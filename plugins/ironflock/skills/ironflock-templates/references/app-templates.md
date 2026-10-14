@@ -46,9 +46,12 @@ read them.
   them (the schema reserves those ids). `device_key` identifies the device that
   published the row, which makes it the natural pivot for "one series per device" and
   the usual entity key: `maintainLatestFlagFor: [device_key]`.
-- `maintainLatestFlagFor` makes a table an entity table: read the newest row per
-  entity, and send only the changed columns in a new row (the rest are inherited).
-  Use it for state such as machine status, settings or orders.
+- `maintainLatestFlagFor` makes a table an entity table: the newest row per entity
+  (by `tsp`) is the entity's current state. To change an entity, send a new row with
+  the key, a `tsp` and only the changed columns. A column the row omits is inherited
+  from the previous row, and an explicit `null` clears it. Use it for state such as
+  machine status, settings or orders. Read the current state with the
+  `{latest: true}` filter (see board-template.md); there is no `latest_flag` column.
 - Transforms are SQL views over the app's own tables. Boards can bind to them, but
   board-side aggregation only works on plain tables. Do the aggregation in the
   transform's SQL instead.

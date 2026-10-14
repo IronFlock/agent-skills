@@ -170,7 +170,7 @@ $defs:
         type: array
         items:
           type: string
-        description: "Entity-key columns. Enables 'latest per entity' reads (DISTINCT ON) and marks these columns as key columns in the UI. Usually ['device_key']."
+        description: "Entity-key columns. Enables 'latest per entity' reads (the newest row by tsp per key, chosen at read time with DISTINCT ON; there is no latest_flag column) and marks these columns as key columns in the UI. A new row may be partial: a column it omits is inherited from the entity's previous row, and an explicit null clears it. Usually ['device_key']."
         examples: [[device_key], [device_key, sensor_id]]
       columnstore:
         type: boolean

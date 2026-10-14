@@ -201,6 +201,12 @@ filterAnd:
   - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
   ```
 
+  The newest row is chosen by `tsp` each time the widget reads. On a table without
+  an entity key, the filter keeps only the single newest row. Other conditions and
+  the time window apply to those newest rows, so an entity whose newest row fails
+  them is hidden. It is never replaced by an older row. There is no `latest_flag`
+  column, so don't filter on one.
+
 - **From the URL path:** `useRoute: true`, where `value` is the index of the route
   segment. On `/machines/press-1`, segment `'1'` is `machines` and `'2'` is
   `press-1`. See [Pages and navigation](#pages-and-navigation).

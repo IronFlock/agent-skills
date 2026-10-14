@@ -87,7 +87,7 @@ $defs:
           refer to it by id, and it appears in URLs, so it cannot contain '/',
           '?' or '#'. The editor generates UUIDs.
       package_name:
-        description: The widget type, i.e. its npm package name under @record-evolution.
+        description: The widget type, i.e. its npm package name under @ironflock.
         anyOf:
           - enum:
               - widget-doughnut
@@ -374,7 +374,9 @@ $defs:
     type: object
     description: >-
       {latest: true}: keep only the newest row per entity (the table's
-      maintainLatestFlagFor columns). The editor writes it as {latest: true,
+      maintainLatestFlagFor columns), chosen by tsp; a table without them yields
+      its single newest row. Other conditions and the time window then filter
+      those rows. The editor writes it as {latest: true,
       column: '', operator: '=', value: '', dataType: boolean}. Ignored when
       aggregating.
     required: [latest]
