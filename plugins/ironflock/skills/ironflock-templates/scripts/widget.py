@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Show an IronFlock widget's configuration schema, as published on npm.
 
-Every widget is an npm package (@record-evolution/<package>) that ships
+Every widget is an npm package (@ironflock/<package>; releases before October
+2026 are under @record-evolution/<package>) that ships
 src/definition-schema.json (the shape of its chartconfig, with descriptions
 written for agents) and src/default-data.json (a working example). This script
 reads them for the version tagged `latest` and caches them by exact version.
@@ -33,8 +34,17 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-NPM_LATEST = "https://registry.npmjs.org/@record-evolution%2F{pkg}/latest"
-CDN_FILE = "https://cdn.jsdelivr.net/npm/@record-evolution/{pkg}@{version}/src/{name}"
+# The widgets moved from the @record-evolution npm scope to @ironflock in October
+# 2026: new releases exist only under @ironflock, older ones only under
+# @record-evolution. Try them in this order.
+SCOPES = ("@ironflock", "@record-evolution")
+NPM_LATEST = "https://registry.npmjs.org/{scope}%2F{pkg}/latest"
+# jsdelivr first; unpkg when jsdelivr cannot serve a file (it answers 503 when
+# its fetch from npm fails).
+CDN_FILES = (
+    "https://cdn.jsdelivr.net/npm/{scope}/{pkg}@{version}/src/{name}",
+    "https://unpkg.com/{scope}/{pkg}@{version}/src/{name}",
+)
 CACHE = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "ironflock-templates"
 
 
@@ -73,13 +83,28 @@ def fetch_json(url: str):
 
 
 def latest_version(package: str) -> str:
-    try:
-        return fetch_json(NPM_LATEST.format(pkg=package))["version"]
-    except FetchError as exc:
-        raise FetchError(
-            f"cannot resolve {package}: {exc}. Package names look like widget-gauge; "
-            "see references/widget-catalog.md for the list."
-        ) from exc
+    errors = []
+    for scope in SCOPES:
+        try:
+            return fetch_json(NPM_LATEST.format(scope=scope, pkg=package))["version"]
+        except FetchError as exc:
+            errors.append(str(exc))
+    raise FetchError(
+        f"cannot resolve {package}: {'; '.join(errors)}. Package names look like widget-gauge; "
+        "see references/widget-catalog.md for the list."
+    )
+
+
+def fetch_src_file(package: str, version: str, name: str):
+    """Fetch a file from the package's src/ folder, from whichever scope and CDN has it."""
+    errors = []
+    for scope in SCOPES:
+        for cdn in CDN_FILES:
+            try:
+                return fetch_json(cdn.format(scope=scope, pkg=package, version=version, name=name))
+            except FetchError as exc:
+                errors.append(str(exc))
+    raise FetchError("; ".join(errors))
 
 
 def widget_file(package: str, version: str, name: str):
@@ -88,7 +113,7 @@ def widget_file(package: str, version: str, name: str):
     path = CACHE / f"{package}@{version}" / name
     if path.exists():
         return json.loads(path.read_text())
-    data = fetch_json(CDN_FILE.format(pkg=package, version=version, name=name))
+    data = fetch_src_file(package, version, name)
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(data))
