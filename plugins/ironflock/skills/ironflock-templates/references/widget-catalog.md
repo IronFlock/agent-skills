@@ -171,13 +171,13 @@ A state history timeline chart widget for visualizing discrete state changes ove
 
 A Mapbox-powered geospatial visualization widget for displaying location-based data on interactive maps. Use this widget for GPS tracking, asset locations, geographic heatmaps, route visualization, or any data with latitude/longitude coordinates.
 
-**Data shape:** Points carrying coordinates: dataseries[].data[] entries with lon and lat, optionally alt and a numeric value, rendered as circles, icons, a density heatmap or connected lines. A pivot column produces one layer per distinct value.
+**Data shape:** Points carrying coordinates: dataseries[].data[] entries with lon and lat, optionally alt and a numeric value, rendered as circles, icons, a density heatmap or connected lines. Positions alone are enough; value only sizes circles, weights the heatmap and labels markers. A pivot column produces one layer per distinct value.
 
 **Use when:**
 - Position on the earth is the point — vehicle and asset locations, site maps, field service, GPS traces.
 - A route or track should be drawn by connecting points in order (dataseries[].type: 'line').
 - Density across an area should be shaded (dataseries[].type: 'heatmap').
-- The view should keep following the latest position (follow: true).
+- The view should keep every current marker or track in view as data arrives (follow: true); with latestValues: 1 it follows each asset's newest position.
 
 **Not for:**
 - Coordinates that are only incidental, where the real question is a measured value over time — use widget-linechart.
