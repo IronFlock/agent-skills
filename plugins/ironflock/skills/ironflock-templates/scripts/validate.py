@@ -250,6 +250,9 @@ class DataModel:
     transforms: set[str] = field(default_factory=set)
     transform_sql: dict[str, str] = field(default_factory=dict)  # name -> its SQL
     consumes: set[str] = field(default_factory=set)
+    # FleetFiles namespaces (files.namespaces): name -> {"contentTypes", "maxObjectBytes"}.
+    # None without a data template.
+    namespaces: dict[str, dict] | None = None
     present: bool = False
 
 
@@ -345,7 +348,32 @@ def check_data(doc: Doc, report: Report) -> DataModel:
             report.error(doc, ["consumes", i, "app"], f"app '{app}' is listed twice")
         seen_apps.add(app)
         model.consumes.add(app)
+
+    model.namespaces = file_namespaces(data.get("files"))
     return model
+
+
+# FleetFiles' defaults for a namespace (fleetfiles internal/template): any type, 100 MiB.
+DEFAULT_NAMESPACE = {"contentTypes": ["*/*"], "maxObjectBytes": 104857600}
+
+
+def file_namespaces(files: Any) -> dict[str, dict]:
+    """The app's FleetFiles namespaces. With none declared there is exactly one,
+    'default'; once any are declared, 'default' exists only if it is listed. A
+    declared namespace takes the defaults for what it leaves out."""
+    declared = files.get("namespaces") if isinstance(files, dict) else None
+    if not isinstance(declared, list) or not declared:
+        return {"default": dict(DEFAULT_NAMESPACE)}
+    namespaces = {}
+    for ns in declared:
+        if isinstance(ns, dict) and isinstance(ns.get("name"), str):
+            types = ns.get("contentTypes")
+            size = ns.get("maxObjectBytes")
+            namespaces[ns["name"]] = {
+                "contentTypes": [t for t in types if isinstance(t, str)] if isinstance(types, list) and types else ["*/*"],
+                "maxObjectBytes": size if isinstance(size, int) and size > 0 else DEFAULT_NAMESPACE["maxObjectBytes"],
+            }
+    return namespaces
 
 
 # --------------------------------------------------------------------------

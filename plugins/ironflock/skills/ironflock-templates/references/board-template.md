@@ -16,7 +16,7 @@ are defined by its published definition schema (`scripts/widget.py <package>`).
 3. [Binding data](#binding-data): valueRef, tableRef, queryParams, filters, aggregation
 4. [What a binding can and cannot read](#what-a-binding-can-and-cannot-read)
 5. [Pages and navigation](#pages-and-navigation): reachability, highlighting, link
-   resolution, navigation patterns, filter widgets
+   resolution, navigation patterns, filter widgets, uploading files with a form
 6. [Layout](#layout)
 7. [Style](#style)
 8. [SCADA pages](#scada-pages)
@@ -477,6 +477,43 @@ Filter widgets set URL parameters for other widgets to read:
 - **widget-filter-calendar:** set `startKey` and `endKey`. Each widget it should
   filter needs `timeStartParam` and `timeEndParam` with those names, plus a
   complete time window, which serves as the default range.
+
+### Uploading files with a form
+
+A widget-form field with `type: $str:file` uploads one file into a FleetFiles
+namespace of the app and writes the stored file's key into its `targetColumn`, in
+the same save as the rest of the row (widget-form 1.0.38 and later):
+
+```yaml
+- label: $str:SOP document
+  type: $str:file
+  required: $bool:true
+  targetColumn: {tablename: sop_commands, column: file_key, dataType: string}
+  fileNamespace: $str:sop                    # a name from files.namespaces
+  acceptedFileTypes: $str:application/pdf    # MIME types; image/* works too
+  maxFileSizeMB: $num:6
+  fileSizeColumn: {tablename: sop_commands, column: size_bytes, dataType: bigint}
+```
+
+- The target is a string column. It gets the key within the namespace,
+  `<YYYY-MM-DD>/<random>/<file name>`: the last segment is the original file name,
+  extension included. The app's code reads the file with the SDK's files API under
+  that key and namespace.
+- `fileNamespace` must be in the app's `files.namespaces` in data-template.yml
+  (with none declared, only `default` exists). Keep `acceptedFileTypes` within the
+  namespace's `contentTypes` and `maxFileSizeMB` within its `maxObjectBytes`. The
+  validator checks all three.
+- Files up to 6 MB upload on every installation. Larger ones need a presigned
+  upload, which an appliance cannot issue, so a board that runs on an appliance
+  keeps `maxFileSizeMB` at 6 or below.
+- `fileNameColumn` (string), `fileSizeColumn` (bigint or numeric) and
+  `fileTypeColumn` (string) are optional, belong in the target column's table, and
+  are written only with a new file.
+- In an edit form (pattern 6), bind `preFilledValue` to the record's key column:
+  the form shows that file, and a save without a new file keeps it.
+- Uploading needs DATABACKEND UPDATE, like every form write. It does not work on an
+  appliance opened through the cloud; there the form says to open the board on
+  the appliance itself.
 
 ## Layout
 

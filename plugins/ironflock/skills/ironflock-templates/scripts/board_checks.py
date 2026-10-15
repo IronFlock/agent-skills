@@ -722,7 +722,16 @@ class Walker:
 def check_form_targets(board: Board, config: dict, path: list) -> None:
     fields = config.get("formFields") if isinstance(config.get("formFields"), list) else []
     targets = [(path + ["formFields", k, "targetColumn"], f.get("targetColumn")) for k, f in enumerate(fields) if isinstance(f, dict)]
+    targets += [
+        (path + ["formFields", k, key], f.get(key))
+        for k, f in enumerate(fields)
+        if isinstance(f, dict) and constant(f.get("type")) == "file"
+        for key in FILE_COLUMNS
+    ]
     targets.append((path + ["deleteFlagColumn"], config.get("deleteFlagColumn")))
+    for k, f in enumerate(fields):
+        if isinstance(f, dict) and constant(f.get("type")) == "file":
+            check_file_field(board, f, path + ["formFields", k])
     for tpath, target in targets:
         if not isinstance(target, dict) or not target.get("tablename"):
             continue
@@ -738,6 +747,80 @@ def check_form_targets(board: Board, config: dict, path: list) -> None:
             board.error(tpath + ["column"], f"table '{table}' has no column '{column}'")
         elif target.get("dataType") and columns[column] != target.get("dataType"):
             board.warn(tpath + ["dataType"], f"column '{column}' is {columns[column]}, not {target.get('dataType')}")
+
+
+# The columns a file field writes beside the key, with the dataTypes that can hold them.
+FILE_COLUMNS = {
+    "fileNameColumn": ({"string"}, "the file name"),
+    "fileSizeColumn": (NUMERIC, "the size in bytes"),
+    "fileTypeColumn": ({"string"}, "the content type"),
+}
+MIB = 1024 * 1024
+
+
+def constant(value: Any) -> Any:
+    """A literal setting's value, with its $str:/$num:/$bool: prefix decoded."""
+    return decode(value)[1] if isinstance(value, str) else value
+
+
+def type_covers(pattern: str, content_type: str) -> bool:
+    """FleetFiles' match (internal/dataplane/ops.go): exact, */*, or a trailing /*."""
+    if pattern in ("*/*", content_type):
+        return True
+    return pattern.endswith("/*") and len(pattern) > 2 and content_type.startswith(pattern[:-1]) and len(content_type) > len(pattern) - 1
+
+
+def check_file_field(board: Board, f: dict, fpath: list) -> None:
+    """A widget-form field of type 'file': it uploads into a FleetFiles namespace of
+    the app that owns the target table, and writes the stored key into the target
+    column. The namespace must exist, the accepted types must be ones the
+    namespace takes, and the key and companion columns must hold what they get."""
+    target = f.get("targetColumn")
+    if isinstance(target, dict) and target.get("tablename"):
+        columns = board.columns_of(target.get("tablename"), None)
+        kind = (columns or {}).get(target.get("column"))
+        if kind and kind != "string":
+            board.error(fpath + ["targetColumn", "column"], f"a file field writes the file's key, a string, but column '{target.get('column')}' is {kind}")
+        for key, (kinds, what) in FILE_COLUMNS.items():
+            ref = f.get(key)
+            if not isinstance(ref, dict) or not ref.get("tablename"):
+                continue
+            if ref.get("tablename") != target.get("tablename"):
+                board.warn(fpath + [key, "tablename"], f"{key} writes to '{ref.get('tablename')}', not the target column's table '{target.get('tablename')}', so it lands in a separate row")
+            ckind = (board.columns_of(ref.get("tablename"), None) or {}).get(ref.get("column"))
+            if ckind and ckind not in kinds:
+                board.error(fpath + [key, "column"], f"{key} gets {what}, which column '{ref.get('column')}' ({ckind}) cannot hold; use a {' or '.join(sorted(kinds))} column")
+
+    namespace = constant(f.get("fileNamespace"))
+    namespace = namespace.strip() if isinstance(namespace, str) else ""
+    if not namespace:
+        board.error(fpath + ["type"], "a file field needs a fileNamespace: a namespace from files.namespaces in data-template.yml ('default' when none are declared)")
+        return
+    namespaces = board.data.namespaces
+    if namespaces is None or (isinstance(target, dict) and target.get("provider_app")):
+        return  # no data template here, or another app's files
+    declared = namespaces.get(namespace)
+    if declared is None:
+        names = ", ".join(sorted(namespaces))
+        board.error(fpath + ["fileNamespace"], f"data-template.yml has no files namespace '{namespace}' (it has: {names})")
+        return
+
+    allowed = declared["contentTypes"]
+    raw = constant(f.get("acceptedFileTypes"))
+    accepted = [t.strip().lower() for t in raw.split(",") if t.strip()] if isinstance(raw, str) else []
+    if not accepted and allowed != ["*/*"]:
+        board.warn(fpath + ["fileNamespace"], f"no acceptedFileTypes, so the picker offers every file, but namespace '{namespace}' takes only {', '.join(allowed)}; list them in acceptedFileTypes")
+    for t in accepted:
+        if any(type_covers(p, t) for p in allowed):
+            continue
+        if t.endswith("/*") and any(p.startswith(t[:-1]) for p in allowed):
+            board.warn(fpath + ["acceptedFileTypes"], f"'{t}' is broader than namespace '{namespace}' ({', '.join(allowed)}); the upload refuses the rest")
+        else:
+            board.error(fpath + ["acceptedFileTypes"], f"namespace '{namespace}' does not take '{t}' (it takes {', '.join(allowed)})")
+
+    size = constant(f.get("maxFileSizeMB"))
+    if isinstance(size, (int, float)) and not isinstance(size, bool) and size * MIB > declared["maxObjectBytes"]:
+        board.warn(fpath + ["maxFileSizeMB"], f"{size:g} MB is more than namespace '{namespace}' takes ({declared['maxObjectBytes'] / MIB:g} MB, its maxObjectBytes)")
 
 
 def resolve(page: dict, segments: list[str]) -> bool:

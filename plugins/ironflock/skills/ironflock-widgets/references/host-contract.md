@@ -189,14 +189,20 @@ dispatch with `bubbles: true, composed: true` anyway.
 | `param-submit` | `{ params: { [key]: string \| undefined } }` | Merges the parameters into the URL of the current page. `undefined` or `null` deletes a key. Widgets bound with `useFilter` filters re-query. |
 | `action-submit` | `{ actionApp, actionDevice, actionTopic, args }` | Calls the device function `<swarm>.<actionDevice>.<app>.<stage>.<actionTopic>` with `[args]`. `actionApp` is the numeric app key and must match exactly. The result is discarded; failures show a toast. Without `actionApp` or `actionTopic` nothing happens. |
 | `data-submit` | An array of `{ swarm_app_databackend_key, table_name, column_name, value }` | Groups the items into one row per table, adds `tsp` (now), turns `NaN` into `null` and publishes the row to the app's table. Items without a key or table are skipped. |
+| `file-data-submit` | `{ items, waitUntil }`: `data-submit` items plus file items `{ swarm_app_databackend_key, table_name, column_name, file: File, namespace, contentType }` | Studio after 3.5.8 only. Claims the event by calling `waitUntil(promise)` during the dispatch. Uploads each file into the FleetFiles namespace of the item's app under a key of its own (`<YYYY-MM-DD>/<random>/<file name>`), puts the key in as the item's value, then writes the rows as for `data-submit`. If an upload fails, no row is written. The promise resolves once the rows are written and rejects with an `Error` whose message (localized) says why, which the widget shows. |
 | `widget-defaults` | A config object | Widget Editor only: replaces the defaults the form fills in (widget-scada sends the selected symbol's defaults). Needs `bubbles: true, composed: true`. |
 
 - `nav-submit` and `param-submit` only work on boards. In the Widget Editor and the
   AI chat nothing handles them.
-- `action-submit` and `data-submit` work everywhere, **including the Widget
-  Editor's preview and the AI chat**: a click there switches a real device or
-  writes a real row.
-- Any other event name is ignored.
+- `action-submit`, `data-submit` and `file-data-submit` work everywhere,
+  **including the Widget Editor's preview and the AI chat**: a click there switches
+  a real device, writes a real row or stores a real file.
+- Any other event name is ignored. That is what makes a new event safe to add: a
+  widget that sends one must check that a host handled it (`file-data-submit`:
+  nobody called `waitUntil`) and tell the user when none did, because an older
+  Studio, or an appliance build that bundles one, silently drops it.
+- Never put a `File`, `Blob` or other object into a `data-submit` value: Studio
+  publishes it as JSON (`{}`), which lands in the column as garbage.
 
 ## Where a widget renders
 

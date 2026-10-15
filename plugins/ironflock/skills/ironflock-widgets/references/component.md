@@ -228,6 +228,7 @@ this.dispatchEvent(
 | Set or clear URL parameters for filters | `param-submit` `{ params: { key: value \| undefined } }` | widget-filter-dropdown, widget-switch (view switch) |
 | Call a device function | `action-submit` `{ actionApp, actionDevice, actionTopic, args }` | widget-switch, widget-scada |
 | Write a row to a table | `data-submit` `[{ swarm_app_databackend_key, table_name, column_name, value }]` | widget-form |
+| Upload files, then write the row with their keys | `file-data-submit` `{ items, waitUntil }` ([host contract](host-contract.md#events)) | widget-form (file field) |
 
 - Read the current state back from the host, not from what you sent: filter
   widgets read their selection from `route`, a switch from its bound value.

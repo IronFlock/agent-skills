@@ -23,7 +23,7 @@ repo's `CLAUDE.md` records its decisions and gotchas.
 | widget-image | images, one or several, filtered by time | reads `timeRange` | — |
 | widget-overlay | an image with live values placed on it | — | — |
 | widget-embed | a web page in an iframe | Studio rewrites tunnel URLs | lit |
-| widget-form | a data-entry dialog that writes table rows | `data-submit`, `nav-submit`, reads `route` | @material/web, lit-flatpickr |
+| widget-form | a data-entry dialog that writes table rows, with file uploads | `data-submit`, `file-data-submit`, `nav-submit`, reads `route` | @material/web, lit-flatpickr |
 | widget-switch | toggles that call device functions, or set URL parameters | `action-submit`, `param-submit`, reads `route` | lit, @material/web |
 | widget-filter-dropdown | a dropdown that sets a URL parameter | `param-submit`, reads `route` | @material/web |
 | widget-filter-calendar | a date or range picker that sets URL parameters | `param-submit`, reads `route` | @material/web, flatpickr, lit-flatpickr |

@@ -45,6 +45,17 @@ data:
           name: Target speed
           description: Target spindle speed in rpm set from the board
           dataType: numeric
+    - tablename: machine_documents
+      description: Manuals and service reports attached to a machine from the board.
+      maintainLatestFlagFor: [machine_id]
+      columns:
+        - {id: tsp, name: Timestamp, description: Time the document was attached (UTC), dataType: timestamp}
+        - {id: machine_id, name: Machine, description: Machine identifier, dataType: string}
+        - {id: file_key, name: File key, description: Key of the file in the FleetFiles namespace documents, dataType: string}
+        - {id: file_name, name: File name, description: Original name of the uploaded file, dataType: string}
+        - {id: size_bytes, name: Size, description: File size in bytes, dataType: bigint}
+        - {id: content_type, name: Content type, description: MIME type of the file, dataType: string}
+        - {id: pages, name: Pages, description: Number of pages, dataType: numeric}
   transforms:
     - tablename: daily_energy
       description: Energy per machine and day.
@@ -69,3 +80,10 @@ data:
         - {id: machine_id, name: Machine, description: Machine identifier, dataType: string}
         - {id: state, name: State, description: Operating state, dataType: string}
         - {id: route, name: Route, description: Board route of the machine's alarm page for that state, dataType: string}
+files:
+  description: Machine manuals and service reports uploaded from the board.
+  namespaces:
+    - name: documents
+      description: Manuals and service reports, as PDF or image.
+      contentTypes: ["application/pdf", "image/png", "image/jpeg"]
+      maxObjectBytes: 20971520

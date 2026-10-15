@@ -1,0 +1,96 @@
+# yaml-language-server: $schema=https://ironflock.com/schemas/board-template/v1.yml
+# widget-form's file field: it uploads into a FleetFiles namespace of the app
+# (files.namespaces in tests/app's data-template.yml: 'documents', PDF, PNG and
+# JPEG up to 20 MB) and writes the stored key into its target column.
+#
+# The form pins widget-form 1.0.38, the first version with the field type.
+# Until that version is published the validator reports it unpublished and
+# skips the schema walk; the file-field checks below do not need the schema.
+#
+# expect: ERROR widgets[0].chartconfig.formFields[1].fileNamespace :: has no files namespace 'manuals'
+# expect: ERROR widgets[0].chartconfig.formFields[2].type :: a file field needs a fileNamespace
+# expect: ERROR widgets[0].chartconfig.formFields[3].acceptedFileTypes :: does not take 'text/csv'
+# expect: WARN  widgets[0].chartconfig.formFields[3].acceptedFileTypes :: 'image/*' is broader than namespace
+# expect: ERROR widgets[0].chartconfig.formFields[4].targetColumn.column :: column 'pages' is numeric
+# expect: ERROR widgets[0].chartconfig.formFields[4].fileSizeColumn.column :: which column 'file_name' (string) cannot hold
+# expect: WARN  widgets[0].chartconfig.formFields[4].fileNameColumn.tablename :: lands in a separate row
+# expect: WARN  widgets[0].chartconfig.formFields[4].maxFileSizeMB :: 50 MB is more than namespace 'documents' takes (20 MB
+# expect: WARN  widgets[0].chartconfig.formFields[5].fileNamespace :: no acceptedFileTypes
+# expect: ERROR widgets[0].chartconfig.formFields[6].fileSizeColumn.column :: table 'machine_documents' has no column 'bytes'
+#
+# The first field is set up correctly, as an edit form that keeps its file.
+#
+# expect-none: widgets[0].chartconfig.formFields[0].type
+# expect-none: widgets[0].chartconfig.formFields[0].fileNamespace
+# expect-none: widgets[0].chartconfig.formFields[0].acceptedFileTypes
+# expect-none: widgets[0].chartconfig.formFields[0].maxFileSizeMB
+# expect-none: widgets[0].chartconfig.formFields[0].targetColumn.column
+# expect-none: widgets[0].chartconfig.formFields[0].fileNameColumn.column
+# expect-none: widgets[0].chartconfig.formFields[0].fileSizeColumn.column
+# expect-none: widgets[0].chartconfig.formFields[0].fileTypeColumn.column
+name: file-field
+widgets:
+    - layout_id: documents-form
+      package_name: widget-form
+      version: 1.0.38
+      chartconfig:
+          title: $str:Attach a document
+          formButton: $bool:true
+          formFields:
+              - label: $str:Manual
+                type: $str:file
+                required: $bool:true
+                targetColumn: {tablename: machine_documents, column: file_key, dataType: string}
+                fileNamespace: $str:documents
+                acceptedFileTypes: $str:application/pdf
+                maxFileSizeMB: $num:6
+                fileNameColumn: {tablename: machine_documents, column: file_name, dataType: string}
+                fileSizeColumn: {tablename: machine_documents, column: size_bytes, dataType: bigint}
+                fileTypeColumn: {tablename: machine_documents, column: content_type, dataType: string}
+                preFilledValue:
+                    valueRef:
+                        tablename: machine_documents
+                        column: file_key
+                        queryParams:
+                            limit: 1
+                            filterAnd:
+                                - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
+              - label: $str:Unknown namespace
+                type: $str:file
+                targetColumn: {tablename: machine_documents, column: file_key, dataType: string}
+                fileNamespace: $str:manuals
+                acceptedFileTypes: $str:application/pdf
+              - label: $str:No namespace
+                type: $str:file
+                targetColumn: {tablename: machine_documents, column: file_key, dataType: string}
+              - label: $str:Types the namespace refuses
+                type: $str:file
+                targetColumn: {tablename: machine_documents, column: file_key, dataType: string}
+                fileNamespace: $str:documents
+                acceptedFileTypes: $str:text/csv, image/*
+              - label: $str:Wrong columns
+                type: $str:file
+                targetColumn: {tablename: machine_documents, column: pages, dataType: numeric}
+                fileNamespace: $str:documents
+                acceptedFileTypes: $str:application/pdf
+                maxFileSizeMB: $num:50
+                fileNameColumn: {tablename: machine_status, column: state, dataType: string}
+                fileSizeColumn: {tablename: machine_documents, column: file_name, dataType: string}
+              - label: $str:Any type
+                type: $str:file
+                targetColumn: {tablename: machine_documents, column: file_key, dataType: string}
+                fileNamespace: $str:documents
+              - label: $str:Missing companion column
+                type: $str:file
+                targetColumn: {tablename: machine_documents, column: file_key, dataType: string}
+                fileNamespace: $str:documents
+                acceptedFileTypes: $str:image/png
+                fileSizeColumn: {tablename: machine_documents, column: bytes, dataType: bigint}
+              - label: $str:Machine
+                type: $str:textfield
+                hiddenField: $bool:true
+                targetColumn: {tablename: machine_documents, column: machine_id, dataType: string}
+                defaultValue: $str:press-1
+layout:
+    gridLayout:
+        - {id: documents-form, x: 0, y: 0, w: 96, h: 64}

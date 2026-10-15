@@ -91,7 +91,7 @@ IMPORT_MAP_SNAPSHOT: dict[str, str] = {
 MUST_BE_EXTERNAL = ("@material/web", "@vaadin/", "lit-flatpickr", "flatpickr", "echarts", "zrender")
 
 # The events Studio listens for on a widget element.
-HOST_EVENTS = {"nav-submit", "param-submit", "action-submit", "data-submit", "widget-defaults"}
+HOST_EVENTS = {"nav-submit", "param-submit", "action-submit", "data-submit", "file-data-submit", "widget-defaults"}
 
 # Widgets the platform registers (for aiSelection's notFor routing).
 KNOWN_WIDGETS = {
