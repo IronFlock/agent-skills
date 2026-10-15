@@ -3,9 +3,9 @@
 # (files.namespaces in tests/app's data-template.yml: 'documents', PDF, PNG and
 # JPEG up to 20 MB) and writes the stored key into its target column.
 #
-# The form pins widget-form 1.0.38, the first version with the field type.
-# Until that version is published the validator reports it unpublished and
-# skips the schema walk; the file-field checks below do not need the schema.
+# The form pins widget-form 1.0.38, the first version with the field type, so
+# the schema walk accepts the file settings; the file-field checks below come
+# from the data template, not the schema.
 #
 # expect: ERROR widgets[0].chartconfig.formFields[1].fileNamespace :: has no files namespace 'manuals'
 # expect: ERROR widgets[0].chartconfig.formFields[2].type :: a file field needs a fileNamespace
