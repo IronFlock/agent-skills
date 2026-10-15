@@ -1003,10 +1003,24 @@ def page_label(pattern: tuple) -> str:
     return "/" + "/".join(pattern)
 
 
-def check_menu_highlighting(board: Board, i: int, w: dict) -> None:
+def shown_under(route: str, pages: list[tuple] | None) -> bool:
+    """Whether the menu sits on a page whose URLs can start with `route`. Two items
+    whose routes start one another light up together only on such a page: a tab bar
+    placed only where a section opens may hold that page and the pages below it.
+    Unknown placements count as yes."""
+    if pages is None:
+        return True
+    segments = [s for s in route.split("/") if s]
+    return any(
+        len(page) >= len(segments) and all(a == b or "*" in (a, b) for a, b in zip(page, segments))
+        for page in pages
+    )
+
+
+def check_menu_highlighting(board: Board, i: int, w: dict, pages: list[tuple] | None = None) -> None:
     """Items are highlighted while the current route starts with theirs, so an
     item for '/' is always on, and an item whose route starts another item's is
-    on together with it."""
+    on together with it - on the pages of the menu where both can match."""
     cfg = w.get("chartconfig")
     if not isinstance(cfg, dict):
         return
@@ -1035,7 +1049,8 @@ def check_menu_highlighting(board: Board, i: int, w: dict) -> None:
             name = str(decode(label)[1]) if isinstance(label, str) else f"item {k}"
             absolute.append((k, "/" + "/".join(s for s in route.split("/") if s), name, ipath))
     for k, route, name, ipath in absolute:
-        deeper = [other for j, r, other, _ in absolute if j != k and r.startswith(route) and r != route]
+        deeper = [other for j, r, other, _ in absolute
+                  if j != k and r.startswith(route) and r != route and shown_under(r, pages)]
         same = [other for j, r, other, _ in absolute if j < k and r == route]
         if deeper:
             board.warn(
@@ -1063,7 +1078,8 @@ def check_navigation(board: Board, layout: dict | None, placements: dict) -> Non
         if isinstance(w, dict) and w.get("package_name") in NAV_WIDGETS:
             links_of[i] = nav_links(i, w)
             if w.get("package_name") in MENU_WIDGETS:
-                check_menu_highlighting(board, i, w)
+                pages_of = [tuple(route) for route in placements.get(w.get("layout_id"), [])]
+                check_menu_highlighting(board, i, w, pages_of)
     if not isinstance(layout, dict):
         return
     pages = {tuple(route): path for route, _page, path in iter_pages(layout, [], ["layout"])}

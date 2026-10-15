@@ -74,6 +74,10 @@ read them.
     whatever those show, so that part is your responsibility. A shared transform
     over a private table, or a board widget bound to one, should show only what
     users should see.
+  - A board widget bound to a private table opens all of that table's rows to
+    everyone who can open the board, not only the part the widget shows. If the
+    board needs only part of the table, add a private transform that holds just
+    that part, and bind the widget to the transform.
 - Add `downsample` to tables that will back charts spanning weeks or months.
 - To read another app's tables, list it under `consumes:`. Board widgets that bind
   to those tables then need `provider_app` on their data reference (see
@@ -145,9 +149,10 @@ AI agents the app contributes to the IronFlock assistant.
   `register_device_function()` in new code.
 - `data_access: true` gives the agent read-only SQL over the app's own tables.
   The agent learns the columns from data-template.yml descriptions, so write those
-  well instead of repeating them in `system_prompt`. Private tables and transforms
-  are out of its reach, like any agent's. If it needs part of one, add a shared
-  transform with that part.
+  well instead of repeating them in `system_prompt`. Its SQL can't reach private
+  tables and transforms, like any agent's. If it needs part of one, add a shared
+  transform with that part. Its `topic:` tools run in the app's own code, which
+  reads private tables normally.
 
 ## Python SDK quick reference
 

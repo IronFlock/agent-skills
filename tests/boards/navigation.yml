@@ -11,6 +11,9 @@
 # expect-none: layout.subRoutes.machines.subRoutes.*
 # expect-none: layout.subRoutes.machines.subRoutes.*.subRoutes.alarms.subRoutes.*
 # expect-none: layout.subRoutes.reports.subRoutes.daily
+# A tab bar placed only where a machine opens may hold that page and the pages below it:
+# on /machines/<id> only the Overview tab matches.
+# expect-none: widgets[7].chartconfig.navItems[0].route
 name: navigation-board
 widgets:
     - layout_id: nav
@@ -80,6 +83,14 @@ widgets:
       chartconfig:
           title: $str:Alarms
           route: '$str:/machines/*/alarms'
+    - layout_id: landing-sections
+      package_name: widget-navbar
+      version: 1.0.18
+      chartconfig:
+          navItems:
+              - {label: $str:Overview, route: '$str:/machines/*'}
+              - {label: $str:Alarms, route: '$str:/machines/*/alarms'}
+              - {label: $str:Events, route: '$str:/machines/*/events'}
 layout:
     gridLayout:
         - {id: nav, x: 0, y: 0, w: 16, h: 64}
@@ -96,7 +107,7 @@ layout:
                     gridLayout:
                         - {id: nav, x: 0, y: 0, w: 16, h: 64}
                         - {id: machine-list, x: 16, y: 0, w: 16, h: 64}
-                        - {id: sections, x: 32, y: 0, w: 64, h: 8}
+                        - {id: landing-sections, x: 32, y: 0, w: 64, h: 8}
                         - {id: text, x: 32, y: 8, w: 64, h: 56}
                     subRoutes:
                         alarms:

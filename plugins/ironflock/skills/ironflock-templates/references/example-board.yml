@@ -8,6 +8,7 @@
 # Every page is reachable by clicking and leads back: the sidenav's title links
 # home, and no menu item links to '/', because an item is highlighted whenever
 # the current route starts with its route (an item for '/' would always be on).
+# Both sidenavs have fixedWidth, so they keep their width on every screen size.
 name: machine-monitor
 widgets:
     - layout_id: nav
@@ -261,7 +262,7 @@ widgets:
                                   useRoute: true
 layout:
     gridLayout:
-        - {id: nav, x: 0, y: 0, w: 16, h: 64}
+        - {id: nav, x: 0, y: 0, w: 16, h: 64, fixedWidth: true}
         - {id: temperature-gauges, x: 16, y: 0, w: 52, h: 24}
         - {id: power, x: 68, y: 0, w: 28, h: 24}
         - {id: trend, x: 16, y: 24, w: 52, h: 40}
@@ -269,14 +270,14 @@ layout:
     subRoutes:
         machines:
             gridLayout:
-                - {id: nav, x: 0, y: 0, w: 16, h: 64}
-                - {id: machine-list, x: 16, y: 0, w: 16, h: 64}
+                - {id: nav, x: 0, y: 0, w: 16, h: 64, fixedWidth: true}
+                - {id: machine-list, x: 16, y: 0, w: 16, h: 64, fixedWidth: true}
                 - {id: machines-hint, x: 32, y: 0, w: 64, h: 64}
             subRoutes:
                 '*':
                     gridLayout:
-                        - {id: nav, x: 0, y: 0, w: 16, h: 64}
-                        - {id: machine-list, x: 16, y: 0, w: 16, h: 64}
+                        - {id: nav, x: 0, y: 0, w: 16, h: 64, fixedWidth: true}
+                        - {id: machine-list, x: 16, y: 0, w: 16, h: 64, fixedWidth: true}
                         - {id: machine-power, x: 32, y: 0, w: 64, h: 16}
                         - {id: machine-trend, x: 32, y: 16, w: 64, h: 48}
 style:

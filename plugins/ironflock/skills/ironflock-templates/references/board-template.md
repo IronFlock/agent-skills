@@ -482,7 +482,8 @@ Filter widgets set URL parameters for other widgets to read:
 
 The grid is `style.columns` × `style.rows`, by default 96 × 64. Positions are given
 in cells: `x`, `y` from 0, and `w`, `h`. Without `overflow`, the whole grid is
-scaled onto the screen, so the grid is the screen.
+scaled onto the screen, so the grid is the screen. The exception is a widget with a
+fixed width or height (see below).
 
 - **Fill every page completely.** Any cell no widget covers shows as empty screen,
   and users read that as unfinished. Plan bands whose heights add up to `rows` and
@@ -495,6 +496,32 @@ scaled onto the screen, so the grid is the screen.
 
 - **Size for readability.** A chart below roughly 16 × 10 cells is too small to
   read. With few widgets, make them bigger rather than leaving space.
+- **Give navigation bars a fixed size.** Normally, set `fixedWidth: true` on a
+  sidebar's position (widget-sidenav) and `fixedHeight: true` on a top bar's
+  position (widget-navbar). Without it, a bar scales with the screen: a sidebar
+  grows wide on a large monitor and squeezes its labels on a laptop. With it, every
+  column or row the bar spans is `style.cell_size` pixels (default 12) on any
+  screen, and the other columns and rows share the rest. So `w: 16` gives a
+  sidebar of about 190 px, and `h: 5` a top bar of about 60 px (minus
+  `grid_gap`). Other widgets in those columns or rows get the same fixed size,
+  which keeps a button beside the navbar in line with it.
+
+  ```yaml
+  - {id: nav, x: 0, y: 0, w: 16, h: 64, fixedWidth: true}     # widget-sidenav
+  - {id: top, x: 0, y: 0, w: 96, h: 5, fixedHeight: true}     # widget-navbar
+  ```
+
+- **Let navigation blend in.** A widget-navbutton normally has no tile border, and
+  often no tile background either, so it reads as a button and not as a tile with
+  a button inside. Widgets in a top navbar band usually look better without a
+  border too. This is a default, not a strict rule:
+
+  ```yaml
+  custom_style:
+      tile_border_color: transparent
+      tile_background_color: transparent   # optional
+  ```
+
 - **Keep everything inside the grid:** `x + w <= columns` and `y + h <= rows`.
 - **Layering is allowed.** A small widget (a date picker, a button) may sit on top
   of a big one. `z` orders them, higher in front.
@@ -558,4 +585,6 @@ Some values only exist inside a running platform, and a template cannot know the
 4. Every page fills the grid. Every page can be reached from the home page by
    clicking and leads back to it, no menu item links to `/`, no item's route is a
    prefix of another item's in the same menu, and every route leads to a page.
-5. `scripts/validate.py <app-dir>` (run it as SKILL.md shows) reports no errors.
+5. Sidebars have `fixedWidth` and top navbars `fixedHeight`, and navbuttons have no
+   tile border, unless there is a reason to do otherwise.
+6. `scripts/validate.py <app-dir>` (run it as SKILL.md shows) reports no errors.
