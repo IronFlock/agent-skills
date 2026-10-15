@@ -1,0 +1,70 @@
+# yaml-language-server: $schema=https://ironflock.com/schemas/board-template/v1.yml
+# A cleared number field: '$num:' with nothing after the colon, which is how the
+# board editor stores a number input someone emptied. The board reads it as
+# unset, like a key that is left out (null in a list), and the editor's
+# conditions read it as false. A typed '$num:0' is still 0.
+#
+# expect: WARN  widgets[0].chartconfig.dataseries[1].data :: it is False here
+# expect: WARN  widgets[0].chartconfig.dataseries[2].data :: it is 0.0 here
+# expect: WARN  widgets[0].chartconfig.dataseries[2].multiChart :: boolean property holds '$num:0'
+# expect: ERROR widgets[0].chartconfig.subTitleType :: 0.0 is not one of
+#
+# An unset value is not checked against its type, enum or condition, so there is
+# no finding at these paths. (expect-none lines are enforced only by a runner that
+# supports them; the expect lines above are checked by every runner.)
+#
+# expect-none: widgets[0].chartconfig.dataseries[0].precision
+# expect-none: widgets[0].chartconfig.dataseries[0].value
+# expect-none: widgets[0].chartconfig.dataseries[0].advanced.maxLatency
+# expect-none: widgets[0].chartconfig.dataseries[1].multiChart
+# expect-none: widgets[0].chartconfig.dataseries[1].value
+# expect-none: widgets[1].chartconfig.subTitleType
+# expect-none: widgets[1].chartconfig.dataseries[0].data.tableRef.format.value
+# expect-none: widgets[2].chartconfig.dataseries[0].actionApp
+# expect-none: widgets[2].chartconfig.dataseries[0].actionDevice
+name: cleared-number
+widgets:
+    - layout_id: values
+      package_name: widget-value
+      version: 1.1.34
+      chartconfig:
+          subTitleType: $num:0              # 0, which is not one of the enum
+          dataseries:
+              - label: $str:Cleared fields
+                precision: '$num:'
+                multiChart: $bool:true
+                value: '$num:'              # hidden here, but unset: nothing to drop
+                advanced: {maxLatency: '$num:'}
+              - label: $str:Cleared condition source
+                multiChart: '$num:'         # false for the editor's conditions
+                value: $num:5               # shown, because ../multiChart is false
+                data: []                    # hidden, because ../multiChart is false
+              - label: $str:Zero as condition source
+                multiChart: $num:0          # 0, which is not false
+                data: []
+    - layout_id: bound
+      package_name: widget-value
+      version: 1.1.34
+      chartconfig:
+          subTitleType: '$num:'
+          dataseries:
+              - label: $str:Cleared constant in a format
+                multiChart: $bool:true
+                data:
+                    tableRef:
+                        tablename: measurements
+                        format: {tsp: tsp, value: '$num:', pivot: machine_id}
+                        queryParams: {limit: 10}
+    - layout_id: switch
+      package_name: widget-switch
+      version: 1.1.10
+      chartconfig:
+          dataseries:
+              - label: $str:Cleared keys
+                actionApp: '$num:'
+                actionDevice: '$num:'
+layout:
+    gridLayout:
+        - {id: values, x: 0, y: 0, w: 48, h: 64}
+        - {id: bound, x: 48, y: 0, w: 48, h: 32}
+        - {id: switch, x: 48, y: 32, w: 48, h: 32}

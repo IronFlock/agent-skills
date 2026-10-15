@@ -86,7 +86,7 @@ does:
 |---|---|
 | text | `$str:Line 3` |
 | empty text | `'$str:'` |
-| number | `$num:12.5` |
+| number | `$num:12.5` / `$num:0` |
 | boolean | `$bool:true` / `$bool:false` |
 | colour | `$str:#4caf50` |
 
@@ -95,15 +95,29 @@ The prefixes matter because:
 - **Inside a tableRef `format`, an unprefixed string is a column name.** A constant
   there must carry a prefix. A raw number or boolean in a format makes the whole
   item null.
-- **Outside a format, unprefixed values work, but don't survive editing.** When
-  someone opens the widget in the editor and saves, a raw `false`, `0` or `''`
-  becomes the widget's default.
+- **Outside a format, unprefixed values work.** When someone opens the widget in
+  the editor and saves, a raw `false` or `0` is stored as `$bool:false` or
+  `$num:0` and keeps its value. Studio 3.5.2 and earlier replaced a raw `false`,
+  `0` or `''` with the widget's default.
 - **The prefix is found anywhere in a string**, not only at the start. Never put
   `$str:`, `$num:` or `$bool:` inside a text such as a markdown body, because
   everything before the prefix would be cut off.
 
 Long multi-line text such as `markdown: |` can stay unprefixed. To leave a setting
 unset, omit the key rather than writing `null`.
+
+Boards the editor saved also contain:
+
+- **`'$num:'`, a number field someone cleared.** The board treats it as unset:
+  the widget gets no value for the key and uses its own default, and in a list
+  that item is `null`. Studio 3.5.7 and earlier read it as 0, so write `$num:0`
+  for zero and omit the key for the default. `'$str:'`, by contrast, is a real
+  empty text.
+- **The settings each dropped widget starts with**, with their text, colour,
+  number and boolean values prefixed. They are the
+  widget's example (`widget.py <package> --example`), and a `0`, `false` or `''`
+  among them is kept as `$num:0`, `$bool:false` or `'$str:'`. Studio 3.5.7 and
+  earlier stored those three as `null`.
 
 ## Binding data
 

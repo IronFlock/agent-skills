@@ -45,6 +45,9 @@ SYSTEM_TABLES = {
 }
 DEFAULT_COLUMNS, DEFAULT_ROWS = 96, 64
 COVERAGE_TARGET = 0.9
+#: What JavaScript's trim() and Number() skip as whitespace, which is not quite
+#: Python's: U+FEFF is in, U+001C-U+001F and U+0085 are out.
+JS_SPACE = "\t\n\v\f\r \u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff"
 
 
 # --------------------------------------------------------------------------
@@ -55,7 +58,8 @@ COVERAGE_TARGET = 0.9
 def decode(value: str) -> tuple[str | None, Any]:
     """Decode a constant the way the renderer does (WidgetDataEngine.parseConst):
     the FIRST prefix found anywhere in the string wins, and the value is the text
-    between it and any second occurrence."""
+    between it and any second occurrence. A blank '$num:' decodes to None (see
+    is_unset)."""
     for prefix in PREFIXES:
         if prefix in value:
             raw = value.split(prefix)[1]
@@ -68,10 +72,21 @@ def decode(value: str) -> tuple[str | None, Any]:
     return None, value
 
 
-def js_number(raw: str) -> float:
-    text = raw.strip()
+def is_unset(value: Any) -> bool:
+    """A constant that decodes to nothing (WidgetDataEngine.isUnsetConst): a '$num:'
+    with nothing but blanks after it, which is how the editor stores a number field
+    someone cleared. The renderer leaves it out of an object and puts null in its
+    place in a list, so it counts as a missing key or null. '$num:0' is 0, and
+    '$str:' is a real empty text."""
+    return isinstance(value, str) and decode(value)[1] is None
+
+
+def js_number(raw: str) -> float | None:
+    """The text after '$num:' as the renderer reads it: None when it is blank (unset,
+    where Number('') would be 0), else a float, NaN when it is not a number."""
+    text = raw.strip(JS_SPACE)
     if text == "":
-        return 0.0
+        return None
     try:
         if re.fullmatch(r"[+-]?0[xX][0-9a-fA-F]+", text):
             return float(int(text, 16))
@@ -410,20 +425,22 @@ class Walker:
             prefix = f"${kind}:"
             if not value.startswith(prefix):
                 self.board.warn(path, f"'{prefix}' is decoded wherever it appears, so the text before it is dropped")
+        if is_unset(value):
+            return  # unset: the widget gets nothing here, as for a missing key or null
         if t in ("number", "integer"):
             if kind == "num" and math.isnan(decoded):
                 self.board.error(path, f"{value!r} is not a number")
             elif kind in ("str", "bool") or (kind is None and isinstance(value, str)):
                 self.board.warn(path, f"number property holds {value!r}; write $num:<value>")
             elif value == 0 and not isinstance(value, bool) and kind is None:
-                self.board.warn(path, "write $num:0; the board editor replaces a raw 0 with the default when it saves")
+                self.board.warn(path, "write $num:0; studio 3.5.2 and earlier replaces a raw 0 with the default when it saves")
         elif t == "boolean":
             if kind == "bool" and isinstance(value, str) and value.split("$bool:")[1].lower() not in ("true", "false"):
                 self.board.warn(path, f"{value!r} decodes to false; only $bool:true is true")
             elif kind in ("str", "num") or (kind is None and isinstance(value, str)):
                 self.board.warn(path, f"boolean property holds {value!r}; write $bool:true or $bool:false")
             elif value is False:
-                self.board.warn(path, "write $bool:false; the board editor replaces a raw false with the default when it saves")
+                self.board.warn(path, "write $bool:false; studio 3.5.2 and earlier replaces a raw false with the default when it saves")
         elif t in TEXT_TYPES:
             if kind in ("num", "bool") or isinstance(value, bool) or (isinstance(value, (int, float)) and t != "image"):
                 self.board.warn(path, f"text property holds {value!r}; write $str:<text>")
@@ -434,13 +451,14 @@ class Walker:
             if not ok:
                 self.board.error(path, f"{t} must be $num:<key> (a numeric key picked in the board editor)")
         enum = node.get("enum")
-        # '' is how the editor stores a cleared field, which means "use the default"
+        # Skip '': a cleared text field ('$str:') arrives as '', which widgets read as
+        # unset, and an enum select has no empty option it could match.
         if isinstance(enum, list) and enum and decoded != "" and not any(same(decoded, e) for e in enum):
             self.board.error(path, f"{decoded!r} is not one of {enum}")
 
     def check_condition(self, key: str, value: Any, node: dict, path: list, stack: list) -> None:
         cond = node.get("condition")
-        if not isinstance(cond, dict) or not cond.get("relativePath") or value is None:
+        if not isinstance(cond, dict) or not cond.get("relativePath") or value is None or is_unset(value):
             return
         allowed = cond.get("showIfValueIn")
         if not isinstance(allowed, list):
@@ -461,7 +479,10 @@ class Walker:
             cursor = cursor.get(part)
         if is_ref(cursor):
             return
-        source = decode(cursor)[1] if isinstance(cursor, str) else (False if cursor is None else cursor)
+        # The editor's SchemaObject.typedValue: unset (missing, null or '$num:') is false.
+        source = decode(cursor)[1] if isinstance(cursor, str) else cursor
+        if source is None:
+            source = False
         if not any(same(source, a) for a in allowed):
             self.board.warn(
                 path,
