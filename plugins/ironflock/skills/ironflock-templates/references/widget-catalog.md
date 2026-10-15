@@ -32,7 +32,7 @@ A versatile chart widget for visualizing data as line charts, bar charts, or sca
 - The same measurement is broken down by an entity — one line per machine, per site, per program (bind the breakdown column to data[].pivot).
 
 **Not for:**
-- Parts of a whole, shares, or percentages that add up to 100% — use widget-doughnut.
+- Parts of a whole, shares, or percentages that add up to 100%, when the parts are a fixed set that arrive as columns of one row (or as one value each) — use widget-doughnut. When the categories are ROWS of the result (one row per cause or program, e.g. a GROUP BY), the doughnut cannot show them; this widget's own bar mode can (dataseries[].type: 'bar', axis.timeseries: false, the category on the x axis).
 - A single current number, reading or KPI with no second dimension to plot — use widget-value, or widget-gauge when it should be read against a min/max range.
 - Records the user needs to read row by row, or data with more columns than an x and a y — use widget-table.
 - Intensity or density across two categorical dimensions at once, i.e. a matrix or calendar grid — use widget-heatmap.
@@ -57,7 +57,7 @@ A simple numeric value display widget for showing key metrics with labels and un
 - Counting or aggregating rows — the widget performs NO aggregation (no count/sum/avg); it displays a value that already exists in the data or is embedded as a static number.
 - A number that only means something against a minimum and maximum — use widget-gauge.
 - How the number is changing — use widget-linechart.
-- Its share of a total — use widget-doughnut.
+- Its share of a total — use widget-doughnut when the parts are a fixed set that arrive as columns of one row (or as one value each); when the parts are rows of the result (one row per cause or program), use widget-linechart with dataseries[].type: 'bar'.
 - Several fields per entity that belong side by side — use widget-table.
 - Text rather than a figure — use widget-label.
 
@@ -75,7 +75,7 @@ A circular gauge widget for displaying single numeric values within a defined ra
 **Not for:**
 - A number with no natural minimum and maximum — a total, a count, a price. Use widget-value; an invented range makes the dial meaningless.
 - How the value got here or where it is heading — a gauge shows only the latest point. Use widget-linechart.
-- A share of a total — use widget-doughnut.
+- A share of a total — use widget-doughnut when the parts are a fixed set that arrive as columns of one row (or as one value each); when the parts are rows of the result (one row per cause or program), use widget-linechart with dataseries[].type: 'bar'.
 - A tank, pump, valve or other industrial asset that should be drawn as itself rather than as a dial — use widget-scada.
 - A binary condition — use widget-signal, or widget-switch when it must also be controllable.
 
@@ -99,20 +99,22 @@ A signal indicator widget for displaying status using colored shapes. Use this w
 
 ### widget-doughnut
 
-A doughnut/pie chart widget for visualizing proportional data as circular segments. Use this widget to display part-to-whole relationships, such as market share percentages, budget allocations, or category distributions.
+A doughnut/pie chart widget for visualizing proportional data as circular segments. Use this widget to display part-to-whole relationships, such as market share percentages, budget allocations, or the split of a total into a fixed set of parts (good vs scrap, running vs idle time).
 
-**Data shape:** A list of named parts with one numeric size each: dataseries[].sections[] gives a label and a value per slice. The parts are drawn as shares of their common total, so the numbers must be summable quantities (counts, amounts, durations) rather than rates or averages. An optional column bound to sections[].pivot splits the data into several rings, one per distinct value. Reads best with 2-8 slices.
+**Data shape:** A fixed list of named parts written in the config, each with one numeric size: dataseries[].sections[][] holds the slices as {name, value, color?, pivot?} (slices live at sections[][], not sections[], and use `name`, not `label`). The parts are drawn as shares of their common total, so the values must be summable quantities (counts, amounts, durations) rather than rates or averages. When sections is bound with a tableRef, EACH ROW of the result is one whole doughnut: the format is a list with one entry per slice, each `value` a column of that row and `name` usually a `$str:` constant, e.g. [{name: '$str:Good', value: 'good_parts'}, {name: '$str:Scrap', value: 'scrap_parts'}]. Only the NEWEST row is drawn, or with dataseries[].settings.averageLatest = N each slice is the mean of that slice over the newest N rows (matched by position). A slice's value can instead be its own valueRef. The widget never turns rows into slices: data with one row per category (e.g. a GROUP BY cause with summed minutes) draws one 100% slice. Binding the same column to sections[][].pivot on every slice draws one separate doughnut per distinct value; each dataseries[] entry is a doughnut of its own, titled with its label. Reads best with 2-8 slices.
 
 **Use when:**
-- The question is what share each category has of a whole — split of production by program, share of downtime by cause, market share, budget allocation.
+- The question is what share each of a fixed, known set of parts has of a whole, and each part's size is a column of one row or a value of its own — good vs scrap parts, running / idle / fault minutes already totalled into columns, budget allocation.
 - The numbers are parts of one total and the proportions matter more than the absolute values.
 - A pie chart is asked for rather than a doughnut: same widget, set dataseries[].settings.cutout to '0%'.
-- One ring per machine, site or period should be generated from a single column (bind it to sections[].pivot).
+- One doughnut per machine, site or period should be generated from a single column — bind it to sections[][].pivot on every slice (e.g. a Good/Scrap doughnut per machine) — or a few separate breakdowns should sit side by side, one dataseries[] entry each.
 
 **Not for:**
 - Comparing magnitudes across categories that are not shares of a total, or where there are more than about eight of them — use widget-linechart with dataseries[].type: 'bar'. Bars compare lengths, which the eye judges far better than angles.
-- Anything changing over time — a doughnut has no time dimension. Use widget-linechart.
-- A single value read against a minimum and maximum — use widget-gauge; a doughnut of one slice is always 100%.
+- Shares whose categories are ROWS of the result — one row per cause, program or machine, such as a GROUP BY cause with summed minutes — or whose categories are not known in advance. The slices are a fixed list written in the config and the widget never turns rows into slices, so such data draws one 100% slice. Use widget-linechart with dataseries[].type: 'bar' and axis.timeseries: false (the category on the x axis), or widget-table when the exact numbers matter.
+- A quantity changing over time — a doughnut has no time dimension. Use widget-linechart.
+- Which state something was in over time, and when — use widget-statehistory. Total time per state, once aggregated into columns of one row, can be shown here as shares.
+- A single figure with no parts — use widget-value, or widget-gauge when it has a meaningful minimum and maximum; a doughnut of one slice is always 100%.
 - Reading exact numbers rather than proportions — use widget-table, or a bar chart with dataseries[].styling.showValueLabels enabled.
 
 ### widget-table
@@ -130,7 +132,7 @@ A data table widget for displaying structured information in rows and columns. U
 **Not for:**
 - Spotting a trend, comparing magnitudes, or seeing a distribution — use widget-linechart; a table makes the reader do the work a chart does for them.
 - One number that matters more than the rest — use widget-value, or widget-gauge to read it against a range.
-- Shares of a total — use widget-doughnut.
+- Shares of a total — use widget-doughnut when the parts are a fixed set that arrive as columns of one row (or as one value each); when the parts are rows of the result (one row per cause or program), use widget-linechart with dataseries[].type: 'bar'.
 - Text written by hand rather than queried — use widget-markdown.
 
 ### widget-heatmap
@@ -163,7 +165,7 @@ A state history timeline chart widget for visualizing discrete state changes ove
 
 **Not for:**
 - A numeric measurement over time — use widget-linechart; this widget plots state names, not quantities.
-- How often each state occurred, or total time per state as a comparison — aggregate first, then use widget-linechart with dataseries[].type: 'bar', or widget-doughnut for shares of total time.
+- How often each state occurred, or total time per state as a comparison — aggregate first, then use widget-linechart with dataseries[].type: 'bar' (one row per state, the state on the x axis), or widget-doughnut for shares of total time once the per-state totals are columns of one row (a fixed set of states, one slice each).
 - Only the current state — use widget-signal, or widget-switch when it must be controllable.
 - Two categorical dimensions with a numeric intensity — use widget-heatmap.
 

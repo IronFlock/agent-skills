@@ -173,10 +173,11 @@ data:
 - **Leaves are column ids or json paths**, or prefixed constants such as
   `iconName: $str:settings`. Only properties of the item are allowed.
 - **Rows arrive oldest first.**
-- **`pivot` splits the rows** into one series, gauge or ring per distinct value.
-  For example, `pivot: machine_id` draws one line per machine. Gauges and value
-  tiles split only with `multiChart: $bool:true`, and then read `data` instead of
-  `value`.
+- **`pivot` splits the rows** into one series, gauge or doughnut per distinct
+  value. For example, `pivot: machine_id` draws one line per machine. Gauges and
+  value tiles split only with `multiChart: $bool:true`, and then read `data`
+  instead of `value`. A doughnut becomes one separate chart per value, never
+  nested rings; bind the same pivot column on every slice of its format.
 - **`limit` is required.** Charts usually want 500 to 3000; a list of entities as
   many as you expect.
 
