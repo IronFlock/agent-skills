@@ -1,0 +1,15 @@
+{
+    "compilerOptions": {
+        "target": "es2021",
+        "module": "esnext",
+        "moduleResolution": "bundler",
+        "lib": ["es2021", "dom", "dom.iterable"],
+        "strict": true,
+        "noEmit": true,
+        "skipLibCheck": true,
+        "resolveJsonModule": true,
+        "experimentalDecorators": true,
+        "useDefineForClassFields": false
+    },
+    "include": ["src"]
+}

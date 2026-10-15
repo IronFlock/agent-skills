@@ -225,7 +225,11 @@ def outline(
         depth += 1
     props = node.get("properties")
     if isinstance(props, dict):
-        req = set(node.get("required") or [])
+        # Only a JSON Schema `required` list names required children. Some widget
+        # schemas also carry a property-level `required: true`, which no platform
+        # consumer reads (widget-switch has one on an object node).
+        required = node.get("required")
+        req = set(required) if isinstance(required, list) else set()
         ordered = sorted(props.items(), key=lambda kv: (kv[1].get("order", 1e9), kv[0]))
         for key, child in ordered:
             if isinstance(child, dict):

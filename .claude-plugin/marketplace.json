@@ -9,9 +9,17 @@
     {
       "name": "ironflock",
       "source": "./plugins/ironflock",
-      "description": "Write and validate an IronFlock app's .ironflock templates: boards and widgets, data tables, app parameters, remote-access ports and AI agents.",
+      "description": "Build on IronFlock: write and validate an app's .ironflock templates (boards and widgets, data tables, app parameters, remote-access ports, AI agents), and create, change and check the board widgets themselves (@ironflock/widget-* Lit components).",
       "category": "development",
-      "keywords": ["ironflock", "iot", "dashboard", "widgets", "templates"]
+      "keywords": [
+        "ironflock",
+        "iot",
+        "dashboard",
+        "widgets",
+        "templates",
+        "lit",
+        "web-components"
+      ]
     }
   ]
 }

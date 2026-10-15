@@ -1,0 +1,55 @@
+{
+    "name": "@ironflock/widget-starter",
+    "description": "TODO: one line on what this IronFlock board widget shows",
+    "license": "MIT",
+    "author": "IronFlock GmbH",
+    "version": "1.0.0",
+    "engines": {
+        "node": ">=24.9.0",
+        "npm": ">=10.0.2"
+    },
+    "type": "module",
+    "main": "dist/widget-starter.js",
+    "files": [
+        "dist",
+        "src",
+        "thumbnail.png",
+        "thumbnail.webp"
+    ],
+    "scripts": {
+        "start": "vite build --watch & vite",
+        "build": "tsc -p . && vite build",
+        "watch": "vite build --watch",
+        "typecheck": "tsc -p .",
+        "types": "cat src/definition-schema.json | json2ts --style.tabWidth=4 > src/definition-schema.d.ts",
+        "preversion": "sh scripts/release-preflight.sh",
+        "version": "npm run build",
+        "postversion": "git push --follow-tags && sh scripts/release-verify.sh",
+        "release": "npm version patch",
+        "release:minor": "npm version minor",
+        "release:major": "npm version major"
+    },
+    "dependencies": {
+        "lit": "^3.3.3"
+    },
+    "devDependencies": {
+        "@rollup/plugin-replace": "^6.0.2",
+        "json-schema-to-typescript": "^15.0.4",
+        "tslib": "^2.8.1",
+        "typescript": "^5.9.3",
+        "vite": "^7.3.0"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/IronFlock/widget-starter.git"
+    },
+    "keywords": [
+        "ironflock",
+        "widget",
+        "starter"
+    ],
+    "bugs": {
+        "url": "https://github.com/IronFlock/widget-starter/issues"
+    },
+    "homepage": "https://github.com/IronFlock/widget-starter#readme"
+}

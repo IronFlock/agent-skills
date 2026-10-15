@@ -1,0 +1,91 @@
+{
+    "title": "Starter Configuration",
+    "description": "TODO: say in one or two sentences what this widget shows and when to use it. This text is the widget's entry in the AI's list of widgets. Example of the form: Shows the latest value of each data series as a large number with its label and unit.",
+    "aiSelection": {
+        "dataShape": "TODO: describe the data this widget consumes. Example of the form: One number per series, dataseries[].data[].value, newest row last; an optional data[].pivot column splits a series into one readout per distinct value.",
+        "useWhen": [
+            "TODO: a situation this widget is the right choice for, naming the properties that express it."
+        ],
+        "notFor": [
+            "TODO: a situation a neighbouring widget handles better, naming it. Example of the form: How the value changes over time — use widget-linechart."
+        ]
+    },
+    "type": "object",
+    "properties": {
+        "title": {
+            "title": "Title",
+            "description": "Heading shown at the top of the tile. Leave it empty to show no heading.",
+            "type": "string",
+            "order": 1
+        },
+        "subTitle": {
+            "title": "Subtitle",
+            "description": "Smaller text below the title, for context such as the location or the data source.",
+            "type": "string",
+            "order": 2
+        },
+        "dataseries": {
+            "title": "Data Series",
+            "description": "The readouts on this tile. Each entry is one labelled number, or one number per distinct pivot value of its data.",
+            "type": "array",
+            "dataDrivenDisabled": true,
+            "order": 3,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "label": {
+                        "title": "Label",
+                        "description": "Name shown above the number, such as 'Spindle speed'. With a pivot it follows the pivot value: '<pivot> - <label>'.",
+                        "type": "string",
+                        "order": 1
+                    },
+                    "unit": {
+                        "title": "Unit",
+                        "description": "Unit shown after the number, such as '°C', 'rpm' or '%'.",
+                        "type": "string",
+                        "order": 2
+                    },
+                    "precision": {
+                        "title": "Decimals",
+                        "description": "Number of decimal places shown. Leave it empty for whole numbers.",
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 6,
+                        "dataDrivenDisabled": true,
+                        "order": 3
+                    },
+                    "color": {
+                        "title": "Value Color",
+                        "description": "Colour of the number. Leave it empty to use the board's text colour.",
+                        "type": "color",
+                        "dataDrivenDisabled": true,
+                        "order": 4
+                    },
+                    "data": {
+                        "title": "Data",
+                        "description": "Rows of this series, oldest first; the newest row is shown. Bind it to a table, with the number in Value and optionally a column in Split Data By.",
+                        "type": "array",
+                        "order": 5,
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "value": {
+                                    "title": "Value",
+                                    "description": "The number to show.",
+                                    "type": "number",
+                                    "order": 1
+                                },
+                                "pivot": {
+                                    "title": "Split Data By",
+                                    "description": "Column whose distinct values each get their own readout, such as a machine id, to show one number per machine.",
+                                    "type": "string",
+                                    "order": 2
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

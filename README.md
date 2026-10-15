@@ -1,7 +1,16 @@
 # IronFlock agent skills
 
-A Claude Code plugin that teaches coding agents to write an IronFlock app's
-integration templates, the files in its `.ironflock/` folder, correctly:
+A Claude Code plugin with two skills for building on the IronFlock IoT platform:
+
+| Skill | For |
+|---|---|
+| `ironflock-templates` | an IronFlock app's integration templates, the files in its `.ironflock/` folder |
+| `ironflock-widgets` | the board widgets themselves: the `@ironflock/widget-*` Lit web components |
+
+## ironflock-templates
+
+Teaches coding agents to write an IronFlock app's integration templates, the files
+in its `.ironflock/` folder, correctly:
 
 | File | Purpose |
 |---|---|
@@ -16,6 +25,27 @@ board widgets, a tool that reads any widget's published configuration schema, an
 validator. The validator catches mistakes the platform would otherwise report only
 at install time, or not at all, such as a widget bound to a column that doesn't
 exist, or a board page that no click can reach.
+
+## ironflock-widgets
+
+Teaches coding agents to create and change IronFlock board widgets: the npm
+packages `@ironflock/widget-*`, whose Lit web components draw the tiles of an
+IronFlock board. It holds the rules, standards and guidelines distilled from the 24
+existing widgets and from how Studio hosts them:
+
+- the contract with Studio: the properties a widget gets, the events it may send,
+  sizing, theming, versions, and the import map of shared libraries;
+- standards for the component code, the config schema (`definition-schema.json`
+  and its `aiSelection` block), the default config, the build and the release;
+- a starter template, and `new_widget.py`, which scaffolds a new widget repository
+  from it;
+- `check_widget.py`, which checks a widget repository against those standards.
+  `--since HEAD` reports only what a change introduced.
+
+The skill works in a checkout of a widget repository, such as
+`ironflock-widgets/widget-gauge`. A new widget also needs changes in IronFlock's
+internal platform repositories; the skill points IronFlock developers to the
+internal runbook for them.
 
 ## Install
 
@@ -52,8 +82,9 @@ app's `.claude/settings.json`. It loads once a person trusts the folder:
 }
 ```
 
-The skill triggers on its own when you work on an IronFlock app. You can also
-invoke it directly as `/ironflock:ironflock-templates`.
+The skills trigger on their own: `ironflock-templates` when you work on an
+IronFlock app, `ironflock-widgets` when you work on a widget. You can also invoke
+them directly as `/ironflock:ironflock-templates` and `/ironflock:ironflock-widgets`.
 
 ## Requirements
 
@@ -63,6 +94,9 @@ invoke it directly as `/ironflock:ironflock-templates`.
   `python3 -m pip install pyyaml jsonschema`.
 - Network access to `registry.npmjs.org` and `cdn.jsdelivr.net` for widget schemas.
   `validate.py --offline` skips the widget checks.
+- For widget work: Node.js 24 and npm, as the widget repositories require.
+  `check_widget.py` and `new_widget.py` need only Python; the checker's type checks
+  use the widget repository's `node_modules`.
 
 ## Layout
 
@@ -70,21 +104,36 @@ invoke it directly as `/ironflock:ironflock-templates`.
 .claude-plugin/marketplace.json          marketplace "ironflock"
 plugins/ironflock/
 ├── .claude-plugin/plugin.json           plugin "ironflock"
-└── skills/ironflock-templates/
-    ├── SKILL.md                         workflow and principles
-    ├── references/
-    │   ├── board-template.md            board format, data bindings, pages, layout
-    │   ├── example-board.yml            a complete, valid three-page board
-    │   ├── widget-catalog.md            which widget for which data (generated)
-    │   └── app-templates.md             data, env, port and ai templates
-    ├── schemas/<name>/v1.yml            JSON Schemas (vendored, see below)
-    └── scripts/
-        ├── validate.py                  validates a whole .ironflock folder
-        ├── board_checks.py              the board-specific part of it
-        └── widget.py                    prints a widget's published schema
+└── skills/
+    ├── ironflock-templates/
+    │   ├── SKILL.md                     workflow and principles
+    │   ├── references/
+    │   │   ├── board-template.md        board format, data bindings, pages, layout
+    │   │   ├── example-board.yml        a complete, valid three-page board
+    │   │   ├── widget-catalog.md        which widget for which data (generated)
+    │   │   └── app-templates.md         data, env, port and ai templates
+    │   ├── schemas/<name>/v1.yml        JSON Schemas (vendored, see below)
+    │   └── scripts/
+    │       ├── validate.py              validates a whole .ironflock folder
+    │       ├── board_checks.py          the board-specific part of it
+    │       └── widget.py                prints a widget's published schema
+    └── ironflock-widgets/
+        ├── SKILL.md                     workflow and the rules
+        ├── references/
+        │   ├── host-contract.md         what Studio gives a widget and expects
+        │   ├── component.md             standards for the Lit component
+        │   ├── config-schema.md         definition-schema.json, default-data.json, aiSelection
+        │   ├── repo-and-release.md      layout, build, demo, testing in Studio, release
+        │   ├── new-widget.md            scaffolding, first publish, platform registration
+        │   └── widget-index.md          the existing widgets, and patterns not to copy
+        ├── assets/widget-template/      the starter widget repository
+        └── scripts/
+            ├── check_widget.py          checks a widget repository
+            └── new_widget.py            scaffolds a widget from the template
 tools/build_widget_catalog.py            regenerates widget-catalog.md
-tests/                                   validator regression tests
-evals/                                   test app, eval prompts and grader for the skill
+tests/                                   validator and widget-checker regression tests
+evals/                                   test app, eval prompts and grader for ironflock-templates
+evals/widgets/                           eval prompts, fixtures and grader for ironflock-widgets
 ```
 
 ## Maintenance
@@ -109,10 +158,41 @@ you have to bump it on every change, or users keep the old copy.
 `python3 tests/run.py`. It requires the example board to stay clean and every
 mistake in `tests/boards/broken.yml` to be reported.
 
+**Test the widget scripts** after changing `check_widget.py`, `new_widget.py` or the
+template: `python3 tests/widget_checks.py`. It scaffolds a widget, requires the
+finished scaffold to produce no findings, and plants one known mistake per case,
+each of which the checker must report. It runs offline and without Node.js. After
+changing the template, also build a scaffold for real: `new_widget.py sample --dest
+<tmp>/widget-sample`, then `npm install && npm run build` there and
+`check_widget.py <tmp>/widget-sample --typecheck`, which then also compares the
+generated types with json2ts' output.
+
+**Keep the widget skill in step with the platform.** The template's release
+infrastructure (`scripts/`, `.github/workflows/`, `.npmrc`, configs) is a copy of the
+fleet's; when the widget repos change theirs, copy the change into
+`assets/widget-template/`. `check_widget.py` keeps a snapshot of Studio's import
+map (`IMPORT_MAP_SNAPSHOT`) for machines without a Studio checkout next to
+`ironflock-widgets/`, and a list of the registered widgets (`KNOWN_WIDGETS`, the
+same as `CATEGORIES` in `tools/build_widget_catalog.py`); update both when Studio's
+import map or the widget list changes. Calibrate a checker change against the real
+widgets: in a checkout with all widget repos, every ERROR the checker reports on
+them must be a real defect.
+
 **Evaluate the skill** after changing its instructions: run each prompt in
 `evals/evals.json` against a fresh copy of `evals/fixtures/machine-monitor`, once
 with the skill and once without, then score the runs with
 `uv run evals/grade.py <iteration-dir>` (layout: `<eval-name>/<config>/app`).
+
+**Evaluate the widget skill** the same way with `evals/widgets/`:
+`python3 evals/widgets/grade.py setup <iteration-dir>` clones the fixture widgets
+(pinned commits, no `origin` remote), you run each prompt of
+`evals/widgets/evals.json` in `<iteration-dir>/<eval>/<config>/` with and without the
+skill (telling the agent never to publish, release, commit or push) and save its
+report as `REPORT.md` there, and `python3 evals/widgets/grade.py grade
+<iteration-dir>` scores the runs. On 2026-10-15 the skill scored 26/26 against
+24/26 without it. Agents without the skill did the coding work well, but copied the
+fleet's drift into new code: stale scripts and docs, dead schema keywords, and
+routing texts too long for the AI's prompt.
 
 **Check the manifests** before pushing:
 

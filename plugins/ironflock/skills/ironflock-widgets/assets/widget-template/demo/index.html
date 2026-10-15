@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>widget-starter demo</title>
+        <style>
+            html,
+            body {
+                margin: 0;
+                height: 100%;
+            }
+
+            body {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+                padding: 16px;
+                box-sizing: border-box;
+                font-family: Roboto, Helvetica, Arial, sans-serif;
+                background: var(--re-background-color);
+                color: var(--re-text-color);
+            }
+
+            .controls {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 16px;
+                align-items: center;
+                font-size: 14px;
+            }
+
+            /* Stands in for Studio's widget-item: the host paints the tile, and the
+               widget fills it. Drag the bottom-right corner to resize it. */
+            #tile {
+                resize: both;
+                overflow: hidden;
+                width: 480px;
+                height: 320px;
+                min-width: 20px;
+                min-height: 20px;
+                box-sizing: border-box;
+                border: 1px solid var(--re-tile-border-color);
+                border-radius: var(--re-tile-border-radius);
+                background-color: var(--re-tile-background-color);
+                color: var(--re-text-color);
+            }
+
+            #tile > * {
+                width: 100%;
+                height: 100%;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div class="controls">
+            <label>Theme <select id="theme"></select></label>
+            <label>
+                Config
+                <select id="config">
+                    <option value="default">default-data.json</option>
+                    <option value="empty">empty ({})</option>
+                    <option value="broken">malformed</option>
+                </select>
+            </label>
+            <label><input type="checkbox" id="live" checked /> live data</label>
+        </div>
+        <div id="tile"></div>
+
+        <script type="module">
+            import { render } from 'lit'
+            import { html, unsafeStatic } from 'lit/static-html.js'
+            import pkg from '../package.json'
+            import defaults from '../src/default-data.json'
+            import light from './themes/light.json'
+            import dark from './themes/dark.json'
+            import '../src/widget-starter.ts'
+
+            const tag = unsafeStatic(`widget-starter-${pkg.version}`)
+            const tile = document.getElementById('tile')
+            const themes = { '---': undefined, light, dark }
+
+            // A config the widget has to survive: nulls, wrong types, a null list slot.
+            const broken = {
+                title: 42,
+                dataseries: [null, { label: 'Wrong types', precision: 'two', data: [null, { value: 'n/a' }] }]
+            }
+            const configs = { default: defaults, empty: {}, broken }
+
+            let theme = { theme_name: 'light', theme_object: light }
+            let config = structuredClone(defaults)
+
+            // Studio sets these on the board, and a theme choice overwrites them
+            // from the theme the way Studio's board style settings do.
+            function applyBoardStyle(themeObject) {
+                const line = themeObject?.timeAxis?.splitLine?.lineStyle?.color
+                const style = {
+                    '--re-background-color': themeObject?.backgroundColor ?? '#fefefe',
+                    '--re-text-color': themeObject?.title?.textStyle?.color ?? '#334d5c',
+                    '--re-tile-background-color': themeObject?.backgroundColor ?? '#ffffff80',
+                    '--re-tile-border-color': (Array.isArray(line) ? line[0] : line) ?? '#fefefe',
+                    '--re-tile-border-radius': '8px'
+                }
+                for (const [name, value] of Object.entries(style)) document.body.style.setProperty(name, value)
+            }
+
+            function draw() {
+                render(html`<${tag} .inputData=${config} .theme=${theme}></${tag}>`, tile)
+            }
+
+            // Like the host: every data update delivers a NEW config object. Nothing
+            // the widget already holds is ever mutated.
+            function tick() {
+                if (!Array.isArray(config.dataseries)) return
+                const next = structuredClone(config)
+                for (const ds of next.dataseries) {
+                    if (!ds || !Array.isArray(ds.data)) continue
+                    const last = ds.data.at(-1)
+                    const value = typeof last?.value === 'number' ? last.value : 50
+                    ds.data = [...ds.data, { ...last, value: Math.round((value + (Math.random() - 0.5) * 10) * 10) / 10 }].slice(-20)
+                }
+                config = next
+                draw()
+            }
+
+            const themeSelect = document.getElementById('theme')
+            for (const name of Object.keys(themes)) themeSelect.add(new Option(name, name, false, name === 'light'))
+            themeSelect.addEventListener('change', () => {
+                theme = { theme_name: themeSelect.value, theme_object: themes[themeSelect.value] }
+                applyBoardStyle(theme.theme_object)
+                draw()
+            })
+            document.getElementById('config').addEventListener('change', (e) => {
+                config = structuredClone(configs[e.target.value])
+                draw()
+            })
+            setInterval(() => document.getElementById('live').checked && tick(), 1000)
+
+            applyBoardStyle(light)
+            draw()
+        </script>
+    </body>
+</html>

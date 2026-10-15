@@ -1,0 +1,14 @@
+{
+    "title": "Metrics",
+    "dataseries": [
+        {
+            "label": "Metric A",
+            "precision": 1,
+            "data": [{ "value": 42.5 }]
+        },
+        {
+            "label": "Metric B",
+            "data": [{ "value": 17 }]
+        }
+    ]
+}

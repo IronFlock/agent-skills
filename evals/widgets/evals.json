@@ -1,0 +1,31 @@
+{
+  "skill_name": "ironflock-widgets",
+  "fixtures": {
+    "widget-value": { "repo": "https://github.com/IronFlock/widget-value.git", "commit": "502b5f8", "tag": "1.1.36" },
+    "widget-gauge": { "repo": "https://github.com/IronFlock/widget-gauge.git", "commit": "02beb1a", "tag": "1.7.43" },
+    "widget-switch": { "repo": "https://github.com/IronFlock/widget-switch.git" }
+  },
+  "evals": [
+    {
+      "id": 1,
+      "name": "edit-value",
+      "fixture": ["widget-value"],
+      "prompt": "Users of our IronFlock widget widget-value want each number to turn a warning colour when it rises above a threshold they configure. Add that to the widget in ./ironflock-widgets/widget-value (per value display: the threshold and the colour to use). It must keep working for the existing boards that use this widget.",
+      "expected_output": "A threshold (number) and a warning colour (color) per value display in the schema, with title, description and order; regenerated types; old configs render as before; npm run build passes; check_widget.py --since HEAD reports nothing new; no version bump, commit or release."
+    },
+    {
+      "id": 2,
+      "name": "fix-gauge",
+      "fixture": ["widget-gauge"],
+      "prompt": "Bug report from a customer: on a live board, widget-gauge shows readings that are several hours old even though they set 'Maximum Latency' to 60 seconds. The gauge should hide stale values then. Please find the cause and fix it in ./ironflock-widgets/widget-gauge.",
+      "expected_output": "Names the cause (bound timestamps arrive as epoch milliseconds, which Date.parse turns into NaN, so the check never runs) and fixes it with a parser that accepts numbers and ISO strings; build passes; check_widget.py --since HEAD reports nothing new; no release."
+    },
+    {
+      "id": 3,
+      "name": "new-widget",
+      "fixture": ["widget-value", "widget-gauge", "widget-switch"],
+      "prompt": "Create a new IronFlock board widget called widget-progress in ./ironflock-widgets (the other widget repos there are examples of ours). It shows one horizontal progress bar per data row: a label, the current value, a target value, the bar filled to value/target, and the percentage. Users bind it to a table in the board editor. Set it up like our other widget repos so we can publish it later, but don't publish anything now.",
+      "expected_output": "A widget-progress repo laid out like the fleet (package @ironflock/widget-progress, versioned element, release pipeline), a bindable array of rows, aiSelection that routes to neighbouring widgets, a valid default config, thumbnails, no checker findings, and a report listing the platform registration still needed; nothing committed or published."
+    }
+  ]
+}
