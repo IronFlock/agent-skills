@@ -330,14 +330,16 @@ A form widget for collecting user input and storing it in database tables. Use t
 
 A toggle switch widget for displaying and controlling binary device states. Use this widget to show ON/OFF status indicators that can also trigger device actions when clicked.
 
-**Data shape:** One value per switch, interpreted as ON or OFF through stateMap, plus an optional device or app action and topic fired on click. Both displays and controls.
+**Data shape:** One value per switch, interpreted as ON or OFF through stateMap, plus an optional device or app action and topic fired on click. Both displays and controls. A switch with a parameterKey needs no data instead: it writes parameterValue (default 'true') into the URL parameter named by parameterKey while ON and removes it while OFF, and its position follows that URL parameter.
 
 **Use when:**
 - A binary device state should be shown and changed from the dashboard — a pump, a light, a valve, an enable flag.
 - An operator needs a control, not only a readout.
 - Several related toggles belong together in one control panel.
+- A single on/off view filter — 'only alarms', 'only line A' — should narrow other widgets: set parameterKey and parameterValue, and give each widget to be narrowed a filterAnd condition with useFilter: true and the parameterKey as its value. While the switch is OFF those widgets show unfiltered data.
 
 **Not for:**
+- Choosing one of several filter values, or a filter whose OFF state is another value rather than 'everything' — use widget-filter-dropdown.
 - A status the user must not be able to change — use widget-signal, which is display-only.
 - More than two states — use widget-signal for the indicator, or widget-scada for an industrial symbol.
 - Values that are entered and stored rather than commanded — use widget-form.
