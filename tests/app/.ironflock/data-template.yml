@@ -57,3 +57,15 @@ data:
         - {id: tsp, name: Day, description: Start of the day (UTC), dataType: timestamp}
         - {id: machine_id, name: Machine, description: Machine identifier, dataType: string}
         - {id: energy_kwh, name: Energy, description: Energy used that day in kWh, dataType: numeric}
+    - tablename: machine_alarm_links
+      description: One link per machine and state, for a menu below the machine pages.
+      materialize: false
+      schedule: "* * * * *"
+      sql: >-
+        SELECT DISTINCT ON (machine_id, state) machine_id, state,
+        '/machines/' || machine_id || '/alarms/' || state AS route
+        FROM machine_status ORDER BY machine_id, state, tsp DESC
+      columns:
+        - {id: machine_id, name: Machine, description: Machine identifier, dataType: string}
+        - {id: state, name: State, description: Operating state, dataType: string}
+        - {id: route, name: Route, description: Board route of the machine's alarm page for that state, dataType: string}

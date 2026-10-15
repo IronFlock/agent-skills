@@ -15,7 +15,7 @@ The skill gives the agent each template's schema and rules, a catalog of the 24
 board widgets, a tool that reads any widget's published configuration schema, and a
 validator. The validator catches mistakes the platform would otherwise report only
 at install time, or not at all, such as a widget bound to a column that doesn't
-exist.
+exist, or a board page that no click can reach.
 
 ## Install
 

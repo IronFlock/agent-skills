@@ -5,6 +5,9 @@
 # Three pages: an overview (/), a machine list (/machines) and a detail page per
 # machine (/machines/*) filtered by the URL. Shows static and data-driven
 # navigation, aggregation, latest-per-entity rows and a fully covered grid.
+# Every page is reachable by clicking and leads back: the sidenav's title links
+# home, and no menu item links to '/', because an item is highlighted whenever
+# the current route starts with its route (an item for '/' would always be on).
 name: machine-monitor
 widgets:
     - layout_id: nav
@@ -14,9 +17,6 @@ widgets:
           title: $str:Machine Monitor
           route: $str:/
           navItems:
-              - label: $str:Overview
-                iconName: $str:dashboard
-                route: $str:/
               - label: $str:Machines
                 iconName: $str:precision_manufacturing
                 route: $str:/machines/

@@ -248,6 +248,7 @@ class DataModel:
 
     tables: dict[str, dict[str, str]] = field(default_factory=dict)  # name -> col -> dataType
     transforms: set[str] = field(default_factory=set)
+    transform_sql: dict[str, str] = field(default_factory=dict)  # name -> its SQL
     consumes: set[str] = field(default_factory=set)
     present: bool = False
 
@@ -329,6 +330,8 @@ def check_data(doc: Doc, report: Report) -> DataModel:
             report.error(doc, tpath + ["schedule"], f"'{schedule}' is not a cron expression")
         if isinstance(name, str):
             model.transforms.add(name)
+            if isinstance(transform.get("sql"), str):
+                model.transform_sql[name] = transform["sql"]
             model.tables[name] = {
                 c.get("id"): c.get("dataType")
                 for c in transform.get("columns") or []

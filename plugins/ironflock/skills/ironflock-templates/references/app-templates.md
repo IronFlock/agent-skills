@@ -55,6 +55,25 @@ read them.
 - Transforms are SQL views over the app's own tables. Boards can bind to them, but
   board-side aggregation only works on plain tables. Do the aggregation in the
   transform's SQL instead.
+- **A transform reaches open boards only on its `schedule` tick**, not when a table
+  underneath changes. With `* * * * *` a new record shows up in a transform-driven
+  menu or list up to a minute late. Give the views behind menus, lists and live
+  states a seconds tick: a sixth, leading field is seconds (`*/5 * * * * *`).
+- **Mark app-internal tables and transforms `private: true`.** Decide this for
+  every table. Users of the app should see only data that means something to them:
+  values they analyze, chart, alarm on or build dashboards with. Internal details
+  are different. Examples are job queues, sync cursors, retry and connection state,
+  raw protocol frames, calibration internals, debug output and staging rows that a
+  transform cleans up. Ask: would a user of this app want to chart this, filter by
+  it or set an alarm on it? If not, or if it would confuse them more than it helps,
+  make it private. If they would, leave the default (`false`, shared).
+  - No user can reach a private table directly. It isn't offered for their own
+    dashboards or alarms, the SQL workbench, data export or AI agents, and other
+    apps can't read it, not even through `consumes`.
+  - Only the app itself uses it: its code, its transforms and its board. Users see
+    whatever those show, so that part is your responsibility. A shared transform
+    over a private table, or a board widget bound to one, should show only what
+    users should see.
 - Add `downsample` to tables that will back charts spanning weeks or months.
 - To read another app's tables, list it under `consumes:`. Board widgets that bind
   to those tables then need `provider_app` on their data reference (see
@@ -126,7 +145,9 @@ AI agents the app contributes to the IronFlock assistant.
   `register_device_function()` in new code.
 - `data_access: true` gives the agent read-only SQL over the app's own tables.
   The agent learns the columns from data-template.yml descriptions, so write those
-  well instead of repeating them in `system_prompt`.
+  well instead of repeating them in `system_prompt`. Private tables and transforms
+  are out of its reach, like any agent's. If it needs part of one, add a shared
+  transform with that part.
 
 ## Python SDK quick reference
 

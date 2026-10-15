@@ -9,7 +9,10 @@ checks what a structural schema cannot see:
 - every data binding against data-template.yml (tables, columns, transforms,
   consumed apps) and the query rules fleetdb applies (time window, aggregation),
 - the layout: ids, pages, positions, screen coverage, navigation routes, and
-  filter widgets wired to the widgets they are meant to filter.
+  filter widgets wired to the widgets they are meant to filter,
+- navigation: menu items that would be highlighted together with others, and
+  whether every page can be reached from the home page by clicking, and left
+  again, following links the way the widgets and the board navigator resolve them.
 
 The rules follow what the board actually does when it renders a widget and
 queries its data, not the stricter or looser habits of other validators.
@@ -220,6 +223,7 @@ def check_board(doc, report, data, offline: bool) -> None:
             check_widget(board, i, w, offline, schema_cache, placements)
 
     check_routes(board, layout, placements)
+    check_navigation(board, layout, placements)
     check_filter_wiring(board)
     if offline:
         board.warn([], "--offline: widget configs were not checked against their definition schemas")
@@ -248,14 +252,12 @@ def check_layout(board: Board, layout: dict, widget_ids: dict[str, int], style: 
     snapped = style.get("gridSnap") is not False
     overflow_y = bool(style.get("overflow"))
     overflow_x = bool(style.get("overflowX"))
-    multi_page = bool(layout.get("subRoutes"))
 
     for route, page, path in iter_pages(layout, [], ["layout"]):
         label = "/" + "/".join(route)
         grid = page.get("gridLayout") if isinstance(page.get("gridLayout"), list) else []
         seen: set[str] = set()
         boxes = []
-        has_nav = False
         has_aspect = False
         for j, pos in enumerate(grid):
             if not isinstance(pos, dict):
@@ -280,12 +282,6 @@ def check_layout(board: Board, layout: dict, widget_ids: dict[str, int], style: 
                 if snapped and not overflow_y and y + h > rows:
                     board.warn(ppath, f"reaches row {y + h:g} but the grid has {rows:g}; the widget is cut off")
                 boxes.append((x, y, w, h, ppath))
-        board_widgets = board.doc.data.get("widgets") or []
-        for pid in seen:
-            idx = widget_ids.get(pid)
-            if idx is not None and isinstance(board_widgets[idx], dict):
-                if board_widgets[idx].get("package_name") in NAV_WIDGETS:
-                    has_nav = True
 
         if not grid:
             board.warn(path + ["gridLayout"], f"page {label} has no widgets")
@@ -298,8 +294,6 @@ def check_layout(board: Board, layout: dict, widget_ids: dict[str, int], style: 
                     f"widgets cover {coverage:.0%} of page {label} ({columns:g}x{rows:g} grid); without "
                     "overflow the grid is scaled onto the whole screen, so the rest shows as empty space",
                 )
-        if multi_page and route and not has_nav:
-            board.warn(path + ["gridLayout"], f"page {label} has no navigation widget, so users cannot leave it from the board")
 
     for pid, paths in orphans.items():
         where = f"{len(paths)} page slots refer" if len(paths) > 1 else "a page slot refers"
@@ -791,6 +785,387 @@ def check_routes(board: Board, layout: dict | None, placements: dict) -> None:
                 candidates = [p[:-1] + target if p else target for p in pages]
             if not any(resolve(layout, c) for c in candidates):
                 board.warn(rpath, f"route '{route}' matches no page; clicking it lands on the board's home page")
+
+
+# --------------------------------------------------------------------------
+# Navigation: highlighting and reachability
+# --------------------------------------------------------------------------
+
+MENU_WIDGETS = {"widget-navbar", "widget-sidenav"}
+
+#: A URL segment that holds a value (an id from a data row, or copied from the
+#: current URL by a '*'), not a fixed page name: it can only open a '*' page.
+VALUE = "\x00"
+
+HOME_ITEM = (
+    "this item links to the home page, so it is highlighted on every page: a menu item is "
+    "highlighted whenever the current route starts with its route, and every route starts "
+    "with '/'. Link home from the menu's title (route: $str:/) instead"
+)
+
+SQL_TOKEN = re.compile(r"'(?:[^']|'')*'|\"(?:[^\"]|\"\")*\"|\|\||::|[(),]|[A-Za-z_][A-Za-z0-9_$.]*|\S")
+
+
+@dataclass
+class NavLink:
+    """One way a navigation widget moves the board to another page."""
+
+    path: list  # where the route is written in the board file
+    kind: str  # "route": a route string; "data": a data-driven menu's column; "up": navbutton to the parent
+    route: str = ""
+    variables: dict = field(default_factory=dict)  # {{label}} -> value, None when it is bound to data
+    table: Any = None
+    column: Any = None
+    provider: Any = None
+    widget: int = -1
+
+
+def nav_links(i: int, w: dict) -> list[NavLink]:
+    """The links of one navigation widget, as the widget resolves them on a click."""
+    cfg = w.get("chartconfig")
+    if not isinstance(cfg, dict):
+        return []
+    base = ["widgets", i, "chartconfig"]
+    package = w.get("package_name")
+    links: list[NavLink] = []
+    if package in MENU_WIDGETS:
+        title = cfg.get("title")
+        if isinstance(title, dict) or (isinstance(title, str) and decode(title)[1] not in ("", None)):
+            # The title navigates on a click; without a route it opens the home page.
+            link = route_link(base + ["route"], cfg.get("route"), cfg.get("variables"), i)
+            if link:
+                links.append(link)
+        items = cfg.get("navItems")
+        if isinstance(items, list):
+            for k, item in enumerate(items):
+                if isinstance(item, dict):
+                    link = route_link(base + ["navItems", k, "route"], item.get("route"), item.get("variables"), i)
+                    if link:
+                        links.append(link)
+        elif isinstance(items, dict) and isinstance(items.get("tableRef"), dict):
+            ref = items["tableRef"]
+            fmt = ref.get("format") if isinstance(ref.get("format"), dict) else {}
+            raw = fmt.get("route")
+            rpath = base + ["navItems", "tableRef", "format", "route"]
+            if isinstance(raw, str) and raw:
+                kind, value = decode(raw)
+                if kind == "str":
+                    links.append(NavLink(rpath, "route", route=str(value), widget=i))
+                elif kind is None:
+                    links.append(NavLink(rpath, "data", table=ref.get("tablename"), column=raw, provider=ref.get("provider_app"), widget=i))
+    elif package == "widget-navbutton":
+        raw = cfg.get("route")
+        if isinstance(raw, str) and decode(raw)[1] == "":
+            links.append(NavLink(base + ["route"], "up", widget=i))  # an empty route opens the parent page
+        else:
+            link = route_link(base + ["route"], raw, cfg.get("variables"), i)
+            if link:
+                links.append(link)
+    return links
+
+
+def route_link(path: list, raw: Any, variables: Any, i: int) -> NavLink | None:
+    """A route string link; a route bound to data cannot be followed (None)."""
+    if isinstance(raw, dict):
+        return None
+    route = decode(raw)[1] if isinstance(raw, str) else ""
+    resolved: dict = {}
+    for var in variables if isinstance(variables, list) else []:
+        if not isinstance(var, dict) or not isinstance(var.get("label"), str):
+            continue
+        value = var.get("value")
+        resolved[decode(var["label"])[1]] = str(decode(value)[1]) if isinstance(value, str) else None
+    return NavLink(path, "route", route=str(route), variables=resolved, widget=i)
+
+
+def follow(link: NavLink, url: tuple, trailing: bool, data: Any) -> tuple[tuple, bool] | None:
+    """Where a click on `link` leads from a page whose URL is `url` (its segments,
+    and whether it ends with '/'): (segments, trailing slash), or None.
+
+    Mirrors the widgets' resolveRoute (variables, then '*' copied from the
+    current URL, after which the route has lost its trailing slash) and the board
+    navigator (an empty route opens home; a relative route replaces the last
+    segment of the current URL)."""
+    if link.kind == "up":
+        return url[:-1], True
+    if link.kind == "data":
+        absolute = data_route(data, link)
+        if absolute is not None:
+            return absolute
+        base = url if trailing else url[:-1]
+        return base + (VALUE,), False
+    route = link.route
+    for label, value in link.variables.items():
+        route = route.replace("{{%s}}" % label, VALUE if value is None else value)
+    route = re.sub(r"\{\{[^}]*\}\}", VALUE, route)
+    route = re.split(r"[?#]", route, maxsplit=1)[0]
+    if not route:
+        return (), True
+    if "*" in route:
+        segs = [s for s in route.split("/") if s]
+        segs = [(url[k] if k < len(url) else "") if s == "*" else s for k, s in enumerate(segs)]
+        route = ("/" if route.startswith("/") else "") + "/".join(s for s in segs if s)
+    parts = tuple(s for s in route.split("/") if s)
+    if route.startswith("/"):
+        return parts, route.endswith("/") or not parts
+    base = url if trailing else url[:-1]
+    return base + parts, route.endswith("/")
+
+
+def data_route(data: Any, link: NavLink) -> tuple[tuple, bool] | None:
+    """The absolute route a transform computes for a data-driven menu, if its SQL
+    builds one from string literals: `'/line/' || line_id || '/andon/' || id`."""
+    sql = getattr(data, "transform_sql", {}).get(link.table) if not link.provider else None
+    if not sql or not isinstance(link.column, str):
+        return None
+    return route_from_sql(sql, link.column)
+
+
+def data_route_known(data: Any, link: NavLink) -> bool:
+    """Whether the validator can tell where a data-driven menu's items lead: an
+    absolute route a transform computes, or else (assumed) a relative id from one
+    of the app's own tables or transforms. Another app's table is not known."""
+    return not link.provider
+
+
+def route_from_sql(sql: str, column: str) -> tuple[tuple, bool] | None:
+    tokens = SQL_TOKEN.findall(sql)
+    for k, tok in enumerate(tokens):
+        if tok.upper() == "AS" and k + 1 < len(tokens) and tokens[k + 1].strip('"').lower() == column.lower():
+            pattern = route_pattern(select_item(tokens, k))
+            if pattern is not None:
+                return pattern
+    return None
+
+
+def select_item(tokens: list[str], as_index: int) -> list[str]:
+    """The tokens of the select-list expression that ends at an `AS` token."""
+    depth, k = 0, as_index - 1
+    while k >= 0:
+        tok = tokens[k]
+        if tok == ")":
+            depth += 1
+        elif tok == "(":
+            if depth == 0:
+                break
+            depth -= 1
+        elif depth == 0 and (tok == "," or tok.upper() in ("SELECT", "DISTINCT")):
+            break
+        k -= 1
+    return tokens[k + 1 : as_index]
+
+
+def split_top(tokens: list[str], separator: str) -> list[list[str]]:
+    parts, current, depth = [], [], 0
+    for tok in tokens:
+        if tok == "(":
+            depth += 1
+        elif tok == ")":
+            depth -= 1
+        if depth == 0 and tok == separator:
+            parts.append(current)
+            current = []
+        else:
+            current.append(tok)
+    parts.append(current)
+    return parts
+
+
+def route_pattern(expr: list[str]) -> tuple[tuple, bool] | None:
+    if len(expr) >= 3 and expr[0].lower() == "concat" and expr[1] == "(" and expr[-1] == ")":
+        parts = split_top(expr[2:-1], ",")
+    else:
+        parts = split_top(expr, "||")
+    text = ""
+    for part in parts:
+        literal = part and part[0].startswith("'") and all(t == "::" or re.match(r"[A-Za-z_]", t) for t in part[1:])
+        text += part[0][1:-1].replace("''", "'") if literal else VALUE
+    if not text.startswith("/"):
+        return None
+    return tuple(VALUE if VALUE in s else s for s in text.split("/") if s), text.endswith("/")
+
+
+def page_of(layout: dict, segments: tuple) -> tuple | None:
+    """The page the board navigator shows for a URL: exact segment, else '*'."""
+    node, pattern = layout, ()
+    for seg in segments:
+        subs = node.get("subRoutes") if isinstance(node.get("subRoutes"), dict) else {}
+        if seg != VALUE and isinstance(subs.get(seg), dict):
+            node, pattern = subs[seg], pattern + (seg,)
+        elif isinstance(subs.get("*"), dict):
+            node, pattern = subs["*"], pattern + ("*",)
+        else:
+            return None
+    return pattern
+
+
+def page_label(pattern: tuple) -> str:
+    return "/" + "/".join(pattern)
+
+
+def check_menu_highlighting(board: Board, i: int, w: dict) -> None:
+    """Items are highlighted while the current route starts with theirs, so an
+    item for '/' is always on, and an item whose route starts another item's is
+    on together with it."""
+    cfg = w.get("chartconfig")
+    if not isinstance(cfg, dict):
+        return
+    base = ["widgets", i, "chartconfig"]
+    items = cfg.get("navItems")
+    if isinstance(items, dict) and isinstance(items.get("tableRef"), dict):
+        fmt = items["tableRef"].get("format")
+        raw = fmt.get("route") if isinstance(fmt, dict) else None
+        if isinstance(raw, str) and decode(raw)[0] == "str" and str(decode(raw)[1]).strip("/ ") == "":
+            board.error(base + ["navItems", "tableRef", "format", "route"], HOME_ITEM)
+        return
+    if not isinstance(items, list):
+        return
+    absolute = []
+    for k, item in enumerate(items):
+        if not isinstance(item, dict) or isinstance(item.get("route"), dict):
+            continue
+        raw = item.get("route")
+        route = str(decode(raw)[1]) if isinstance(raw, str) else ""
+        route = re.split(r"[?#]", route, maxsplit=1)[0].strip()
+        ipath = base + ["navItems", k] + (["route"] if "route" in item else [])
+        if route.strip("/") == "":
+            board.error(ipath, HOME_ITEM)
+        elif route.startswith("/") and "{{" not in route:
+            label = item.get("label")
+            name = str(decode(label)[1]) if isinstance(label, str) else f"item {k}"
+            absolute.append((k, "/" + "/".join(s for s in route.split("/") if s), name, ipath))
+    for k, route, name, ipath in absolute:
+        deeper = [other for j, r, other, _ in absolute if j != k and r.startswith(route) and r != route]
+        same = [other for j, r, other, _ in absolute if j < k and r == route]
+        if deeper:
+            board.warn(
+                ipath,
+                f"item '{name}' ({route}) is highlighted together with "
+                + ", ".join(f"'{d}'" for d in deeper)
+                + " on their pages, because an item is highlighted whenever the current route starts "
+                "with its route (compared by characters). Keep a route that starts another item's "
+                "route out of the same menu",
+            )
+        if same:
+            board.warn(ipath, f"item '{name}' has the same route as '{same[0]}' ({route}), so both are always highlighted together")
+
+
+def check_navigation(board: Board, layout: dict | None, placements: dict) -> None:
+    """Every page must be reachable from the home page by clicking, and lead back.
+
+    Walks the board the way a user does: start on '/', follow every link of every
+    navigation widget on the current page, as the widget and the board navigator
+    resolve it. A URL is tracked with its trailing slash, because a relative link
+    resolves against it."""
+    widgets = board.doc.data.get("widgets") or []
+    links_of: dict[int, list[NavLink]] = {}
+    for i, w in enumerate(widgets):
+        if isinstance(w, dict) and w.get("package_name") in NAV_WIDGETS:
+            links_of[i] = nav_links(i, w)
+            if w.get("package_name") in MENU_WIDGETS:
+                check_menu_highlighting(board, i, w)
+    if not isinstance(layout, dict):
+        return
+    pages = {tuple(route): path for route, _page, path in iter_pages(layout, [], ["layout"])}
+    on_page: dict[tuple, list[NavLink]] = {}
+    for i, links in links_of.items():
+        for route in placements.get(widgets[i].get("layout_id"), []):
+            on_page.setdefault(tuple(route), []).extend(links)
+            for link in links:
+                check_star_depth(board, link, tuple(route))
+    if len(pages) < 2:
+        return
+
+    start = ((), True)
+    seen, edges, queue = {start}, {}, [start]
+    while queue:
+        state = queue.pop()
+        url, trailing = state
+        out = edges.setdefault(state, set())
+        for link in on_page.get(page_of(layout, url), ()):
+            target = follow(link, url, trailing, board.data)
+            if target is None or page_of(layout, target[0]) is None:
+                continue
+            out.add(target)
+            if target not in seen:
+                seen.add(target)
+                queue.append(target)
+
+    reached: dict[tuple, list] = {}
+    for state in seen:
+        reached.setdefault(page_of(layout, state[0]), []).append(state)
+    back, incoming = {s for s in seen if not s[0]}, {}
+    for state, targets in edges.items():
+        for target in targets:
+            incoming.setdefault(target, set()).add(state)
+    stack = list(back)
+    while stack:
+        for state in incoming.get(stack.pop(), ()):
+            if state not in back:
+                back.add(state)
+                stack.append(state)
+
+    unknown = sorted({
+        str(widgets[link.widget].get("layout_id"))
+        for page in reached
+        for link in on_page.get(page, ())
+        if link.kind == "data" and not data_route_known(board.data, link)
+    })
+    for pattern, path in pages.items():
+        label = page_label(pattern)
+        if pattern not in reached:
+            message = f"page {label} cannot be reached by clicking from the home page: " + unreachable_hint(
+                board, pattern, reached, on_page, widgets
+            )
+            if unknown:
+                board.warn(path, message + f" (the validator could not follow the data-driven menu {', '.join(repr(u) for u in unknown)}; check by hand)")
+            else:
+                board.error(path, message)
+        elif any(state not in back for state in reached[pattern]):
+            board.error(
+                path,
+                f"page {label} has no way back to the home page: put the board's menu on it, whose "
+                "title links home (route: $str:/), or a widget-navbutton to /",
+            )
+
+
+def unreachable_hint(board: Board, pattern: tuple, reached: dict, on_page: dict, widgets: list) -> str:
+    parent = pattern[:-1]
+    if pattern and pattern[-1] == "*" and parent in reached:
+        relative = [
+            link for link in on_page.get(parent, ())
+            if link.kind == "data" and data_route(board.data, link) is None
+        ]
+        if relative and not any(trailing for _url, trailing in reached[parent]):
+            lid = widgets[relative[0].widget].get("layout_id")
+            return (
+                f"the data-driven menu '{lid}' on {page_label(parent)} has relative item routes, which "
+                f"open pages next to {page_label(parent)}, not below it, because its address never ends "
+                "with '/' (a route with '*' drops it). Bind the items' route to an absolute route "
+                "computed in a transform: '/a/' || id_column || ... AS route"
+            )
+    if pattern and pattern[-1] == "*":
+        return (
+            f"no navigation widget on a reachable page links to it. Give {page_label(parent)} a "
+            "data-driven menu whose items lead to these pages"
+        )
+    return "no navigation widget on a reachable page links to it. Add it to a menu, or link it with a widget-navbutton"
+
+
+def check_star_depth(board: Board, link: NavLink, page: tuple) -> None:
+    """A '*' copies the current URL's segment at its position; on a page with
+    fewer segments there is nothing to copy, and the link opens a shorter route."""
+    if link.kind != "route" or "*" not in link.route:
+        return
+    segs = [s for s in re.split(r"[?#]", link.route, maxsplit=1)[0].split("/") if s]
+    missing = [k + 1 for k, s in enumerate(segs) if s == "*" and k >= len(page)]
+    if missing:
+        resolved = "/" + "/".join(s for k, s in enumerate(segs) if s != "*" or k < len(page))
+        board.warn(
+            link.path,
+            f"'*' at segment {missing[0]} has nothing to copy on page {page_label(page)}, which has "
+            f"{len(page)} segment(s), so the link opens {resolved}",
+        )
 
 
 def check_filter_wiring(board: Board) -> None:

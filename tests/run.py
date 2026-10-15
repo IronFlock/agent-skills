@@ -9,7 +9,8 @@ board as board-template.yml, run scripts/validate.py and compare its findings:
 
 - the example board must produce no findings at all;
 - every other board must produce each finding its `# expect:` lines list, as
-  `# expect: LEVEL <exact path> :: <part of the message>`.
+  `# expect: LEVEL <exact path> :: <part of the message>`, and no finding at a
+  path its `# expect-none: <exact path>` lines list.
 
 Needs network access for the widget schemas (cached after the first run).
 """
@@ -29,6 +30,7 @@ VALIDATE = SKILL / "scripts/validate.py"
 EXAMPLE = SKILL / "references/example-board.yml"
 FINDING = re.compile(r"^(ERROR|WARN)\s+(\S+) (\S+): (.*)$")
 EXPECT = re.compile(r"^# expect:\s*(ERROR|WARN)\s+(\S+)\s+::\s+(.*)$")
+EXPECT_NONE = re.compile(r"^# expect-none:\s*(\S+)\s*$")
 
 
 def run_board(board: Path) -> list[tuple[str, str, str]]:
@@ -55,6 +57,8 @@ def main() -> int:
                 for lvl, path, text in expected
                 if not any(f[0] == lvl and f[1] == path and text in f[2] for f in found)
             ]
+            clean = [m[1] for m in map(EXPECT_NONE.match, board.read_text().splitlines()) if m]
+            problems += [f"unexpected {lvl} {path}: {msg}" for lvl, path, msg in found if path in clean]
         status = "ok  " if not problems else "FAIL"
         print(f"{status} {board.name}: {len(found)} finding(s), {len(expected)} expected")
         for problem in problems:

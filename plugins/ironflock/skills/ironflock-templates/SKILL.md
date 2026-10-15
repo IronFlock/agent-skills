@@ -32,7 +32,9 @@ in it is described.
    from ones you introduce.
 2. **Data comes first.** A board can only show what a table in `data-template.yml`
    holds. Design or extend the tables before the board. If the code doesn't publish
-   the data yet, say so and change the code too.
+   the data yet, say so and change the code too. For each table, decide whether
+   users of the app should work with it directly. Mark tables that only hold the
+   app's internal details `private: true` (app-templates.md explains when).
 3. **Write the file.** For the board, read
    [references/board-template.md](references/board-template.md) and the complete
    example [references/example-board.yml](references/example-board.yml) first,
@@ -80,6 +82,13 @@ config needs the literal prefixes and data references described in board-templat
 
 - **Bind, don't paste.** If a value lives in a table, bind the widget to it with a
   data reference. Pasted numbers go stale the moment the board is installed.
+- **Make every page reachable by clicking, and the way there obvious.** People
+  only click through a board; nobody types a route. Every page must be reachable
+  from the home page and lead back to it. Home is a menu's title, never a menu
+  item: an item is highlighted whenever the current route starts with its route,
+  so an item for `/` is highlighted on every page. board-template.md's "Pages and
+  navigation" section has the rules and the patterns (sections, list and detail
+  pages, records with edit pages), and the validator walks every link to check.
 - **Use only names that exist.** Every table, column and widget property you write
   must exist in data-template.yml or the widget's schema. The platform ignores unknown
   keys silently, so an invented key renders as nothing rather than as an error.

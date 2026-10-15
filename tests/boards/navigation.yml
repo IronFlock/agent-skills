@@ -1,0 +1,145 @@
+# yaml-language-server: $schema=https://ironflock.com/schemas/board-template/v1.yml
+# Navigation checks: highlighting traps and reachability. Every `# expect:` line
+# must appear in the validator's output; no finding may appear at an
+# `# expect-none:` path.
+# expect: ERROR widgets[0].chartconfig.navItems[0].route :: highlighted on every page
+# expect: WARN  widgets[0].chartconfig.navItems[2].route :: highlighted together with 'Daily'
+# expect: ERROR layout.subRoutes.orphan :: cannot be reached by clicking from the home page
+# expect: ERROR layout.subRoutes.deadend :: has no way back to the home page
+# expect: ERROR layout.subRoutes.machines.subRoutes.*.subRoutes.events.subRoutes.* :: has relative item routes
+# expect: WARN  widgets[6].chartconfig.route :: nothing to copy on page /
+# expect-none: layout.subRoutes.machines.subRoutes.*
+# expect-none: layout.subRoutes.machines.subRoutes.*.subRoutes.alarms.subRoutes.*
+# expect-none: layout.subRoutes.reports.subRoutes.daily
+name: navigation-board
+widgets:
+    - layout_id: nav
+      package_name: widget-sidenav
+      version: 1.0.19
+      chartconfig:
+          title: $str:Plant
+          route: $str:/
+          navItems:
+              - {label: $str:Home, route: $str:/}
+              - {label: $str:Machines, route: $str:/machines/}
+              - {label: $str:Reports, route: $str:/reports}
+              - {label: $str:Daily, route: $str:/reports/daily}
+              - {label: $str:Dead end, route: $str:/deadend}
+    - layout_id: machine-list
+      package_name: widget-sidenav
+      version: 1.0.19
+      chartconfig:
+          title: $str:Machines
+          navItems:
+              tableRef:
+                  tablename: machine_status
+                  format: {label: machine_id, route: machine_id}
+                  queryParams:
+                      limit: 50
+                      filterAnd:
+                          - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
+    - layout_id: sections
+      package_name: widget-navbar
+      version: 1.0.18
+      chartconfig:
+          navItems:
+              - {label: $str:Alarms, route: '$str:/machines/*/alarms'}
+              - {label: $str:Events, route: '$str:/machines/*/events'}
+    - layout_id: alarm-list
+      package_name: widget-sidenav
+      version: 1.0.19
+      chartconfig:
+          title: $str:Alarms
+          navItems:
+              tableRef:
+                  tablename: machine_alarm_links
+                  format: {label: state, route: route}
+                  queryParams:
+                      limit: 50
+                      filterAnd:
+                          - {column: machine_id, operator: '=', value: '2', dataType: string, useRoute: true}
+    - layout_id: event-list
+      package_name: widget-sidenav
+      version: 1.0.19
+      chartconfig:
+          title: $str:Events
+          navItems:
+              tableRef:
+                  tablename: measurements
+                  format: {label: tsp, route: machine_id}
+                  queryParams: {limit: 50}
+    - layout_id: text
+      package_name: widget-markdown
+      version: 1.0.11
+      chartconfig:
+          markdown: |
+              Page content.
+    - layout_id: jump
+      package_name: widget-navbutton
+      version: 1.0.12
+      chartconfig:
+          title: $str:Alarms
+          route: '$str:/machines/*/alarms'
+layout:
+    gridLayout:
+        - {id: nav, x: 0, y: 0, w: 16, h: 64}
+        - {id: text, x: 16, y: 0, w: 70, h: 64}
+        - {id: jump, x: 86, y: 0, w: 10, h: 64}
+    subRoutes:
+        machines:
+            gridLayout:
+                - {id: nav, x: 0, y: 0, w: 16, h: 64}
+                - {id: machine-list, x: 16, y: 0, w: 16, h: 64}
+                - {id: text, x: 32, y: 0, w: 64, h: 64}
+            subRoutes:
+                '*':
+                    gridLayout:
+                        - {id: nav, x: 0, y: 0, w: 16, h: 64}
+                        - {id: machine-list, x: 16, y: 0, w: 16, h: 64}
+                        - {id: sections, x: 32, y: 0, w: 64, h: 8}
+                        - {id: text, x: 32, y: 8, w: 64, h: 56}
+                    subRoutes:
+                        alarms:
+                            gridLayout:
+                                - {id: nav, x: 0, y: 0, w: 16, h: 64}
+                                - {id: alarm-list, x: 16, y: 0, w: 16, h: 64}
+                                - {id: sections, x: 32, y: 0, w: 64, h: 8}
+                                - {id: text, x: 32, y: 8, w: 64, h: 56}
+                            subRoutes:
+                                '*':
+                                    gridLayout:
+                                        - {id: nav, x: 0, y: 0, w: 16, h: 64}
+                                        - {id: alarm-list, x: 16, y: 0, w: 16, h: 64}
+                                        - {id: sections, x: 32, y: 0, w: 64, h: 8}
+                                        - {id: text, x: 32, y: 8, w: 64, h: 56}
+                        events:
+                            gridLayout:
+                                - {id: nav, x: 0, y: 0, w: 16, h: 64}
+                                - {id: event-list, x: 16, y: 0, w: 16, h: 64}
+                                - {id: sections, x: 32, y: 0, w: 64, h: 8}
+                                - {id: text, x: 32, y: 8, w: 64, h: 56}
+                            subRoutes:
+                                '*':
+                                    gridLayout:
+                                        - {id: nav, x: 0, y: 0, w: 16, h: 64}
+                                        - {id: event-list, x: 16, y: 0, w: 16, h: 64}
+                                        - {id: text, x: 32, y: 0, w: 64, h: 64}
+        reports:
+            gridLayout:
+                - {id: nav, x: 0, y: 0, w: 16, h: 64}
+                - {id: text, x: 16, y: 0, w: 80, h: 64}
+            subRoutes:
+                daily:
+                    gridLayout:
+                        - {id: nav, x: 0, y: 0, w: 16, h: 64}
+                        - {id: text, x: 16, y: 0, w: 80, h: 64}
+        orphan:
+            gridLayout:
+                - {id: nav, x: 0, y: 0, w: 16, h: 64}
+                - {id: text, x: 16, y: 0, w: 80, h: 64}
+        deadend:
+            gridLayout:
+                - {id: text, x: 0, y: 0, w: 96, h: 64}
+style:
+    columns: 96
+    rows: 64

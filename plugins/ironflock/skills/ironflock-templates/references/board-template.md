@@ -15,7 +15,8 @@ are defined by its published definition schema (`scripts/widget.py <package>`).
 2. [Literal values](#literal-values)
 3. [Binding data](#binding-data): valueRef, tableRef, queryParams, filters, aggregation
 4. [What a binding can and cannot read](#what-a-binding-can-and-cannot-read)
-5. [Pages and navigation](#pages-and-navigation)
+5. [Pages and navigation](#pages-and-navigation): reachability, highlighting, link
+   resolution, navigation patterns, filter widgets
 6. [Layout](#layout)
 7. [Style](#style)
 8. [SCADA pages](#scada-pages)
@@ -228,6 +229,21 @@ filterAnd:
   name, i.e. a filter-dropdown's `parameterKey`. When the parameter is absent, the
   filter is dropped, so the widget shows everything.
 - **OR logic:** `{combinator: OR, filters: [ ... ]}`.
+- **A filter that is off until the user switches it on.** An unset `useFilter`
+  parameter removes its predicate, also inside a group. So put the switchable
+  predicate into an OR group with the default condition. This table shows the
+  records that are not deleted, until a widget-filter-dropdown with
+  `parameterKey: $str:show_deleted` and the option
+  `{label: $str:Show deleted, value: $str:true}` sets the parameter:
+
+  ```yaml
+  filterAnd:
+      - combinator: OR
+        filters:
+            - {column: deleted, operator: 'IS NULL', dataType: boolean}
+            - {column: deleted, operator: '=', value: false, dataType: boolean}
+            - {column: deleted, operator: '=', value: show_deleted, dataType: boolean, useFilter: true}
+  ```
 
 ### Aggregation
 
@@ -273,14 +289,17 @@ Rules, which the validator enforces:
 You can read:
 
 - **The app's own tables:** every column, plus `device_key` (the publishing device)
-  and `authid`, which exist on every table.
+  and `authid`, which exist on every table. That includes tables and transforms
+  marked `private: true`: users can't reach those directly, but the app's own
+  board can. Users see whatever the board shows, so show only what they should see.
 - **Transforms (SQL views):** only `limit`, `offset` and `filterAnd` work. There is
   no time window, no aggregation and no latest filter, and rows come in the view's
   own order.
 - **`error-logs`:** the app's error log, with columns `tsp msg source level
   device_key`.
 - **Another app's table:** add `provider_app: <app name in lowercase>` to the ref,
-  and list that app under `consumes` in data-template.yml.
+  and list that app under `consumes` in data-template.yml. Only that app's shared
+  tables and transforms can be read. Its private ones are not shared.
 
 There's no arithmetic, ratio, join or derived column in a binding, and no widget
 computes those either. When a widget needs one, add a transform to
@@ -312,8 +331,53 @@ layout:                         # /
   the same id to each page. Give it the same position on every page, because moving
   it in the editor moves it everywhere.
 
-Navigation widgets are widget-sidenav (vertical menu), widget-navbar (horizontal
-bar) and widget-navbutton (one button). Their `route` values work like this:
+### Every page is reached by clicking
+
+People move through a board only by clicking: nobody types a route, and a kiosk
+screen has no address bar. So:
+
+- **Every page must be reachable from the home page** (`/`) through a series of
+  clicks, and **every page must lead back home.** A page that nothing links to
+  cannot be opened, and a page without a way back traps its user. The validator
+  follows every link from the home page the way the board does, and reports each
+  page it cannot reach, and each page with no way back, as an error.
+- **Only navigation widgets move between pages:** widget-navbar, widget-sidenav and
+  widget-navbutton. A widget-table `button` or `image` cell opens its link in a new
+  browser tab, so it cannot move inside the board. Use those cells for external
+  links only.
+- **Put the same menu on every page of one level, at the same position**, so it
+  reads as the board's menu. A parent page that exists only to hold `*` children
+  (`/machines`) still needs content: make it the list that leads to them.
+
+### How menu items are highlighted
+
+widget-navbar and widget-sidenav highlight an item when **the current route starts
+with the item's route**. A relative item (no leading `/`) is highlighted when the
+current route ends with it. Three rules follow:
+
+1. **Never give an item the home route.** Every route starts with `/`, so an item
+   with the route `/` (or an empty route) is highlighted on every page, next to
+   the item the user actually chose. Link home from the menu's **title** instead
+   (`title: $str:Machine Monitor`, `route: $str:/`). The title is never
+   highlighted.
+2. **Never put an item whose route is a prefix of another item's route into the
+   same menu**, such as `/line/*` next to `/line/*/andon`, or `/reports` next to
+   `/reports/daily`: on the deeper page both are highlighted. The comparison is by
+   characters, so `/line` even matches `/lines`.
+3. **An item stays highlighted on the pages below its route.** `/machines/` is
+   highlighted on `/machines/press-1` too. Use that: give each section one item,
+   and connect the pages inside a section with their own links (see the patterns
+   below).
+4. **Data-driven menus inherit rule 2 from the data.** A menu built from a table
+   with routes like `/line/<id>` lights up `LINE-1` on `LINE-10`'s pages, because
+   `/line/LINE-10` starts with `/line/LINE-1`. The validator cannot see ids, so
+   say in the key column's description (and the form that creates the record)
+   that ids need the same number of digits: `LINE-01` … `LINE-24`.
+
+widget-navbutton is never highlighted. That makes it the right widget for a single
+link such as "Home", "Back to the list" or "Manage documents".
+
+### How a link resolves
 
 - **`/machines` is absolute**, from the board's home.
 - **`press-2`, with no leading slash, replaces the last segment** of the current
@@ -322,29 +386,88 @@ bar) and widget-navbutton (one button). Their `route` values work like this:
   reached relatively with a trailing slash: `/machines/`.
 - **A segment that is exactly `*`** is replaced by the current URL's segment at
   that position, and `{{name}}` by the item's `variables` entry with `label: name`.
+  A `*` needs a segment at its position: on `/machines`, the route
+  `/machines/*/trend` has no second segment to copy, so the link opens
+  `/machines/trend`.
+- **A route that contains `*` loses its trailing slash.** `/line/*/andon/` opens
+  `/line/LINE-1/andon`, so relative links on that page lead next to it
+  (`/line/LINE-1/<id>`), never below it. Below a `*` page, item routes have to be
+  absolute (pattern 3).
 
-A data-driven menu lists one item per row:
+### Navigation patterns
 
-```yaml
-navItems:
-    tableRef:
-        tablename: machine_status
-        format:
-            label: machine_id
-            iconName: $str:precision_manufacturing    # Material icon name
-            route: machine_id                         # relative: /machines/<id>
-        queryParams:
-            limit: 50
-            filterAnd:
-                - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
-```
+1. **Sections.** One widget-navbar or widget-sidenav on every page. Its title links
+   home, and each item opens one section (`/machines/`, `/alarms`, `/settings`).
 
-Put this menu on `/machines` and `/machines/*`, and link to it with `/machines/`.
-On the `*` page, filter every widget with
-`{column: machine_id, operator: '=', value: '2', dataType: string, useRoute: true}`.
+2. **A list and its detail pages** (`/machines` and `/machines/*`). A data-driven
+   menu lists one item per row:
 
-On a multi-page board, put a navigation widget on every page. Otherwise users get
-stuck.
+   ```yaml
+   navItems:
+       tableRef:
+           tablename: machine_status
+           format:
+               label: machine_id
+               iconName: $str:precision_manufacturing    # Material icon name
+               route: machine_id                         # relative: /machines/<id>
+           queryParams:
+               limit: 50
+               filterAnd:
+                   - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
+   ```
+
+   Put this menu on `/machines` and `/machines/*`, and link to the list with a
+   trailing slash and no `*`: `/machines/`. On the `*` page, filter every widget
+   with `{column: machine_id, operator: '=', value: '2', dataType: string, useRoute: true}`.
+
+3. **Detail pages below a `*` page** (`/line/*/andon/*`). A relative route cannot
+   reach them (see above), and a binding cannot join strings. Compute the absolute
+   route in a transform, and bind the item's `route` to it:
+
+   ```yaml
+   # data-template.yml: a column of the transform the menu reads
+   sql: SELECT ..., '/line/' || line_id || '/andon/' || request_no AS route FROM ...
+   ```
+
+   ```yaml
+   format:
+       label: request_no
+       route: route          # /line/<line>/andon/<request>
+   ```
+
+   Filter the menu by the route segment as usual; transforms accept `filterAnd`.
+   The validator reads the transform's SQL to see which page such a route opens,
+   so write it as `'/literal/' || column || ...` or `concat('/literal/', column, ...)`.
+
+4. **An entity with an overview and sections** (`/line/*`, with `/line/*/andon`,
+   `/line/*/reports` and so on below it). The overview cannot be an item next to
+   its sections (rule 2). Make the menu's title the link to the overview (`title`
+   bound to the entity's name, `route: $str:/line/*`), and put a widget-navbutton
+   next to the menu as the way home (`title: $str:Home`, `iconName: $str:home`,
+   `route: $str:/`).
+
+5. **Pages within a section** (`/line/*/sop` and `/line/*/sop/manage`). Connect
+   them with widget-navbutton ("Manage documents", "Back to documents"). The
+   section's item stays highlighted on both.
+
+6. **Records that users create, edit and delete** (master data, settings). A list
+   page shows a table of the records, a "New" form (`formButton: $bool:true`) and a
+   data-driven menu of the records (pattern 2 or 3) that opens one edit page per
+   record (`/settings/machines/*`). The edit page holds a widget-form:
+   - Its fields are prefilled from the record: `preFilledValue` is a valueRef with
+     a `useRoute` filter on the record's key, and the key itself is a
+     `hiddenField`, so a save updates that record.
+   - `deleteButton: $bool:true` with `deleteFlagColumn` set to the table's
+     soft-delete column. The form writes that column on every submit: `false` on
+     Save and `true` on Delete, so saving a deleted record restores it. Give the
+     "New" form the same `deleteFlagColumn`, so every row has the flag set.
+   - `deleteNavigationRoute` leads back to the list, which the form opens after a
+     delete.
+
+   Hide deleted records by default, and let users show them with a filter that is
+   off until it is switched on (see [Filters](#filters)).
+
+### Filter widgets
 
 Filter widgets set URL parameters for other widgets to read:
 
@@ -431,6 +554,7 @@ Some values only exist inside a running platform, and a template cannot know the
 3. Bindings sit at the right kind of property (valueRef on single values, tableRef
    on lists), each tableRef has a `limit` and a `format` shaped like its items, and
    aggregations have a complete window.
-4. Every page fills the grid and has a way to navigate, and every route leads to a
-   page.
+4. Every page fills the grid. Every page can be reached from the home page by
+   clicking and leads back to it, no menu item links to `/`, no item's route is a
+   prefix of another item's in the same menu, and every route leads to a page.
 5. `scripts/validate.py <app-dir>` (run it as SKILL.md shows) reports no errors.
