@@ -1,0 +1,5 @@
+.git
+.ironflock
+.venv
+__pycache__
+*.md

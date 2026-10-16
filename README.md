@@ -4,13 +4,26 @@ A Claude Code plugin with two skills for building on the IronFlock IoT platform:
 
 | Skill | For |
 |---|---|
-| `ironflock-templates` | an IronFlock app's integration templates, the files in its `.ironflock/` folder |
+| `ironflock-templates` | IronFlock apps: their architecture, a starter app, and the integration templates in the app's `.ironflock/` folder |
 | `ironflock-widgets` | the board widgets themselves: the `@ironflock/widget-*` Lit web components |
 
 ## ironflock-templates
 
-Teaches coding agents to write an IronFlock app's integration templates, the files
-in its `.ironflock/` folder, correctly:
+Teaches coding agents to build IronFlock apps the way the platform is meant to be
+used: containers on every device that keep the app's state in its tables through
+the `ironflock` SDK, the board as the app's central UI bound live to those
+tables, and web UIs that devices serve themselves, reached through remote-access
+tunnels and embedded in the board. It holds:
+
+- the architecture's rules and patterns: where each kind of data goes, how a
+  device follows what users set on the board, device functions and topics, what
+  the device agent does with a container or a Compose stack, and web UIs on
+  devices;
+- a starter app, and `new_app.py`, which scaffolds a new app from it: a Python
+  program that keeps each device's state and readings in tables, applies the
+  settings users save on the board, and serves a live view that the board embeds;
+- the rules for writing the integration templates, the files in the app's
+  `.ironflock/` folder:
 
 | File | Purpose |
 |---|---|
@@ -108,15 +121,18 @@ plugins/ironflock/
     ├── ironflock-templates/
     │   ├── SKILL.md                     workflow and principles
     │   ├── references/
+    │   │   ├── app-architecture.md      how an app is built: state, data flow, containers, web UIs
     │   │   ├── board-template.md        board format, data bindings, pages, layout
     │   │   ├── example-board.yml        a complete, valid three-page board
     │   │   ├── widget-catalog.md        which widget for which data (generated)
     │   │   └── app-templates.md         data, env, port and ai templates
+    │   ├── assets/app-template/         the starter app
     │   ├── schemas/<name>/v1.yml        JSON Schemas (vendored, see below)
     │   └── scripts/
     │       ├── validate.py              validates a whole .ironflock folder
     │       ├── board_checks.py          the board-specific part of it
-    │       └── widget.py                prints a widget's published schema
+    │       ├── widget.py                prints a widget's published schema
+    │       └── new_app.py               scaffolds an app from the starter
     └── ironflock-widgets/
         ├── SKILL.md                     workflow and the rules
         ├── references/
@@ -131,7 +147,7 @@ plugins/ironflock/
             ├── check_widget.py          checks a widget repository
             └── new_widget.py            scaffolds a widget from the template
 tools/build_widget_catalog.py            regenerates widget-catalog.md
-tests/                                   validator and widget-checker regression tests
+tests/                                   validator, starter-app and widget-checker regression tests
 evals/                                   test app, eval prompts and grader for ironflock-templates
 evals/widgets/                           eval prompts, fixtures and grader for ironflock-widgets
 ```
@@ -158,6 +174,14 @@ you have to bump it on every change, or users keep the old copy.
 `python3 tests/run.py`. It requires the example board to stay clean and every
 mistake in `tests/boards/broken.yml` to be reported.
 
+**Keep the starter app working.** `tests/run.py` also requires
+`assets/app-template` to validate without findings, and `new_app.py` to scaffold
+an app from it that does too and keeps no trace of the starter's name. The
+starter pins its widget versions, `ironflock` and `aiohttp`; when you move a
+pin, run the tests, build the image (`docker build` in the starter's folder),
+and run the program on a device. Its README.md is written for the people who
+install an app, its CLAUDE.md for the agents that change it.
+
 **Test the widget scripts** after changing `check_widget.py`, `new_widget.py` or the
 template: `python3 tests/widget_checks.py`. It scaffolds a widget, requires the
 finished scaffold to produce no findings, and plants one known mistake per case,
@@ -181,7 +205,16 @@ them must be a real defect.
 **Evaluate the skill** after changing its instructions: run each prompt in
 `evals/evals.json` against a fresh copy of `evals/fixtures/machine-monitor`, once
 with the skill and once without, then score the runs with
-`uv run evals/grade.py <iteration-dir>` (layout: `<eval-name>/<config>/app`).
+`uv run evals/grade.py <iteration-dir>` (layout: `<eval-name>/<config>/app`). An
+eval with `"fixture": null` (`new-app`) starts in an empty `app` folder instead.
+Run the skill under test from its files, not from an installed copy of the
+plugin, and keep the agent without the skill away from both. On 2026-10-17, after
+the architecture guide and the starter app were added, the skill scored 28/28
+(the three template evals 18/18 as before, `new-app` 10/10). Without the skill,
+`new-app` scored 9/10: the agent worked the architecture out from the SDK's
+public sources with twice the tokens and time, but its board had 31 validator
+errors (unquoted numeric `layout_id`s, which the board editor does not show, and
+numeric route-filter values).
 
 **Evaluate the widget skill** the same way with `evals/widgets/`:
 `python3 evals/widgets/grade.py setup <iteration-dir>` clones the fixture widgets

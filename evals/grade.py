@@ -200,10 +200,81 @@ def grade_ports(app: Path, errors, warnings):
     ]
 
 
+def grade_new_app(app: Path, errors, warnings):
+    board = load(app / ".ironflock/board-template.yml") or {}
+    data = load(app / ".ironflock/data-template.yml") or {}
+    ports = (load(app / ".ironflock/port-template.yml") or {}).get("ports") or []
+    files = [p for p in app.rglob("*") if p.is_file() and not {".git", "node_modules", ".venv"} & set(p.parts)]
+    code = "\n".join(p.read_text(errors="ignore") for p in files if p.suffix in (".py", ".js", ".mjs", ".ts", ".go"))
+    pages = "\n".join(p.read_text(errors="ignore") for p in files if p.suffix in (".html", ".js", ".mjs", ".ts", ".tsx"))
+    setup = "\n".join(p.read_text(errors="ignore") for p in files if p.name.startswith(("Dockerfile", "docker-compose")))
+    widgets = [w for w in board.get("widgets") or [] if isinstance(w, dict)]
+    tables = {t.get("tablename"): t for t in (data.get("data") or {}).get("tables") or [] if isinstance(t, dict)}
+
+    # The table a board form writes a numeric limit into, and whether the code follows it.
+    form_tables = {
+        str((f.get("targetColumn") or {}).get("tablename"))
+        for w in widgets if w.get("package_name") == "widget-form"
+        for f in (w.get("chartconfig") or {}).get("formFields") or [] if isinstance(f, dict) and isinstance(f.get("targetColumn"), dict)
+    }
+    limit_tables = [
+        name for name in form_tables
+        if any(isinstance(c, dict) and c.get("dataType") in ("numeric", "bigint") and re.search(r"limit|low|min|threshold|alarm", str(c.get("id")), re.I)
+               for c in (tables.get(name) or {}).get("columns") or [])
+    ]
+
+    constants = re.findall(r"\b([A-Za-z_]\w*)\s*(?::\s*\w+\s*)?:?=\s*[\"']([^\"'\n]+)[\"']", code)
+
+    def called(functions, table):
+        """A call that names the table, as a string or through a constant that holds it."""
+        names = [re.escape(f'"{table}"'), re.escape(f"'{table}'")]
+        names += [rf"\b{name}\b" for name, value in constants if value == table]
+        return re.search(rf"(?:{functions})\s*\(\s*(?:ctx\s*,\s*)?(?:{'|'.join(names)})", code)
+
+    follows = [t for t in limit_tables if called("subscribe_to_table|subscribeToTable|SubscribeToTable", t) and called("getHistory|GetHistory", t)]
+    rejoin = re.search(r"""\.on\(\s*["']join["']|on_join|onJoin|OnJoin""", code)
+
+    http_ports = [p.get("port") for p in ports if isinstance(p, dict) and p.get("protocol", "http") in ("http", "https")]
+    served = [p for p in http_ports if re.search(rf"\b{p}\b", code + setup)]
+    tunnel_url = re.search(r"getRemoteAccessUrlForPort|GetRemoteAccessURLForPort", code)
+
+    def pages_of(page, route=()):
+        yield route, page
+        for name, child in (page.get("subRoutes") or {}).items():
+            if isinstance(child, dict):
+                yield from pages_of(child, route + (str(name),))
+
+    layout = board.get("layout") if isinstance(board.get("layout"), dict) else {}
+    wildcard = [p for r, p in pages_of(layout) if r and r[-1] == "*"] if layout else []
+    on_wildcard = {pos.get("id") for p in wildcard for pos in p.get("gridLayout") or [] if isinstance(pos, dict)}
+    embeds = [
+        w for w in widgets
+        if w.get("package_name") == "widget-embed" and w.get("layout_id") in on_wildcard
+        and isinstance(((w.get("chartconfig") or {}).get("webUrl") or {}), dict)
+        and ((w["chartconfig"]["webUrl"].get("valueRef") or {}).get("tablename") in tables)
+        and any(isinstance(f, dict) and f.get("useRoute") for f in ((w["chartconfig"]["webUrl"]["valueRef"].get("queryParams") or {}).get("filterAnd") or []))
+    ]
+    pushed = re.search(r"WebSocket|EventSource", pages)
+    sigterm = re.search(r"SIGTERM", code) or re.search(r"init:\s*true|tini|dumb-init", setup)
+    return [
+        check("validate.py reports no errors", not errors, f"{len(errors)} error(s)" + (f": {errors[0][:160]}" if errors else "")),
+        check("a Dockerfile or docker-compose.yml and edge code using the ironflock SDK", setup and re.search(r"ironflock", code), f"{len(files)} file(s)"),
+        check("a board form writes the low-level limit into a table", limit_tables, f"form tables {sorted(form_tables)}"),
+        check("the code reads that table at start and subscribes to it", follows, f"followed: {follows}"),
+        check("the code reads the limit again after a reconnect", rejoin, rejoin.group(0) if rejoin else "no join hook"),
+        check("port-template declares the web page's http port, and the code serves it", served, f"http ports {http_ports}"),
+        check("the code writes the port's tunnel URL into a table", tunnel_url, "found" if tunnel_url else "not found"),
+        check("a widget-embed on a per-tank page binds the URL from a table, filtered by the route", embeds, f"{len(embeds)} embed(s), {len(wildcard)} wildcard page(s)"),
+        check("the web page is pushed to (websocket or server-sent events)", pushed, pushed.group(0) if pushed else "no push channel"),
+        check("the program stops on SIGTERM", sigterm, sigterm.group(0) if sigterm else "not handled"),
+    ]
+
+
 GRADERS = {
     "overview-board": grade_overview,
     "multi-page-navigation": grade_multipage,
     "ports-params-data": grade_ports,
+    "new-app": grade_new_app,
 }
 
 

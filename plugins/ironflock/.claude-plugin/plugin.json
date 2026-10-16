@@ -1,6 +1,6 @@
 {
   "name": "ironflock",
-  "description": "Build on IronFlock: write and validate an app's .ironflock templates (boards and widgets, data tables, app parameters, remote-access ports, AI agents), and create, change and check the board widgets themselves (@ironflock/widget-* Lit components).",
+  "description": "Build on IronFlock: design and scaffold edge apps that keep their state in the app's tables and embed their devices' web UIs in the board, write and validate their .ironflock templates (boards and widgets, data tables, app parameters, remote-access ports, AI agents), and create, change and check the board widgets themselves (@ironflock/widget-* Lit components).",
   "author": {
     "name": "IronFlock",
     "url": "https://ironflock.com"
@@ -10,6 +10,7 @@
   "keywords": [
     "ironflock",
     "iot",
+    "edge",
     "dashboard",
     "widgets",
     "templates",

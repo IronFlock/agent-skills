@@ -1,0 +1,344 @@
+# yaml-language-server: $schema=https://ironflock.com/schemas/board-template/v1.yml
+# The board of App Starter, bound to the tables in data-template.yml:
+#   /             every device's temperature and state, and the 24-hour trend
+#   /devices      the device list; /devices/<device_key> embeds the device's live
+#                 view (devices.ui_url, served by main.py on port 8080 and opened
+#                 through the device's remote-access tunnel) above its readings
+#   /settings     the form that writes the settings table, which every device applies
+# The toast shows the errors the app reports with report_error (source app).
+name: app-starter
+widgets:
+    - layout_id: nav
+      package_name: widget-sidenav
+      version: 1.0.22
+      chartconfig:
+          title: $str:App Starter
+          route: $str:/
+          navItems:
+              - label: $str:Devices
+                iconName: $str:developer_board
+                route: $str:/devices/
+              - label: $str:Settings
+                iconName: $str:tune
+                route: $str:/settings
+    - layout_id: temperature-now
+      package_name: widget-value
+      version: 1.1.37
+      chartconfig:
+          title: $str:Temperature now
+          subTitle: $str:Latest reading per device
+          dataseries:
+              - label: $str:Temperature
+                unit: $str:°C
+                precision: $num:1
+                multiChart: $bool:true
+                data:
+                    tableRef:
+                        tablename: measurements
+                        format:
+                            tsp: tsp
+                            value: temperature
+                            pivot: device_name
+                        queryParams:
+                            limit: 100
+                            windowPeriod: minute
+                            windowLength: 5
+                            nowMinusPeriods: 0
+    - layout_id: device-states
+      package_name: widget-table
+      version: 1.1.26
+      chartconfig:
+          title: $str:Devices
+          columns:
+              - header: $str:Device
+                type: $str:string
+                values:
+                    tableRef:
+                        tablename: devices
+                        format:
+                            value: device_name
+                        queryParams:
+                            limit: 100
+                            filterAnd:
+                                - latest: true
+                                  column: ''
+                                  operator: '='
+                                  value: ''
+                                  dataType: boolean
+              - header: $str:State
+                type: $str:state
+                values:
+                    tableRef:
+                        tablename: devices
+                        format:
+                            value: state
+                        queryParams:
+                            limit: 100
+                            filterAnd:
+                                - latest: true
+                                  column: ''
+                                  operator: '='
+                                  value: ''
+                                  dataType: boolean
+                styling:
+                    stateMap: "$str:'OK', '#4caf50', 'TOO_HOT', '#f44336', 'NO_READING', '#9e9e9e'"
+              - header: $str:Updated
+                type: $str:timestamp
+                values:
+                    tableRef:
+                        tablename: devices
+                        format:
+                            value: tsp
+                        queryParams:
+                            limit: 100
+                            filterAnd:
+                                - latest: true
+                                  column: ''
+                                  operator: '='
+                                  value: ''
+                                  dataType: boolean
+    - layout_id: temperature-trend
+      package_name: widget-linechart
+      version: 1.7.14
+      chartconfig:
+          title: $str:Temperature, last 24 hours
+          subTitle: $str:Average per device
+          axis:
+              timeseries: $bool:true
+              yAxisLabel: $str:°C
+          dataseries:
+              - label: $str:Temperature
+                type: $str:line
+                data:
+                    tableRef:
+                        tablename: measurements
+                        format:
+                            x: tsp
+                            y: temperature
+                            pivot: device_name
+                        queryParams:
+                            limit: 3000
+                            windowPeriod: hour
+                            windowLength: 24
+                            nowMinusPeriods: 0
+                            series:
+                                method: AVG
+    - layout_id: errors
+      package_name: widget-toast
+      version: 1.0.10
+      chartconfig:
+          message:
+              valueRef:
+                  tablename: error-logs
+                  column: user_message
+                  queryParams:
+                      limit: 1
+                      filterAnd:
+                          - column: source
+                            operator: '='
+                            value: app
+                            dataType: string
+          type:
+              valueRef:
+                  tablename: error-logs
+                  column: level
+                  queryParams:
+                      limit: 1
+                      filterAnd:
+                          - column: source
+                            operator: '='
+                            value: app
+                            dataType: string
+          position: $str:bottom-right
+      custom_style:
+          tile_background_color: transparent
+          tile_border_color: transparent
+    - layout_id: device-list
+      package_name: widget-sidenav
+      version: 1.0.22
+      chartconfig:
+          title: $str:Devices
+          navItems:
+              tableRef:
+                  tablename: devices
+                  format:
+                      label: device_name
+                      iconName: $str:developer_board
+                      route: device_key
+                  queryParams:
+                      limit: 100
+                      filterAnd:
+                          - latest: true
+                            column: ''
+                            operator: '='
+                            value: ''
+                            dataType: boolean
+    - layout_id: devices-hint
+      package_name: widget-markdown
+      version: 1.0.13
+      chartconfig:
+          markdown: |
+              ## Devices
+              Pick a device on the left to open its live view and its readings of the last 24 hours.
+
+              The live view is a web page the device serves itself. It opens here through
+              the device's remote-access tunnel, which the app's production install
+              switches on.
+    - layout_id: live-view
+      package_name: widget-embed
+      version: 1.0.12
+      chartconfig:
+          multiEmbed: $bool:false
+          webUrl:
+              valueRef:
+                  tablename: devices
+                  column: ui_url
+                  queryParams:
+                      limit: 1
+                      filterAnd:
+                          - latest: true
+                            column: ''
+                            operator: '='
+                            value: ''
+                            dataType: boolean
+                          - column: device_key
+                            operator: '='
+                            value: '2'
+                            dataType: numeric
+                            useRoute: true
+    - layout_id: device-trend
+      package_name: widget-linechart
+      version: 1.7.14
+      chartconfig:
+          title: $str:Readings, last 24 hours
+          axis:
+              timeseries: $bool:true
+              yAxisLabel: $str:°C
+              yAxisLabelRight: $str:bar
+          dataseries:
+              - label: $str:Temperature
+                type: $str:line
+                data:
+                    tableRef:
+                        tablename: measurements
+                        format:
+                            x: tsp
+                            y: temperature
+                        queryParams:
+                            limit: 3000
+                            windowPeriod: hour
+                            windowLength: 24
+                            nowMinusPeriods: 0
+                            series:
+                                method: AVG
+                            filterAnd:
+                                - column: device_key
+                                  operator: '='
+                                  value: '2'
+                                  dataType: numeric
+                                  useRoute: true
+              - label: $str:Pressure
+                type: $str:line
+                yAxis: $str:right
+                data:
+                    tableRef:
+                        tablename: measurements
+                        format:
+                            x: tsp
+                            y: pressure
+                        queryParams:
+                            limit: 3000
+                            windowPeriod: hour
+                            windowLength: 24
+                            nowMinusPeriods: 0
+                            series:
+                                method: AVG
+                            filterAnd:
+                                - column: device_key
+                                  operator: '='
+                                  value: '2'
+                                  dataType: numeric
+                                  useRoute: true
+    - layout_id: settings-form
+      package_name: widget-form
+      version: 1.0.40
+      chartconfig:
+          title: $str:Limits
+          subTitle: $str:Every device applies a saved change at once.
+          formButton: $bool:false
+          formFields:
+              - label: $str:Maximum temperature (°C)
+                type: $str:numberfield
+                required: $bool:true
+                min: $num:0
+                max: $num:200
+                description: $str:A device whose temperature is above this reports TOO_HOT.
+                targetColumn:
+                    tablename: settings
+                    column: max_temperature
+                    dataType: numeric
+                preFilledValue:
+                    valueRef:
+                        tablename: settings
+                        column: max_temperature
+                        queryParams:
+                            limit: 1
+    - layout_id: settings-history
+      package_name: widget-table
+      version: 1.1.26
+      chartconfig:
+          title: $str:Saved settings
+          columns:
+              - header: $str:Saved
+                type: $str:timestamp
+                values:
+                    tableRef:
+                        tablename: settings
+                        format:
+                            value: tsp
+                        queryParams:
+                            limit: 50
+              - header: $str:Maximum temperature (°C)
+                type: $str:number
+                values:
+                    tableRef:
+                        tablename: settings
+                        format:
+                            value: max_temperature
+                        queryParams:
+                            limit: 50
+                styling:
+                    precision: $num:1
+layout:
+    gridLayout:
+        - {id: nav, x: 0, y: 0, w: 16, h: 64, fixedWidth: true}
+        - {id: temperature-now, x: 16, y: 0, w: 52, h: 24}
+        - {id: device-states, x: 68, y: 0, w: 28, h: 24}
+        - {id: temperature-trend, x: 16, y: 24, w: 80, h: 40}
+        - {id: errors, x: 56, y: 52, w: 40, h: 12, z: 1}
+    subRoutes:
+        devices:
+            gridLayout:
+                - {id: nav, x: 0, y: 0, w: 16, h: 64, fixedWidth: true}
+                - {id: device-list, x: 16, y: 0, w: 16, h: 64, fixedWidth: true}
+                - {id: devices-hint, x: 32, y: 0, w: 64, h: 64}
+                - {id: errors, x: 56, y: 52, w: 40, h: 12, z: 1}
+            subRoutes:
+                '*':
+                    gridLayout:
+                        - {id: nav, x: 0, y: 0, w: 16, h: 64, fixedWidth: true}
+                        - {id: device-list, x: 16, y: 0, w: 16, h: 64, fixedWidth: true}
+                        - {id: live-view, x: 32, y: 0, w: 64, h: 40}
+                        - {id: device-trend, x: 32, y: 40, w: 64, h: 24}
+                        - {id: errors, x: 56, y: 52, w: 40, h: 12, z: 1}
+        settings:
+            gridLayout:
+                - {id: nav, x: 0, y: 0, w: 16, h: 64, fixedWidth: true}
+                - {id: settings-form, x: 16, y: 0, w: 80, h: 24}
+                - {id: settings-history, x: 16, y: 24, w: 80, h: 40}
+                - {id: errors, x: 56, y: 52, w: 40, h: 12, z: 1}
+style:
+    theme:
+        theme_name: light
+    columns: 96
+    rows: 64

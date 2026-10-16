@@ -16,7 +16,8 @@ are defined by its published definition schema (`scripts/widget.py <package>`).
 3. [Binding data](#binding-data): valueRef, tableRef, queryParams, filters, aggregation
 4. [What a binding can and cannot read](#what-a-binding-can-and-cannot-read)
 5. [Pages and navigation](#pages-and-navigation): reachability, highlighting, link
-   resolution, navigation patterns, filter widgets, uploading files with a form
+   resolution, navigation patterns, filter widgets, uploading files with a form,
+   embedding a web UI the app serves
 6. [Layout](#layout)
 7. [Style](#style)
 8. [SCADA pages](#scada-pages)
@@ -296,8 +297,14 @@ You can read:
 - **Transforms (SQL views):** only `limit`, `offset` and `filterAnd` work. There is
   no time window, no aggregation and no latest filter, and rows come in the view's
   own order.
-- **`error-logs`:** the app's error log, with columns `tsp msg source level
-  device_key`.
+- **`error-logs`:** the app's error log, with columns `tsp msg user_message source
+  level device_key`. `source` is `app` for what the app reports with
+  `report_error` and `system` for the platform's own errors, and `user_message` is
+  the text for operators. A widget-toast shows the app's reports with `message`
+  bound to `user_message` and `type` to `level`, both filtered on
+  `{column: source, operator: '=', value: app, dataType: string}`. The toast knows
+  the types `success`, `error`, `info` and `warning`, so a report with level `warn`
+  shows as `info`.
 - **Another app's table:** add `provider_app: <app name in lowercase>` to the ref,
   and list that app under `consumes` in data-template.yml. Only that app's shared
   tables and transforms can be read. Its private ones are not shared.
@@ -514,6 +521,33 @@ the same save as the rest of the row (widget-form 1.0.38 and later):
 - Uploading needs DATABACKEND UPDATE, like every form write. It does not work on an
   appliance opened through the cloud; there the form says to open the board on
   the appliance itself.
+
+### Embedding a web UI the app serves
+
+A device's own web page (a live view, a machine's HMI) reaches the board through
+the remote-access tunnel of its port: the app writes the tunnel's URL into the
+device's row of an entity table (app-architecture.md, "Web UIs on the device"),
+and a widget-embed on the device's page reads it:
+
+```yaml
+webUrl:
+    valueRef:
+        tablename: devices                   # maintainLatestFlagFor: [device_key]
+        column: ui_url
+        queryParams:
+            limit: 1
+            filterAnd:
+                - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
+                - {column: device_key, operator: '=', value: '2', dataType: numeric, useRoute: true}
+```
+
+- Put it on the `*` page of a device list (pattern 2), whose menu routes by
+  `device_key`. The starter app's board in `assets/app-template/` has this page.
+- Set `multiEmbed: $bool:false`. With `multiEmbed: $bool:true`, `data` takes a
+  tableRef with the format `{url: ui_url, title: device_name}` and shows every
+  device's page side by side, which suits a handful of devices.
+- Only production installs have tunnels. A development run writes no URL, and its
+  embed stays empty.
 
 ## Layout
 

@@ -1,0 +1,71 @@
+# yaml-language-server: $schema=https://ironflock.com/schemas/data-template/v1.yml
+data:
+  description: >-
+    App Starter reads the machine at every device it runs on: its temperature and
+    pressure, whether the temperature is within the limit users set on the board,
+    and where the device's live view can be opened.
+  tables:
+    - tablename: devices
+      description: >-
+        One row per device that runs the app, with its current state and the address
+        of its live view. Written by each device about itself; the newest row per
+        device is its current state.
+      maintainLatestFlagFor: [device_key]
+      columns:
+        - id: tsp
+          name: Updated
+          description: When the device last changed its state or its live view address.
+          dataType: timestamp
+        - id: device_name
+          name: Device
+          description: The device's name in IronFlock.
+          dataType: string
+          path: kwargs.DEVICE_NAME
+        - id: state
+          name: State
+          description: >-
+            OK while the temperature is at or below the limit on the board's Settings
+            page, TOO_HOT above it, NO_READING while the machine cannot be read.
+          dataType: string
+        - id: ui_url
+          name: Live view
+          description: >-
+            The remote-access address of the device's live view (port 8080). Empty
+            while the app runs in development, because only production installs get
+            remote-access tunnels.
+          dataType: string
+    - tablename: measurements
+      description: >-
+        The machine's readings, one row per device and sample. Written by each device
+        every SAMPLE_INTERVAL seconds.
+      columns:
+        - id: tsp
+          name: Time
+          description: When the machine was read.
+          dataType: timestamp
+        - id: device_name
+          name: Device
+          description: The name of the device that read the machine.
+          dataType: string
+          path: kwargs.DEVICE_NAME
+        - id: temperature
+          name: Temperature
+          description: Machine temperature in °C.
+          dataType: numeric
+        - id: pressure
+          name: Pressure
+          description: Hydraulic pressure in bar.
+          dataType: numeric
+    - tablename: settings
+      description: >-
+        The limits users set on the board's Settings page. Written by the board's
+        settings form; the newest row is in force on every device.
+      columns:
+        - id: tsp
+          name: Saved
+          description: When the settings were saved.
+          dataType: timestamp
+        - id: max_temperature
+          name: Maximum temperature
+          description: A device whose temperature is above this, in °C, reports TOO_HOT.
+          dataType: numeric

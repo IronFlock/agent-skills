@@ -1,21 +1,30 @@
 ---
 name: ironflock-templates
-description: Write, edit and validate the IronFlock integration files in an app's .ironflock/ folder. These are board-template.yml (the app's dashboard, with widgets, data bindings, pages and layout), data-template.yml (database tables and transforms), env-template.yml (app parameters), port-template.yml (remote-access ports) and ai-template.yml (AI agents). Use this whenever you build or change an IronFlock app, add or change a board, dashboard or widget, bind a widget to live data, add a table or column, expose a parameter or port, or define an app's AI agent. Also use it when the user mentions IronFlock, Reswarm or a .ironflock folder, even if they don't say "template". To change a widget's own code (the @ironflock/widget-* packages), use ironflock-widgets instead.
+description: Build IronFlock apps: their architecture (edge containers that keep all state in the app's tables through the ironflock SDK, the board as the central UI, device web UIs embedded through remote-access tunnels), a starter app to scaffold, and the integration files in the app's .ironflock/ folder, with a validator. These are board-template.yml (the board: widgets, data bindings, pages, layout), data-template.yml (tables and transforms), env-template.yml (parameters), port-template.yml (remote-access ports) and ai-template.yml (AI agents). Use this whenever you create, design or change an IronFlock app or its edge code, add or change a board, dashboard or widget, bind a widget to live data, add a table or column, expose a parameter or port, or define an app's AI agent. Also use it when the user mentions IronFlock, Reswarm or a .ironflock folder, even if they don't say "template". To change a widget's own code (the @ironflock/widget-* packages), use ironflock-widgets instead.
 allowed-tools: Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/*), Bash(uv run ${CLAUDE_SKILL_DIR}/scripts/*)
 ---
 
-# IronFlock integration templates
+# IronFlock apps and their templates
 
-An IronFlock app is a Docker app plus an optional `.ironflock/` folder that plugs it
-into the platform. When a user installs the app in a project, the platform reads
-these files. Each file is optional and independent:
+An IronFlock app is a container, or a Docker Compose stack, that runs on every
+device the app is installed on, plus a `.ironflock/` folder that plugs it into the
+platform. The containers talk to the platform only through the `ironflock` SDK,
+and keep the app's state in its tables. The board, the app's central UI, is bound
+to the same tables live, so the edge code and the UI never call each other. A web
+UI that a container serves itself is reached through the port's remote-access
+tunnel and embedded in the board.
+[references/app-architecture.md](references/app-architecture.md) has the rules,
+and `assets/app-template/` is a starter app that follows them.
+
+When a user installs the app in a project, the platform reads the `.ironflock/`
+files. Each file is optional and independent:
 
 | File | What the platform does with it |
 |---|---|
 | `data-template.yml` | Creates the app's tables in the project's database. The app fills them through the SDK. |
 | `board-template.yml` | Installs the app's board (dashboard): widgets bound to those tables, laid out on pages. |
 | `env-template.yml` | Renders a parameters form per device or device group. Values reach the app as environment variables. |
-| `port-template.yml` | Lists ports that privileged users may open as remote-access tunnels. |
+| `port-template.yml` | Lists the ports the app serves. A production install opens a remote-access tunnel for each. |
 | `ai-template.yml` | Registers the app's AI agents with the IronFlock assistant. |
 
 Each file has a JSON Schema in `${CLAUDE_SKILL_DIR}/schemas/<name>/v1.yml`, the same
@@ -27,22 +36,42 @@ in it is described.
 1. **Read before writing.** Look at the existing `.ironflock/` files and at the app's
    code. The code shows what the app actually publishes (`publish_to_table` calls)
    and which functions it registers (`register_device_function` calls). The templates
-   have to agree with it. If templates already exist, run the validator (step 4)
+   have to agree with it. If templates already exist, run the validator (step 5)
    once before changing anything, so you can tell findings that were already there
-   from ones you introduce.
-2. **Data comes first.** A board can only show what a table in `data-template.yml`
+   from ones you introduce. Before you design an app, write its edge code or change
+   how its parts talk to each other, read
+   [references/app-architecture.md](references/app-architecture.md).
+2. **Start a new app from the starter.** For a new app in an empty folder (or one
+   holding only `.git`), scaffold it:
+
+   ```bash
+   python3 ${CLAUDE_SKILL_DIR}/scripts/new_app.py <app-name> --dest <dir>
+   ```
+
+   `<app-name>` is the app's name in IronFlock. The copy is a working app: a
+   program that reads a machine (simulated) on every device, keeps each device's
+   state and readings in tables, applies the limit users set on the board, and
+   serves a live view that the board embeds. Keep its structure and replace its
+   example: the data source in `read_machine()`, the tables, the board, the live
+   view, and the `TODO:` texts in `README.md` (the app's description for its
+   users) and `CLAUDE.md`. Delete what the app does not need, such as the live
+   view and the port-template when it serves no web page. Never scaffold over an
+   existing app, including the demo app IronFlock puts into a new app's
+   repository: use the starter's files as the reference for changing the app's
+   own, and ask before replacing demo code.
+3. **Data comes first.** A board can only show what a table in `data-template.yml`
    holds. Design or extend the tables before the board. If the code doesn't publish
    the data yet, say so and change the code too. For each table, decide whether
    users of the app should work with it directly. Mark tables that only hold the
    app's internal details `private: true` (app-templates.md explains when).
-3. **Write the file.** For the board, read
+4. **Write the file.** For the board, read
    [references/board-template.md](references/board-template.md) and the complete
    example [references/example-board.yml](references/example-board.yml) first,
    choose widgets with [references/widget-catalog.md](references/widget-catalog.md),
    and look up each chosen widget's exact properties (see below). For the other four
    files, read [references/app-templates.md](references/app-templates.md) and the
    file's schema.
-4. **Validate, fix and repeat until there are no errors:**
+5. **Validate, fix and repeat until there are no errors:**
 
    ```bash
    python3 ${CLAUDE_SKILL_DIR}/scripts/validate.py <app-dir>
@@ -55,10 +84,13 @@ in it is described.
    or install `pyyaml` and `jsonschema`. Warnings are judgment calls. Read each one
    and fix it unless it is deliberate. The validator has its own test suite, so a
    clean run is enough; there is no need to seed mistakes to test it.
-5. **Report** what you created, which tables and widgets connect, and anything the
+6. **Report** what you created, which tables and widgets connect, and anything the
    app's code still has to do. Tell the user they can open the board in IronFlock's
    board editor to adjust it visually. The editor reads and writes the same
-   `board-template.yml`.
+   `board-template.yml`. For a new app, add how to get it running: push it to the
+   app's repository in IronFlock and run it on a device from the IDE. That
+   development run has no remote-access tunnels; they come with a production
+   install.
 
 ## Widget schemas
 
@@ -80,6 +112,14 @@ config needs the literal prefixes and data references described in board-templat
 
 ## Principles
 
+- **Keep the app's state in its tables.** Devices write what they measure and the
+  state they are in, the board writes what users decide, and each device follows
+  that with `subscribe_to_table` and reads it again after a reconnect. Neither side
+  calls the other, and nothing polls. app-architecture.md has the rules and the
+  code patterns.
+- **Reach a device's web UI through its tunnel.** Declare the port in
+  port-template.yml, write the URL from `getRemoteAccessUrlForPort` into a table,
+  and bind widget-embed to it. Never hard-code a device's address, port or URL.
 - **Bind, don't paste.** If a value lives in a table, bind the widget to it with a
   data reference. Pasted numbers go stale the moment the board is installed.
 - **Make every page reachable by clicking, and the way there obvious.** People

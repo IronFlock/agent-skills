@@ -18,7 +18,7 @@ autocomplete in their editor:
 - [env-template.yml](#env-templateyml): app parameters
 - [port-template.yml](#port-templateyml): remote access
 - [ai-template.yml](#ai-templateyml): AI agents
-- [Python SDK quick reference](#python-sdk-quick-reference)
+- [The SDK](#the-sdk)
 
 ## data-template.yml
 
@@ -42,6 +42,9 @@ read them.
   requires all four. Some older documentation examples omit `name` or `description`;
   follow the schema. Descriptions are read by people in the board editor and by AI
   agents, so say what the value means and its unit.
+- **Give every table one writer, and name it in the table's `description`**: each
+  device about itself, the board's form, or one service. app-architecture.md
+  explains why, and how a device follows a table the board writes.
 - **`device_key` and `authid` exist on every table automatically**, so don't declare
   them (the schema reserves those ids). `device_key` identifies the device that
   published the row, which makes it the natural pivot for "one series per device" and
@@ -100,8 +103,14 @@ Parameters the user can set per device or per device group without a custom UI.
   value is also written to `/data/env/<NAME>.txt`, and a value over 20 KB exists
   only there.
 - `defaultValue` is what the app gets while running in development.
-- `DEVICE_NAME`, `DEVICE_SERIAL_NUMBER` and `SWARM_KEY` are always set by the
-  platform. Don't declare them.
+- The platform always sets `DEVICE_KEY`, `DEVICE_NAME`, `DEVICE_SERIAL_NUMBER`,
+  `SWARM_KEY`, `APP_KEY`, `APP_NAME`, `ENV` and the other variables listed in
+  app-architecture.md ("The container on the device"). Don't declare them, and
+  give parameters specific names (`PLC_HOST`, not `HOST`) that no other variable's
+  name or value contains.
+- Parameters belong to one device or device group. Settings that users change
+  while the app runs, or that apply to many devices, belong in a table the board
+  writes (app-architecture.md, "Parameters or a settings table?").
 
 ## port-template.yml
 
@@ -124,7 +133,11 @@ the app must authenticate its clients itself.
   `DEVICE_LAN_IP`, `DEVICE_PORT_FOR_<port>`, and for an active tcp/udp tunnel
   `REMOTE_PORT_FOR_<port>`. Never hard-code the declared port into a URL you show
   to the user.
-- A board can show the app's web UI inside an embed widget (widget-embed).
+- **To show a device's web UI on the board**, the app writes the URL from
+  `getRemoteAccessUrlForPort(<port>)` into the device's row of a table, and the
+  board's widget-embed binds `webUrl` to that column. Tunnels exist for production
+  installs only. app-architecture.md ("Web UIs on the device") has the whole
+  pattern, and board-template.md the binding.
 
 ## ai-template.yml
 
@@ -154,28 +167,12 @@ AI agents the app contributes to the IronFlock assistant.
   transform with that part. Its `topic:` tools run in the app's own code, which
   reads private tables normally.
 
-## Python SDK quick reference
+## The SDK
 
-`pip install ironflock` (JavaScript: `npm install ironflock`, same names in
-camelCase).
-
-```python
-from datetime import datetime, timezone
-from ironflock import IronFlock
-
-async def toggle_lamp(on: bool):
-    ...                                   # called by widget actions and AI tools
-    return {"lamp": "on" if on else "off"}
-
-async def main():
-    await flock.register_device_function("toggle_lamp", toggle_lamp)
-    await flock.publish_to_table("sensordata", {
-        "tsp": datetime.now(timezone.utc).isoformat(),
-        "temperature": 21.5,
-    })
-
-flock = IronFlock(mainFunc=main)
-flock.run()
-```
-
-JavaScript: `registerDeviceFunction`, `publishToTable`, `publishRowsToTable`.
+The code reads and writes the tables, follows them and registers device functions
+through the `ironflock` SDK (`pip install ironflock`, `npm install ironflock`, or
+`github.com/ironflock/sdk-go`). app-architecture.md ("Reading and writing state
+with the SDK") lists the calls and what they guarantee, and the starter app's
+`main.py` uses them. One rule is easy to miss: `main()` must not return, because
+the SDK closes the connection when it does, and with it every registered device
+function and subscription.

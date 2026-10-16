@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live view</title>
+<style>
+    :root {
+        color-scheme: light dark;
+        --text: #1f2a30;
+        --muted: #607078;
+        --surface: #ffffff;
+        --ok: #2e7d32;
+        --alarm: #c62828;
+        --idle: #757575;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+        :root { --text: #e8eef0; --muted: #9aa8ae; --surface: #182024; --ok: #66bb6a; --alarm: #ef5350; --idle: #9e9e9e; }
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+        display: flex; flex-direction: column; gap: 4vmin; padding: 4vmin;
+        background: var(--surface); color: var(--text);
+    }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 1em; }
+    h1 { margin: 0; font-size: clamp(16px, 5vmin, 32px); font-weight: 600; }
+    .state {
+        padding: 0.3em 0.8em; border-radius: 999px; color: #fff; font-weight: 600;
+        font-size: clamp(12px, 3.5vmin, 22px); background: var(--idle);
+    }
+    .state.OK { background: var(--ok); }
+    .state.TOO_HOT { background: var(--alarm); }
+    main { flex: 1; display: flex; flex-wrap: wrap; gap: 4vmin; align-items: center; justify-content: space-around; }
+    .reading { text-align: center; }
+    .reading .value { font-size: clamp(32px, 16vmin, 120px); font-weight: 700; font-variant-numeric: tabular-nums; }
+    .reading .label, footer { color: var(--muted); font-size: clamp(12px, 3vmin, 18px); }
+    footer { display: flex; justify-content: space-between; gap: 1em; }
+</style>
+</head>
+<body>
+    <header>
+        <h1 id="device">Live view</h1>
+        <span id="state" class="state">Connecting</span>
+    </header>
+    <main>
+        <div class="reading"><div class="value" id="temperature">–</div><div class="label">Temperature, °C</div></div>
+        <div class="reading"><div class="value" id="pressure">–</div><div class="label">Pressure, bar</div></div>
+    </main>
+    <footer>
+        <span id="limit"></span>
+        <span id="updated"></span>
+    </footer>
+<script>
+    // The device pushes every reading over a websocket; this page only listens.
+    // The address is relative to the page, so it works on the device's network
+    // (ws://) and through its remote-access tunnel or a reverse proxy (wss://).
+    const $ = (id) => document.getElementById(id)
+    const states = { OK: 'OK', TOO_HOT: 'Too hot', NO_READING: 'No reading' }
+    let wait = 1000
+
+    function render(r) {
+        $('device').textContent = r.device
+        $('state').textContent = states[r.state] ?? r.state
+        $('state').className = `state ${r.state}`
+        $('temperature').textContent = r.temperature?.toFixed(1) ?? '–'
+        $('pressure').textContent = r.pressure?.toFixed(2) ?? '–'
+        $('limit').textContent = `Limit ${r.max_temperature} °C`
+        $('updated').textContent = `Updated ${new Date(r.tsp).toLocaleTimeString()}`
+    }
+
+    function connect() {
+        const url = new URL('ws', location.href)
+        url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
+        const socket = new WebSocket(url)
+        socket.onopen = () => { wait = 1000 }
+        socket.onmessage = (event) => render(JSON.parse(event.data))
+        socket.onclose = () => {
+            $('state').textContent = 'Reconnecting'
+            $('state').className = 'state'
+            setTimeout(connect, wait)
+            wait = Math.min(wait * 2, 15000)
+        }
+    }
+
+    connect()
+</script>
+</body>
+</html>

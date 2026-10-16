@@ -1,0 +1,6 @@
+# yaml-language-server: $schema=https://ironflock.com/schemas/port-template/v1.yml
+ports:
+  - name: Live view
+    port: 8080
+    main: true
+    protocol: http
