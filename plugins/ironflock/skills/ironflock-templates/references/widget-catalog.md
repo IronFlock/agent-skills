@@ -315,13 +315,14 @@ An iframe embed widget for displaying external web content within the dashboard.
 
 A form widget for collecting user input and storing it in database tables. Use this widget to create data entry interfaces for manual input, configuration settings, user feedback, or any scenario requiring structured data collection.
 
-**Data shape:** Writes rather than reads. Each formFields[] entry maps one input control to a database column through targetColumn, and submitting stores a row. Field types cover text, number, dropdown, checkbox, textarea, datetime and file, with validation, required flags, defaults and conditional visibility. A file field uploads one file into a FleetFiles namespace of the app and stores the file's key in its string column.
+**Data shape:** Writes rather than reads. Each formFields[] entry maps one input control to a database column through targetColumn, and submitting stores a row. Field types cover text, number, dropdown, checkbox, textarea, datetime, secret and file, with validation, required flags, defaults and conditional visibility. A file field uploads one file into a FleetFiles namespace of the app and stores the file's key in its string column. A secret field is a masked, write-only input.
 
 **Use when:**
 - A person needs to enter or correct data that is then persisted — manual readings, maintenance notes, quality checks, configuration values, feedback.
 - Input must be structured and validated, with required fields, defaults, or fields that appear only when another field has a given value (conditionalDisplay).
 - Records should also be deletable or flagged as deleted from the dashboard (deleteButton, deleteFlagColumn).
 - A record comes with a document, image or data file, such as a new SOP revision as a PDF: a field of type 'file' stores the file with the row (fileNamespace, acceptedFileTypes).
+- A password or API token is entered: a 'secret' field masks it and never shows the saved value. Target a 'secret: true' column, which FleetDB encrypts.
 
 **Not for:**
 - Narrowing what other widgets display — that is filtering, not data entry. Use widget-filter-dropdown or widget-filter-calendar.
