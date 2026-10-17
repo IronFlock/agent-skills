@@ -129,7 +129,7 @@ the connection, so a program that runs until it is stopped never returns from
 | Read | `getHistory(table, {"limit": n, ...})` | The newest matching rows, oldest first |
 | Read the current state | `getHistory(table, {"limit": n, "filterAnd": [{"latest": True}]})` | The newest row per entity |
 | Read aggregated | `get_series_history(table, params)` | One row per time bucket |
-| Follow | `subscribe_to_table(table, handler)` | Every new row, as the platform stores it |
+| Follow | `subscribe_to_table(table, handler)` | Every new row, as the platform stores it, also across reconnects |
 | Report an error | `report_error(error, user_message=...)` | A row in `error-logs`, shown by widget-toast |
 | Delete | a row with `deleted: True` | Rows are history; see below |
 
@@ -145,6 +145,11 @@ the connection, so a program that runs until it is stopped never returns from
 - **There is no delete.** Retire an entity by writing `deleted: True` and filter
   it out where it is read (board forms write the flag through
   `deleteFlagColumn`). Old rows age out with the table's `dropAfter`.
+- **The SDK hides the connection.** The program calls everything on its
+  `IronFlock` object and never deals with sessions: the SDK reconnects, restores
+  subscriptions and device functions, and delivers to a table subscription the
+  rows stored while the connection was down (`ironflock` 1.10.0 and later).
+  Never reach into `flock.connection`.
 - **Writes ride out a platform restart.** A table write waits up to a minute
   (`reconnect_window`) for the connection to come back, then raises
   `RuntimeError`. Catch it in a loop that must keep running, and buffer the rows
@@ -156,20 +161,22 @@ the connection, so a program that runs until it is stopped never returns from
 ## Following what the board writes
 
 A device that applies board-written state, such as a limit set on the board,
-follows the table in four steps. The starter's `main.py` does all four:
+follows the table in three steps. The starter's `main.py` does all three:
 
 1. **Subscribe first** with `subscribe_to_table`, so no row falls between the
    read and the subscription.
 2. **Read the newest row** with `getHistory` and `{"latest": True}`, and apply it.
-3. **Read again after every reconnect.** The SDK restores subscriptions after a
-   reconnect, but rows written in the meantime are not replayed: a limit saved
-   while a device was offline never reaches its subscription. The SDKs have no
-   public join callback yet. In Python, listen to the join event of the
-   connection's autobahn component:
-   `flock.connection.component.on("join", handler)`, where `handler(session,
-   details)` is a coroutine that reads the table again.
-4. **Apply a row only if it is newer** (`tsp`) than the one in force. Rows from
-   the read, the subscription and the re-read arrive in no guaranteed order.
+3. **Apply a row only if it is newer** (`tsp`) than the one in force. A row saved
+   just as the program starts can arrive from the read and from the
+   subscription.
+
+Reconnects need nothing more. The router does not replay what was published
+while a device was offline, so the SDK does it: after every reconnect, the
+subscription's handler first gets the rows stored meanwhile, oldest first, and
+then the rows that arrive live. A limit saved while a device was offline reaches
+it as soon as it is back. The catch-up goes by `tsp`: it delivers the rows newer
+than the newest one the handler got, at most 10000. It came with `ironflock`
+1.10.0; with an older SDK such a row is lost until the next change or restart.
 
 ```python
 await flock.subscribe_to_table("settings", lambda row, *a, **kw: apply(row))
@@ -188,8 +195,8 @@ or off, a recipe. Write them into a table, as above.
 
 **Commands that must run once** (print a label, start a cleaning cycle) are rows
 with an id in a table the board writes. The device records the ids it has done
-(an entity table keyed by the id, written by the device), so the re-read after a
-reconnect skips them.
+(an entity table keyed by the id, written by the device), so a command it gets
+twice, from the read at start and from the subscription, runs once.
 
 **Device functions** are procedures a device registers:
 `await flock.register_device_function("set_lamp", handler)`. Use them when the
@@ -339,7 +346,8 @@ Rules for the page:
    every column the code writes is declared in data-template.yml.
 2. Every row has a `tsp`; state rows are written on change and hold only the key
    and the changed columns.
-3. Board-written state is followed in the four steps above, and `main()` never
+3. Board-written state is followed in the three steps above, with `ironflock`
+   1.10.0 or later; the code never touches `flock.connection`, and `main()` never
    returns.
 4. Table writes in long-running loops catch `RuntimeError`; expected failures
    are handled in the program and reported with `report_error` and a

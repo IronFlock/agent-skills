@@ -303,8 +303,9 @@ You can read:
   the text for operators. A widget-toast shows the app's reports with `message`
   bound to `user_message` and `type` to `level`, both filtered on
   `{column: source, operator: '=', value: app, dataType: string}`. The toast knows
-  the types `success`, `error`, `info` and `warning`, so a report with level `warn`
-  shows as `info`.
+  the types `success`, `error`, `info` and `warning`; `report_error` sends `error`,
+  `warning`, `info` or `debug`, and the toast shows `debug` as `info`. SDK versions
+  before 1.10.0 sent `warn` for `warning`, which the toast shows as `info` too.
 - **Another app's table:** add `provider_app: <app name in lowercase>` to the ref,
   and list that app under `consumes` in data-template.yml. Only that app's shared
   tables and transforms can be read. Its private ones are not shared.

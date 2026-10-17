@@ -114,9 +114,10 @@ config needs the literal prefixes and data references described in board-templat
 
 - **Keep the app's state in its tables.** Devices write what they measure and the
   state they are in, the board writes what users decide, and each device follows
-  that with `subscribe_to_table` and reads it again after a reconnect. Neither side
-  calls the other, and nothing polls. app-architecture.md has the rules and the
-  code patterns.
+  that with `subscribe_to_table`, which also delivers what was saved while the
+  device was offline. Neither side calls the other, nothing polls, and app code
+  never touches the SDK's connection or sessions. app-architecture.md has the rules
+  and the code patterns.
 - **Reach a device's web UI through its tunnel.** Declare the port in
   port-template.yml, write the URL from `getRemoteAccessUrlForPort` into a table,
   and bind widget-embed to it. Never hard-code a device's address, port or URL.

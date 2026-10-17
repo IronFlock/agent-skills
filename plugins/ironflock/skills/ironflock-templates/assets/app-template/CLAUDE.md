@@ -19,10 +19,11 @@ app is installed on. `.ironflock/` connects it to the platform.
 - **The board is the user interface** (`.ironflock/board-template.yml`): widgets
   bound to the tables, updated live. The board and the devices never call each
   other, so either works while the other is offline.
-- **Settings reach the devices as rows.** `main.py` reads the newest `settings`
-  row at start, follows new ones with `subscribe_to_table`, reads again after
-  every reconnect (rows saved meanwhile are not replayed), and applies a row only
-  if it is newer than the one in force.
+- **Settings reach the devices as rows.** `main.py` subscribes to `settings`,
+  reads its newest row once at start, and applies a row only if it is newer than
+  the one in force. The SDK (`ironflock` 1.10.0 or later) delivers the rows saved
+  while a device was offline as soon as it is back, so the code never deals with
+  connections or sessions.
 - **The live view** is a web page `main.py` serves on port 8080
   (`web/index.html`, updated over a websocket). `.ironflock/port-template.yml`
   offers the port as a remote-access tunnel, `main.py` writes the tunnel's URL

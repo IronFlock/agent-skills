@@ -208,6 +208,10 @@ def grade_new_app(app: Path, errors, warnings):
     code = "\n".join(p.read_text(errors="ignore") for p in files if p.suffix in (".py", ".js", ".mjs", ".ts", ".go"))
     pages = "\n".join(p.read_text(errors="ignore") for p in files if p.suffix in (".html", ".js", ".mjs", ".ts", ".tsx"))
     setup = "\n".join(p.read_text(errors="ignore") for p in files if p.name.startswith(("Dockerfile", "docker-compose")))
+    deps = "\n".join(
+        p.read_text(errors="ignore") for p in files
+        if p.name.startswith("requirements") or p.name in ("pyproject.toml", "package.json", "go.mod")
+    )
     widgets = [w for w in board.get("widgets") or [] if isinstance(w, dict)]
     tables = {t.get("tablename"): t for t in (data.get("data") or {}).get("tables") or [] if isinstance(t, dict)}
 
@@ -232,7 +236,13 @@ def grade_new_app(app: Path, errors, warnings):
         return re.search(rf"(?:{functions})\s*\(\s*(?:ctx\s*,\s*)?(?:{'|'.join(names)})", code)
 
     follows = [t for t in limit_tables if called("subscribe_to_table|subscribeToTable|SubscribeToTable", t) and called("getHistory|GetHistory", t)]
-    rejoin = re.search(r"""\.on\(\s*["']join["']|on_join|onJoin|OnJoin""", code)
+
+    # A limit saved while an IPC was offline reaches it through the SDK, which
+    # catches table subscriptions up after a reconnect from 1.10.0 on: the
+    # app's code stays out of the connection's sessions.
+    pins = re.findall(r"ironflock(?:==|@\^?|\"\s*:\s*\"[\^~]?|/sdk-go v)(\d+)\.(\d+)\.(\d+)", setup + deps)
+    catching_up = bool(pins) and all(tuple(map(int, p)) >= (1, 10, 0) for p in pins)
+    session_code = re.search(r"""\.connection\.component|\.on\(\s*["']join["']|onopen|on_join|onJoin""", code)
 
     http_ports = [p.get("port") for p in ports if isinstance(p, dict) and p.get("protocol", "http") in ("http", "https")]
     served = [p for p in http_ports if re.search(rf"\b{p}\b", code + setup)]
@@ -261,7 +271,11 @@ def grade_new_app(app: Path, errors, warnings):
         check("a Dockerfile or docker-compose.yml and edge code using the ironflock SDK", setup and re.search(r"ironflock", code), f"{len(files)} file(s)"),
         check("a board form writes the low-level limit into a table", limit_tables, f"form tables {sorted(form_tables)}"),
         check("the code reads that table at start and subscribes to it", follows, f"followed: {follows}"),
-        check("the code reads the limit again after a reconnect", rejoin, rejoin.group(0) if rejoin else "no join hook"),
+        check(
+            "reconnects are left to the SDK: ironflock 1.10.0 or later, and no session code",
+            catching_up and not session_code,
+            f"pinned {['.'.join(p) for p in pins]}" + (f", session code: {session_code.group(0)}" if session_code else ""),
+        ),
         check("port-template declares the web page's http port, and the code serves it", served, f"http ports {http_ports}"),
         check("the code writes the port's tunnel URL into a table", tunnel_url, "found" if tunnel_url else "not found"),
         check("a widget-embed on a per-tank page binds the URL from a table, filtered by the route", embeds, f"{len(embeds)} embed(s), {len(wildcard)} wildcard page(s)"),

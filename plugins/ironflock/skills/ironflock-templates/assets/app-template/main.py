@@ -62,8 +62,8 @@ def read_machine() -> dict:
 def apply_settings(row: dict) -> None:
     """Apply a settings row unless a newer one is in force already.
 
-    Rows come from the first read, from the subscription and from the read after
-    a reconnect, in no guaranteed order, so the newest row wins."""
+    Rows come from the first read and from the subscription, and a row saved
+    just as the program starts can come from both, so the newest row wins."""
     global settings_tsp
     if row.get("tsp", 0) <= settings_tsp or row.get("max_temperature") is None:
         return
@@ -80,28 +80,9 @@ async def load_settings() -> None:
 
 
 def on_settings(*args, **kwargs) -> None:
-    """A settings row was saved on the board just now."""
+    """A settings row the board saved. Rows saved while this device was offline
+    arrive too: the SDK delivers them as soon as the connection is back."""
     apply_settings(args[0])
-
-
-def reload_settings_after_reconnects() -> None:
-    """Read the settings again each time the connection comes back.
-
-    Tables have no replay: a row the board saves while this device is offline never
-    reaches the subscription. The SDK has no public join callback, so this listens
-    to the join event of the autobahn component behind flock.connection."""
-
-    async def reload(session, details):
-        try:
-            await load_settings()
-        except Exception as error:  # the next reconnect tries again
-            print(f"Could not read the settings after a reconnect: {error}")
-
-    component = getattr(flock.connection, "component", None)
-    if component is None:
-        print("Cannot watch for reconnects: settings saved while offline apply after a restart")
-        return
-    component.on("join", reload)
 
 
 # --- live view: a web page this device serves on UI_PORT -------------------
@@ -160,7 +141,6 @@ async def main() -> None:
     await serve_live_view()
     await flock.subscribe_to_table("settings", on_settings)  # before the read, so no row falls between
     await load_settings()
-    reload_settings_after_reconnects()
     await announce()
 
     state = None  # what this device's row in the devices table says
