@@ -207,8 +207,21 @@ filterAnd:
 ```
 
 - **Operators:** `= != <> > >= < <= LIKE ILIKE NOT LIKE NOT ILIKE IN NOT IN IS NULL
-  IS NOT NULL`, in uppercase. `IN` takes a list as its value, and `IS NULL` takes
-  no value.
+  IS NOT NULL IS CURRENT USER`, in uppercase. `IN` takes a list as its value, and
+  `IS NULL` and `IS CURRENT USER` take no value.
+- **The person viewing the board:** `operator: IS CURRENT USER` keeps the rows
+  whose column (string or bigint) is the viewer's account id, the id the platform
+  stamps as `authid` on every row a person saves. The data backend fills it in
+  for each read, so a widget can show the viewer their own record or their own
+  saves; a visitor who is not signed in sees no row. The column must exist on the
+  table (or transform) the binding reads, and the operator does nothing in alarms.
+
+  ```yaml
+  # The viewer's own user record, e.g. their name in a header label
+  - {column: account_id, operator: IS CURRENT USER, dataType: string}
+  # Rows the viewer saved through a form
+  - {column: authid, operator: IS CURRENT USER, dataType: string}
+  ```
 - **`dataType` is required in practice.** Without it, the database does not apply
   the filter.
 - **Latest row per entity:** on a table with `maintainLatestFlagFor`, this filter

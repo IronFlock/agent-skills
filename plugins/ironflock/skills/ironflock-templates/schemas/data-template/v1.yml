@@ -133,11 +133,11 @@ $defs:
       share:
         type: string
         enum: [authenticated, link, none]
-        description: "How objects may be shared. 'authenticated' (DEFAULT) = reachable only through the stable URL, which requires a signed-in requestor holding READ on this data backend. 'link' = additionally allows minting expiring bearer links. 'none' = no links at all; API access only."
+        description: "Whether objects can be opened through their permanent URL. 'authenticated' (DEFAULT) = the URL serves a signed-in requestor holding READ on this data backend. 'link' = reserved for expiring bearer links; currently the same as 'authenticated'. 'none' = the URL answers 404; read the objects through the API. share does not affect share links (share_url), upload URLs, API reads or cross-app access (see private)."
       linkMaxTtl:
         type: string
         pattern: "^[1-9][0-9]*(s|m|h)$"
-        description: "Ceiling for the lifetime of an expiring link. Only meaningful with share: link. Default 15m, hard ceiling 24h."
+        description: "Reserved for share: link. Not applied yet: share links (share_url) are valid for 1 to 60 minutes, 15 by default."
         examples: ["15m", "1h"]
       renderInline:
         type: boolean

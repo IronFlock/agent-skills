@@ -150,10 +150,13 @@ the connection, so a program that runs until it is stopped never returns from
   subscriptions and device functions, and delivers to a table subscription the
   rows stored while the connection was down (`ironflock` 1.10.0 and later).
   Never reach into `flock.connection`.
-- **Writes ride out a platform restart.** A table write waits up to a minute
-  (`reconnect_window`) for the connection to come back, then raises
-  `RuntimeError`. Catch it in a loop that must keep running, and buffer the rows
-  if none may be lost.
+- **Append what must not be lost.** `append_to_table` waits up to a minute
+  (`reconnect_window`) for a restarting platform, the router and the data
+  backend alike, and raises `RuntimeError` when it does not come back.
+  `publish_to_table` waits only for the connection: a row published while the
+  data backend restarts is acknowledged and lost. Append state changes and
+  records; publish high-rate readings. Catch `RuntimeError` in a loop that must
+  keep running, and buffer the rows if none may be lost.
 - **A table's columns are its contract.** A key the code writes that no column
   declares is dropped, and a column nobody writes stays empty; neither raises.
   Keep data-template.yml and the code in step.
@@ -175,8 +178,11 @@ while a device was offline, so the SDK does it: after every reconnect, the
 subscription's handler first gets the rows stored meanwhile, oldest first, and
 then the rows that arrive live. A limit saved while a device was offline reaches
 it as soon as it is back. The catch-up goes by `tsp`: it delivers the rows newer
-than the newest one the handler got, at most 10000. It came with `ironflock`
-1.10.0; with an older SDK such a row is lost until the next change or restart.
+than the newest one the handler got, at most 10000. Its read waits for the data
+backend like any history read, up to the reconnect window, and when it fails,
+those rows are not delivered and only a warning is logged. It came with
+`ironflock` 1.10.0; with an older SDK such a row is lost until the next change or
+restart.
 
 ```python
 await flock.subscribe_to_table("settings", lambda row, *a, **kw: apply(row))

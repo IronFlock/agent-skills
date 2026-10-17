@@ -605,6 +605,14 @@ class Walker:
                 board.warn(path + ["dataType"], f"column '{base}' is {actual}, but the filter says {declared}")
             if op in PATTERN_OPERATORS and actual and actual != "string":
                 board.warn(path + ["operator"], f"{op} only works on text columns; it is dropped for {actual}")
+        if op == "IS CURRENT USER":
+            if f.get("useFilter") or f.get("useRoute"):
+                board.error(path, "IS CURRENT USER takes no value, so useFilter and useRoute have nothing to bind")
+            if isinstance(column, str) and columns is not None and "{" not in column:
+                base = re.split(r"[.\[]", column, maxsplit=1)[0]
+                actual = columns.get(base)
+                if actual and actual not in ("string", "bigint"):
+                    board.error(path + ["operator"], f"IS CURRENT USER compares with an account id; column '{base}' is {actual}, not string or bigint")
         if f.get("useFilter") and f.get("useRoute"):
             board.error(path, "use either useFilter or useRoute, not both")
         if f.get("useRoute"):
@@ -623,6 +631,9 @@ class Walker:
         elif op in ("IS NULL", "IS NOT NULL"):
             if value not in (None, ""):
                 board.warn(path + ["value"], f"{op} takes no value")
+        elif op == "IS CURRENT USER":
+            if value not in (None, ""):
+                board.warn(path + ["value"], "IS CURRENT USER takes no value: the viewer's account id is the value")
         elif op in ("IN", "NOT IN"):
             if not isinstance(value, (list, str)):
                 board.error(path + ["value"], f"{op} needs a list of values")

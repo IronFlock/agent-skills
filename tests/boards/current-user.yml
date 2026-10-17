@@ -1,0 +1,71 @@
+# yaml-language-server: $schema=https://ironflock.com/schemas/board-template/v1.yml
+# IS CURRENT USER: the column is the account id of whoever views the board,
+# filled in by the data backend for each read. It takes no value, so the URL
+# bindings have nothing to bind, and it compares with an account id, so only a
+# string or bigint column can hold one.
+#
+# expect: ERROR widgets[1].chartconfig.text.valueRef.queryParams.filterAnd[0].operator :: column 'pages' is numeric, not string or bigint
+# expect: ERROR widgets[2].chartconfig.text.valueRef.queryParams.filterAnd[0] :: useFilter and useRoute have nothing to bind
+# expect: WARN  widgets[3].chartconfig.text.valueRef.queryParams.filterAnd[0].value :: IS CURRENT USER takes no value
+#
+# The first label is set up correctly: the newest document the viewer attached.
+#
+# expect-none: widgets[0].chartconfig.text.valueRef.queryParams.filterAnd[0]
+# expect-none: widgets[0].chartconfig.text.valueRef.queryParams.filterAnd[0].operator
+# expect-none: widgets[0].chartconfig.text.valueRef.queryParams.filterAnd[0].value
+name: current-user
+widgets:
+    - layout_id: my-document
+      package_name: widget-label
+      version: 1.0.8
+      chartconfig:
+          text:
+              valueRef:
+                  tablename: machine_documents
+                  column: file_name
+                  queryParams:
+                      limit: 1
+                      filterAnd:
+                          - {column: authid, operator: IS CURRENT USER, dataType: string}
+    - layout_id: wrong-type
+      package_name: widget-label
+      version: 1.0.8
+      chartconfig:
+          text:
+              valueRef:
+                  tablename: machine_documents
+                  column: file_name
+                  queryParams:
+                      limit: 1
+                      filterAnd:
+                          - {column: pages, operator: IS CURRENT USER, dataType: numeric}
+    - layout_id: bound
+      package_name: widget-label
+      version: 1.0.8
+      chartconfig:
+          text:
+              valueRef:
+                  tablename: machine_documents
+                  column: file_name
+                  queryParams:
+                      limit: 1
+                      filterAnd:
+                          - {column: machine_id, operator: IS CURRENT USER, value: '2', dataType: string, useRoute: true}
+    - layout_id: with-value
+      package_name: widget-label
+      version: 1.0.8
+      chartconfig:
+          text:
+              valueRef:
+                  tablename: machine_documents
+                  column: file_name
+                  queryParams:
+                      limit: 1
+                      filterAnd:
+                          - {column: machine_id, operator: IS CURRENT USER, value: me, dataType: string}
+layout:
+    gridLayout:
+        - {id: my-document, x: 0, y: 0, w: 24, h: 6, z: 1000}
+        - {id: wrong-type, x: 24, y: 0, w: 24, h: 6, z: 1001}
+        - {id: bound, x: 48, y: 0, w: 24, h: 6, z: 1002}
+        - {id: with-value, x: 72, y: 0, w: 24, h: 6, z: 1003}

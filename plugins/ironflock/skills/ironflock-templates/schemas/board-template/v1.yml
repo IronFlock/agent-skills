@@ -341,11 +341,16 @@ $defs:
         minLength: 1
         description: Column id or json path.
       operator:
-        enum: ["=", "!=", "<>", ">", ">=", "<", "<=", LIKE, ILIKE, NOT LIKE, NOT ILIKE, IN, NOT IN, IS NULL, IS NOT NULL]
+        enum: ["=", "!=", "<>", ">", ">=", "<", "<=", LIKE, ILIKE, NOT LIKE, NOT ILIKE, IN, NOT IN, IS NULL, IS NOT NULL, IS CURRENT USER]
+        description: >-
+          IS CURRENT USER takes no value: the column (string or bigint) equals
+          the account id of the person viewing the board - the id the platform
+          stamps as authid on the rows they save. A visitor who is not signed
+          in matches no row.
       value:
         description: >-
           The comparison value; a list for IN / NOT IN; omitted for IS NULL /
-          IS NOT NULL. With useFilter it is the URL parameter name (a
+          IS NOT NULL and IS CURRENT USER. With useFilter it is the URL parameter name (a
           filter-dropdown's parameterKey); with useRoute it is the index of the
           route segment ('2' in /machines/press-1 is press-1).
         anyOf:

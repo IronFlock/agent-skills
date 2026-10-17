@@ -154,16 +154,18 @@ async def main() -> None:
         else:
             new_state = "TOO_HOT" if reading["temperature"] > settings["max_temperature"] else "OK"
         await show(reading, new_state)
-        # Each write waits up to a minute for a platform that is restarting (the SDK's
-        # reconnect window), so short outages lose nothing. A longer one raises, and
-        # this reading is dropped; buffer readings yourself if none may be lost.
+        # Readings are published: a publish waits for the connection, up to the SDK's
+        # reconnect window, but not for the data backend, so a reading published while
+        # the data backend restarts is lost, which is fine at this rate. State changes
+        # are appended: an append waits for the data backend too, so a short outage
+        # loses none. A longer outage raises, and the next round tries again.
         try:
             if reading:
                 await flock.publish_to_table("measurements", {"tsp": now(), **reading})
             if new_state != state:
                 if new_state == "NO_READING":
-                    await flock.report_error(problem, user_message=f"{DEVICE_NAME} cannot read the machine")
-                await flock.publish_to_table("devices", {"tsp": now(), "state": new_state})
+                    await flock.report_error(problem, append=True, user_message=f"{DEVICE_NAME} cannot read the machine")
+                await flock.append_to_table("devices", {"tsp": now(), "state": new_state})
                 state = new_state
         except RuntimeError as error:
             print(f"Not recorded: {error}")
