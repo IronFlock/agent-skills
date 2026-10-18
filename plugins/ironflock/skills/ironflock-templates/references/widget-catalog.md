@@ -245,12 +245,13 @@ A rich text display widget with three configurable sections: title, subtitle, an
 
 A markdown rendering widget for displaying formatted text with dynamic variable substitution. Use this widget for documentation, instructions, dynamic reports, or any rich text content on dashboards.
 
-**Data shape:** A Markdown document, with {{variableName}} placeholders substituted from data[] entries that each bind a label to a live value.
+**Data shape:** A Markdown document (HTML allowed), with {{variableName}} placeholders substituted from data[] entries that each bind a label to a live value — in the text, and in HTML attribute values such as style, class, href and src.
 
 **Use when:**
 - Prose, documentation, instructions or a written summary belongs on the dashboard.
 - The text needs structure or markup — headings, lists, links, tables, code blocks.
 - A narrative should incorporate live numbers, e.g. 'Line 3 produced {{units}} units today'.
+- Hand-written HTML should follow the data — a banner whose colour comes from a column (style="background: {{stateColor}}"), a link or image whose address does.
 
 **Not for:**
 - A single styled string with no markup — use widget-label; a Markdown renderer is overkill.
