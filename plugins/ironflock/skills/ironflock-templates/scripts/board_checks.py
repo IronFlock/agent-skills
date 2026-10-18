@@ -12,7 +12,9 @@ checks what a structural schema cannot see:
   filter widgets wired to the widgets they are meant to filter,
 - navigation: menu items that would be highlighted together with others, and
   whether every page can be reached from the home page by clicking, and left
-  again, following links the way the widgets and the board navigator resolve them.
+  again, following links the way the widgets and the board navigator resolve them,
+- widget-markdown bodies: markup that renders broken, such as a {{placeholder}}
+  inside a tag or HTML that Markdown turns into a code block (markdown_markup.py).
 
 The rules follow what the board actually does when it renders a widget and
 queries its data, not the stricter or looser habits of other validators.
@@ -26,6 +28,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
+import markdown_markup
 import widget as widget_lib
 
 PREFIXES = ("$str:", "$num:", "$bool:")
@@ -358,6 +361,9 @@ def check_widget(board: Board, i: int, w: dict, offline: bool, cache: dict, plac
             walker.check_refs_only(config, cpath)
     if package == "widget-form" and isinstance(config, dict):
         check_form_targets(board, config, cpath)
+    if package == "widget-markdown" and isinstance(config, dict):
+        rendered = cache.get((package, version if isinstance(version, str) else None), (None,))[0]
+        check_markdown(board, config, cpath, rendered or (version if isinstance(version, str) else None))
 
 
 class Walker:
@@ -758,6 +764,23 @@ def check_form_targets(board: Board, config: dict, path: list) -> None:
             board.error(tpath + ["column"], f"table '{table}' has no column '{column}'")
         elif target.get("dataType") and columns[column] != target.get("dataType"):
             board.warn(tpath + ["dataType"], f"column '{column}' is {columns[column]}, not {target.get('dataType')}")
+
+
+def check_markdown(board: Board, config: dict, path: list, version: str | None) -> None:
+    """A widget-markdown body against what the version that renders it does with
+    it: where its placeholders work, and Markdown's rules for HTML blocks (see
+    markdown_markup). version None (offline, nothing pinned) means the latest."""
+    body = config.get("markdown")
+    if not isinstance(body, str):
+        return  # unset, or bound to data
+    data = config.get("data")
+    if isinstance(data, list):
+        data = [
+            {key: constant(item.get(key)) for key in ("label", "value")} if isinstance(item, dict) else item
+            for item in data
+        ]
+    for finding in markdown_markup.check(constant(body), data, version):
+        (board.error if finding.level == "error" else board.warn)(path + list(finding.path), finding.message)
 
 
 # The columns a file field writes beside the key, with the dataTypes that can hold them.

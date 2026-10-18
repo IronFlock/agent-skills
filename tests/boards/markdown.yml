@@ -1,0 +1,151 @@
+# yaml-language-server: $schema=https://ironflock.com/schemas/board-template/v1.yml
+# Up to widget-markdown 1.0.13 every {{name}} became a <span> element before
+# Markdown rendered, so a placeholder only worked in the text between tags
+# (widgets 0-6 pin 1.0.13). From 1.0.14 on it also fills attribute values, code
+# and link addresses, and removes scripts and event handlers (widgets 7-8). For
+# every version HTML blocks follow Markdown's rules: Markdown inside one is not
+# parsed, and a line indented by four spaces after a blank line is a code block.
+#
+# The first widget is set up correctly for 1.0.13: a fixed style, live values in
+# the text, a monospaced value in <code>, every placeholder bound. Widget 7 is set
+# up correctly for 1.0.14, with live values in attributes, code and a link. Until
+# 1.0.14 is published, widgets 7-8 also report that their version is not.
+#
+# expect-none: widgets[0].chartconfig.markdown
+# expect-none: widgets[0].chartconfig.data[0].label
+# expect-none: widgets[0].chartconfig.data[0].value
+#
+# expect: ERROR widgets[1].chartconfig.markdown :: {{mbg}}, {{mcolor}} are inside the <div> tag (its style attribute)
+# expect: ERROR widgets[1].chartconfig.markdown :: widget-markdown 1.0.14 and later fill it; this widget renders with 1.0.13
+# expect: ERROR widgets[2].chartconfig.markdown :: line 4: this line follows a blank line and is indented by 4 or more spaces
+# expect: ERROR widgets[3].chartconfig.markdown :: line 2: `**Status:**` is Markdown inside an HTML block
+# expect: ERROR widgets[4].chartconfig.markdown :: {{machine}} is inside a code span
+# expect: ERROR widgets[4].chartconfig.markdown :: {{doc}} is in a link or image address
+# expect: ERROR widgets[5].chartconfig.markdown :: {{accent}} is inside a <style> element
+# expect: ERROR widgets[5].chartconfig.markdown :: <script> never runs in widget-markdown
+# expect: ERROR widgets[6].chartconfig.markdown :: {{mode}} has no data entry with the label 'mode'
+# expect: WARN  widgets[6].chartconfig.data[0].label :: no {{state}} in the markdown uses this entry
+# expect: ERROR widgets[6].chartconfig.data[1].value :: inserted as plain text, so its markup shows literally
+#
+# expect-none: widgets[7].chartconfig.markdown
+# expect-none: widgets[7].chartconfig.data[1].value
+# expect: ERROR widgets[8].chartconfig.markdown :: <a> has the onclick attribute
+# expect: ERROR widgets[8].chartconfig.markdown :: {{attr}} stands where the <div> tag needs a name
+# expect: ERROR widgets[8].chartconfig.data[0].value :: {{tone}} stands in CSS, where a value must be a plain CSS value
+name: markdown
+widgets:
+    - layout_id: status-card
+      package_name: widget-markdown
+      version: 1.0.13
+      chartconfig:
+          markdown: |
+              <div style="background:#161b22;border-left:4px solid #58a6ff;padding:8px 12px">
+                <strong>{{machine}}</strong> is <span style="color:#e6edf3">{{state}}</span>
+              </div>
+
+              **Temperature:** {{temperature}} °C, machine id <code>{{machine}}</code>
+          data:
+              - label: $str:temperature
+                value:
+                    valueRef: {tablename: measurements, column: temperature, queryParams: {limit: 1}}
+              - {label: $str:machine, value: $str:press-1}
+              - {label: $str:state, value: $str:running}
+    - layout_id: mode-banner
+      package_name: widget-markdown
+      version: 1.0.13
+      chartconfig:
+          markdown: '<div style="background-color:{{mbg}};border-left:4px solid {{mcolor}}">{{status}}</div>'
+          data:
+              - {label: $str:mbg, value: $str:#1f2937}
+              - {label: $str:mcolor, value: $str:#22c55e}
+              - {label: $str:status, value: $str:Running}
+    - layout_id: indented-html
+      package_name: widget-markdown
+      version: 1.0.13
+      chartconfig:
+          markdown: |
+              <div style="padding:4px">
+                <h3>Press 1</h3>
+
+                  <p>{{state}}</p>
+              </div>
+          data:
+              - {label: $str:state, value: $str:running}
+    - layout_id: markdown-in-html
+      package_name: widget-markdown
+      version: 1.0.13
+      chartconfig:
+          markdown: |
+              <div style="text-align:center">
+              **Status:** {{state}}
+              </div>
+          data:
+              - {label: $str:state, value: $str:running}
+    - layout_id: code-and-link
+      package_name: widget-markdown
+      version: 1.0.13
+      chartconfig:
+          markdown: |
+              Machine `{{machine}}`, see the [manual]({{doc}}).
+          data:
+              - {label: $str:machine, value: $str:press-1}
+              - {label: $str:doc, value: $str:https://example.com/press-1.pdf}
+    - layout_id: style-and-script
+      package_name: widget-markdown
+      version: 1.0.13
+      chartconfig:
+          markdown: |
+              <style>
+              .card { border-color: {{accent}}; }
+              </style>
+
+              <script>document.title = 'Press 1'</script>
+
+              <div class="card">Press 1</div>
+          data:
+              - {label: $str:accent, value: $str:#22c55e}
+    - layout_id: bindings
+      package_name: widget-markdown
+      version: 1.0.13
+      chartconfig:
+          markdown: |
+              Mode: {{mode}}, status: {{status}}
+          data:
+              - {label: $str:state, value: $str:running}
+              - {label: $str:status, value: $str:<b>OK</b>}
+    - layout_id: live-banner
+      package_name: widget-markdown
+      version: 1.0.14
+      chartconfig:
+          markdown: |
+              <div style="background:{{stateColor}};border-left:6px solid {{accent}};padding:4px 12px">
+                <a href="/machines/{{machine}}">{{machine}}</a> is {{state}}
+              </div>
+
+              Id `{{machine}}`, see the [manual]({{doc}}).
+          data:
+              - {label: $str:stateColor, value: $str:#1f2937}
+              - {label: $str:accent, value: '$str:rgb(34, 197, 94)'}
+              - {label: $str:machine, value: $str:press-1}
+              - {label: $str:state, value: $str:running}
+              - {label: $str:doc, value: $str:https://example.com/press-1.pdf}
+    - layout_id: handlers
+      package_name: widget-markdown
+      version: 1.0.14
+      chartconfig:
+          markdown: |
+              <a href="#" onclick="go()">Go</a> <div {{attr}}="x" style="color:{{tone}}">{{tone}}</div>
+          data:
+              - {label: $str:tone, value: 'red; position: fixed'}
+              - {label: $str:attr, value: $str:title}
+layout:
+    gridLayout:
+        - {id: status-card, x: 0, y: 0, w: 32, h: 32}
+        - {id: mode-banner, x: 32, y: 0, w: 32, h: 32}
+        - {id: indented-html, x: 64, y: 0, w: 32, h: 32}
+        - {id: markdown-in-html, x: 0, y: 32, w: 24, h: 32}
+        - {id: code-and-link, x: 24, y: 32, w: 24, h: 32}
+        - {id: style-and-script, x: 48, y: 32, w: 24, h: 32}
+        - {id: bindings, x: 72, y: 32, w: 24, h: 32}
+        - {id: live-banner, x: 0, y: 0, w: 1, h: 1}
+        - {id: handlers, x: 1, y: 0, w: 1, h: 1}

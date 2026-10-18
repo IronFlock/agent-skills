@@ -20,9 +20,10 @@ are defined by its published definition schema (`scripts/widget.py <package>`).
    embedding a web UI the app serves
 6. [Layout](#layout)
 7. [Style](#style)
-8. [SCADA pages](#scada-pages)
-9. [Left to the board editor](#left-to-the-board-editor)
-10. [Checklist](#checklist)
+8. [Markdown and HTML](#markdown-and-html): placeholders, HTML blocks
+9. [SCADA pages](#scada-pages)
+10. [Left to the board editor](#left-to-the-board-editor)
+11. [Checklist](#checklist)
 
 [example-board.yml](example-board.yml) is a complete, valid three-page board. It
 has navigation, a data-driven machine menu, route filtering, aggregation and a
@@ -632,6 +633,67 @@ style:
 `overflow: true` makes the board scroll (cells are then `cell_size` pixels) instead
 of scaling to the screen.
 
+## Markdown and HTML
+
+widget-markdown renders Markdown and HTML. A `{{name}}` placeholder shows the value
+of the `data` entry whose `label` is `name`:
+
+```yaml
+markdown: |
+    <div style="background:{{stateColor}};border-left:4px solid #58a6ff;padding:8px 12px">
+      <a href="/machines/{{machine}}">{{machine}}</a> is {{state}}
+    </div>
+
+    **Temperature:** {{temperature}} °C
+data:
+    - {label: $str:machine, value: $str:press-1}
+    - {label: $str:state, value: $str:running}
+    - label: $str:stateColor
+      value:
+          valueRef: {tablename: machine_status, column: state_color, queryParams: {limit: 1}}
+    - label: $str:temperature
+      value:
+          valueRef: {tablename: measurements, column: temperature, queryParams: {limit: 1}}
+```
+
+From widget-markdown 1.0.14 on, a placeholder works in text, code, link addresses
+and HTML attribute values (`style`, `class`, `href`, `src`), and in a `<style>`
+element:
+
+- **Values are plain text.** A value never becomes markup, so it cannot add a tag
+  or leave its attribute. Markup in a value shows literally. Every placeholder
+  needs a `data` entry with exactly its label, or it renders as nothing.
+- **In CSS, a value must be a plain CSS value**, such as `#22c55e`,
+  `rgb(34, 197, 94)`, `12px` or `bold`. This applies in a `style` attribute, a
+  `<style>` element and an SVG `fill` or `stroke`. A value with `;`, `:`, quotes,
+  braces or `url(` is left out. For a colour that follows the data, bind a column
+  that holds the colour, for example a transform column
+  `CASE state WHEN 'running' THEN '#22c55e' ELSE '#ef4444' END`.
+- **An address must be http(s), mailto, tel or relative.** Images can also take
+  `data:` images. Any other address is left out.
+- **The widget runs no code.** It removes `<script>`, event handlers (`onclick=…`)
+  and `javascript:` links. A placeholder can fill an attribute's value, but it
+  cannot name a tag or an attribute.
+
+Up to 1.0.13, a placeholder only worked in the text between tags. Inside a tag it
+broke the tag, and the rest of the tag showed on the board as text. On those
+versions, keep attributes fixed and use widget-signal or widget-label for colours
+that follow the data.
+
+For every version, HTML follows the rules of Markdown:
+
+- **An HTML block runs from a line that starts with a tag to the next blank line.**
+  Markdown inside the block is not parsed, so `**Status:**` keeps its asterisks.
+  Use HTML there (`<strong>`, `<ul><li>`), or put a blank line between the HTML
+  and the Markdown.
+- **After a blank line, a line indented by four spaces or more is a code block.**
+  This is also true inside a `<div>`, and the HTML of the line then shows as text.
+  Write HTML without blank lines, or indent it by less than four spaces.
+- **A `<style>` element styles only this widget.**
+
+validate.py checks the markup against the version the widget pins, or the latest
+version when it pins none.
+
 ## SCADA pages
 
 widget-scada draws one industrial symbol (a tank, pump, valve, pipe and so on) per
@@ -672,4 +734,7 @@ Some values only exist inside a running platform, and a template cannot know the
    prefix of another item's in the same menu, and every route leads to a page.
 5. Sidebars have `fixedWidth` and top navbars `fixedHeight`, and navbuttons have no
    tile border, unless there is a reason to do otherwise.
-6. `scripts/validate.py <app-dir>` (run it as SKILL.md shows) reports no errors.
+6. In widget-markdown, every `{{placeholder}}` has a `data` entry, values in CSS are
+   plain CSS values, and the markup has no scripts or event handlers. HTML has no
+   blank line followed by a line indented by four spaces or more.
+7. `scripts/validate.py <app-dir>` (run it as SKILL.md shows) reports no errors.
