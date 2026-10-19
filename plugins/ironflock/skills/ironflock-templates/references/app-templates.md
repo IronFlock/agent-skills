@@ -58,6 +58,10 @@ read them.
 - Transforms are SQL views over the app's own tables. Boards can bind to them, but
   board-side aggregation only works on plain tables. Do the aggregation in the
   transform's SQL instead.
+- **A transform's `sql` can be any single SQL `SELECT` statement**, with PostgreSQL
+  and TimescaleDB semantics. That includes CTEs (`WITH ... SELECT`). When a
+  computation needs intermediate steps, put them in CTEs of one transform rather
+  than chaining several transforms.
 - **A transform reaches open boards only on its `schedule` tick**, not when a table
   underneath changes. With `* * * * *` a new record shows up in a transform-driven
   menu or list up to a minute late. Give the views behind menus, lists and live
