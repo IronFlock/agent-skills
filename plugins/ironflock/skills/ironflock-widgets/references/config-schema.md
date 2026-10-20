@@ -24,7 +24,7 @@ keyword does, as the platform implements it.
 
 | Reader | What it uses |
 |---|---|
-| Studio's config editor | Builds the settings form: labels from `title`, help tips from `description`, order from `order`, the input from `type`, the data-binding switch from `dataDrivenDisabled`, visibility from `condition`. |
+| Studio's config editor | Builds the settings form: labels from `title`, help tips from `description`, order from `order`, the input from `type`, the data-binding switch from `dataDrivenDisabled`, visibility from `condition`, a text dialog's highlighting from `contentMediaType`. |
 | Studio's renderer | Removes undeclared keys and `null` values inside declared object settings (by the board's pinned version) before the widget gets them. Top-level keys and keys directly in list items pass through. |
 | The IronFlock AI | Picks widgets by the root `description` and `aiSelection`, configures them from the property descriptions, validates its configs against the schema. |
 | json2ts (`npm run types`) | Generates `src/definition-schema.d.ts`; every `title` becomes a type name. |
@@ -101,7 +101,7 @@ Use one string, from this list:
 | `object` | a collapsible group | object |
 | `array` | a list of tabs, one per item; or a table binding | array |
 | `color` | colour picker | CSS colour string; `''` when unset |
-| `textarea` | a button opening a 24-line text dialog | string |
+| `textarea` | a button opening a 24-line text dialog; a Markdown editor with `contentMediaType` (below) | string |
 | `image` | an upload field | the upload's URL |
 | `targetColumn` | the picker of a table column to write to (widget-form) | `{ swarm_app_databackend_key, tablename, column, … }` |
 | `actionApp` / `actionDevice` | app and device selects for device actions | numeric keys |
@@ -185,6 +185,7 @@ values:
 | `default` | Only a hint for the editor form: it fills an unset field when the editor opens (not for colours). The widget never receives it, so apply the same default in code. `default-data.json` wins over it in the editor. |
 | `minimum` / `maximum` | The editor's number input enforces them (an out-of-range value is not saved), the AI validates. |
 | `pattern` | Only the AI's validator checks it. |
+| `contentMediaType` | On `textarea` only: what the text is written in. `"text/markdown"` turns the text dialog into a Markdown editor with syntax highlighting. Leave it out where the widget shows the text as it is (widget-label): the dialog is then a plain text field, and so it is for any other value. Validators ignore it, and the widget gets the same string either way. |
 
 These appear in some schemas but nothing reads them. Don't add them, and drop them
 when you touch the property:

@@ -234,6 +234,20 @@ MUTATIONS: dict[str, tuple[Mutation, list[tuple[str, str, str, str]]]] = {
         lambda r: edit_json(r, SCHEMA, lambda s: series_item(s)["unit"].update(dataDrivenDisable=True)),
         [("WARN", SCHEMA, "dataseries.[].unit", "did you mean 'dataDrivenDisabled'")],
     ),
+    "media type on a plain string": (
+        lambda r: edit_json(r, SCHEMA, lambda s: series_item(s)["label"].update(contentMediaType="text/markdown")),
+        [("WARN", SCHEMA, "dataseries.[].label", "only on a textarea")],
+    ),
+    "media type Studio does not highlight": (
+        lambda r: edit_json(
+            r,
+            SCHEMA,
+            lambda s: s["properties"].update(
+                notes={"title": "Notes", "description": "Text below the readouts.", "type": "textarea", "contentMediaType": "text/html", "order": 4}
+            ),
+        ),
+        [("WARN", SCHEMA, "notes", "highlights only text/markdown")],
+    ),
     "duplicate order": (
         lambda r: edit_json(r, SCHEMA, lambda s: s["properties"]["subTitle"].update(order=1)),
         [("WARN", SCHEMA, "subTitle", "same order")],

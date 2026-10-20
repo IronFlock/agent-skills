@@ -118,7 +118,10 @@ PROPERTY_KEYS = {
     "enum", "enumLabels", "items", "properties", "minimum", "maximum", "exclusiveMinimum",
     "exclusiveMaximum", "multipleOf", "pattern", "minLength", "maxLength", "minItems",
     "maxItems", "format", "examples", "const", "additionalProperties", "$comment",
+    "contentMediaType",
 }  # fmt: skip
+# What a textarea's contentMediaType can name: Studio's text dialog highlights these.
+HIGHLIGHTED_MEDIA_TYPES = {"text/markdown"}
 UNRENDERABLE = {"$ref", "allOf", "anyOf", "oneOf", "not", "if", "then", "else", "definitions", "$defs"}
 INERT = {
     "min": "nothing reads it; use minimum",
@@ -846,6 +849,12 @@ class WidgetCheck:
             self.warn(file, "dataDrivenDisabled: false is the same as leaving it out; leave it out", path)
         if kind in ("actionApp", "targetColumn") and node.get("dataDrivenDisabled") is not True:
             self.warn(file, f"a {kind} property needs dataDrivenDisabled: true, or the editor opens the binding picker instead of its own", path)
+        if "contentMediaType" in node:
+            media = node["contentMediaType"]
+            if kind != "textarea":
+                self.warn(file, "contentMediaType does something only on a textarea: the language its text dialog highlights", path)
+            elif not isinstance(media, str) or media not in HIGHLIGHTED_MEDIA_TYPES:
+                self.warn(file, f"contentMediaType {media!r}: Studio highlights only {', '.join(sorted(HIGHLIGHTED_MEDIA_TYPES))}; others get the plain text dialog", path)
         if "enum" in node:
             if not isinstance(node["enum"], list) or not node["enum"]:
                 self.error(file, "enum must be a non-empty list", path)
