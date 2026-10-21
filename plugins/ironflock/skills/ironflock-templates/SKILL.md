@@ -110,6 +110,43 @@ The outline marks `dataDrivenDisabled` (cannot be bound to data), enums, default
 conditional fields. `--example` prints plain values. In a board template the same
 config needs the literal prefixes and data references described in board-template.md.
 
+## IronFlock documentation
+
+This skill covers the templates and how an app is built. For the rest of the
+platform, look things up in the documentation at <https://ironflock.com/en/docs/>.
+Don't answer from memory, because the platform changes faster than your training
+data. Look it up when the task or the user's question involves:
+
+- an SDK function, its options or its errors beyond what app-architecture.md shows,
+  or the REST API;
+- what users do in IronFlock: projects, connecting devices, installing apps, app
+  settings, updates, privileges, alarms, boards in Board Studio, the AI assistant;
+- remote access, tunnels, SSH and host access;
+- developing and shipping an app: the cloud IDE, Git integration, releases, the App
+  Store, pricing and billing;
+- file storage, network shares, data from other apps, LoRaWAN, the collector apps;
+- deployment options (cloud, appliance, private cloud), proxies, certificates,
+  security and access control.
+
+How to look something up:
+
+1. Fetch <https://ironflock.com/llms.txt>. It lists every English docs page in
+   sidebar order, each with a one-line description and a link to the page's
+   Markdown.
+2. Fetch the Markdown of the pages that match. Any docs URL has one: drop the
+   trailing slash and add `.md` (`…/docs/app-development/data-backend/` →
+   `…/docs/app-development/data-backend.md`). Links inside it point to other
+   pages' Markdown.
+3. When you pass on something from the docs, give the user the page's URL (the
+   same path with its trailing slash, without `.md`).
+
+For the syntax of the `.ironflock/` files, this skill's schemas and the validator
+are authoritative. The docs explain what the files do, but some of their examples
+lag behind, for instance older ones that omit required fields. If the docs and
+this skill disagree on a template, follow the skill and mention the difference.
+For SDK signatures, the SDK page links each SDK's README on GitHub, which is the
+complete reference.
+
 ## Principles
 
 - **Keep the app's state in its tables.** Devices write what they measure and the

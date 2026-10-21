@@ -156,3 +156,16 @@ Both need only Python 3.9+. The checker's type checks need the repo's
 
 In an existing widget, fix what your change touches. Report older problems you
 notice instead of rewriting code you weren't asked to change.
+
+## IronFlock documentation
+
+This skill covers the widget code. How users configure widgets on a board is
+covered in the IronFlock docs: the widget reference, data binding, aggregation,
+filters, forms, actions, styling and embedding, under
+<https://ironflock.com/en/docs/iot-dashboards/>. Look a page up when a change
+affects what users see in the board editor or the docs describe, or when you need
+to know how a feature behaves for users. Don't guess from memory. Fetch
+<https://ironflock.com/llms.txt> for the list of pages, then the page's Markdown:
+its URL without the trailing slash plus `.md`. Where the docs and this skill's
+references disagree on what Studio passes to a widget, host-contract.md is
+authoritative. If a change makes a docs page wrong, tell the user which page.
