@@ -41,7 +41,8 @@ events, and Studio does all fetching, writing and navigating.
    a sub-problem (a chart, a menu, a device action), look at the widget that
    already solves it ([references/widget-index.md](references/widget-index.md)).
 4. **Keep the rest in step**: `src/default-data.json` stays a valid, neutral
-   example; `aiSelection` changes when the widget can do something new; `CLAUDE.md`
+   example; `aiSelection` changes when the widget can do something new; `layout`
+   when its natural height or width changes; `CLAUDE.md`
    and `README.md` describe what you changed.
 5. **Verify**:
    - `npm run build` must pass.
@@ -149,7 +150,7 @@ Both need only Python 3.9+. The checker's type checks need the repo's
 |---|---|
 | [references/host-contract.md](references/host-contract.md) | you need to know exactly what Studio passes, renders, listens for, or how versions reach boards |
 | [references/component.md](references/component.md) | writing or changing component code |
-| [references/config-schema.md](references/config-schema.md) | changing `definition-schema.json`, `default-data.json` or `aiSelection` |
+| [references/config-schema.md](references/config-schema.md) | changing `definition-schema.json`, `default-data.json`, `aiSelection` or `layout` |
 | [references/repo-and-release.md](references/repo-and-release.md) | build config, dependencies, the demo, testing in Studio, releasing |
 | [references/new-widget.md](references/new-widget.md) | creating a new widget |
 | [references/widget-index.md](references/widget-index.md) | looking for an existing widget that solves a similar problem, or for patterns not to copy |

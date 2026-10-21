@@ -147,7 +147,8 @@ element's `class` and `style` attributes, so never overwrite them on `this`.
   tooltip that has to extend beyond the tile must use the top layer (a `<dialog>`,
   the popover API, or a Material component that uses it).
 - Layout positions can carry `fixedWidth`/`fixedHeight` (the tile keeps a pixel
-  size) and `aspectRatio` (widget-scada: the tile keeps the symbol's shape, and
+  size; a widget asks for it with the root `layout` of its schema, see
+  [config-schema.md](config-schema.md#layout)) and `aspectRatio` (widget-scada: the tile keeps the symbol's shape, and
   its background, border and radius are made transparent).
 
 ## Theming

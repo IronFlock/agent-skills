@@ -8,8 +8,9 @@ checks what a structural schema cannot see:
   the shape of a tableRef's format),
 - every data binding against data-template.yml (tables, columns, transforms,
   consumed apps) and the query rules fleetdb applies (time window, aggregation),
-- the layout: ids, pages, positions, screen coverage, navigation routes, and
-  filter widgets wired to the widgets they are meant to filter,
+- the layout: ids, pages, positions, screen coverage, navigation routes, the
+  fixed height or width a widget declares (`layout` in its definition schema),
+  and filter widgets wired to the widgets they are meant to filter,
 - navigation: menu items that would be highlighted together with others, and
   whether every page can be reached from the home page by clicking, and left
   again, following links the way the widgets and the board navigator resolve them,
@@ -50,6 +51,8 @@ SYSTEM_TABLES = {
     }
 }
 DEFAULT_COLUMNS, DEFAULT_ROWS = 96, 64
+#: DEFAULT_DASHBOARD_STYLE in Studio's src/types/dashboard.ts.
+DEFAULT_CELL_SIZE, DEFAULT_GRID_GAP = 12, 8
 COVERAGE_TARGET = 0.9
 #: What JavaScript's trim() and Number() skip as whitespace, which is not quite
 #: Python's: U+FEFF is in, U+001C-U+001F and U+0085 are out.
@@ -224,6 +227,8 @@ def check_board(doc, report, data, offline: bool) -> None:
     for i, w in enumerate(widgets):
         if isinstance(w, dict):
             check_widget(board, i, w, offline, schema_cache, placements)
+    if layout:
+        check_fixed_sizes(board, layout, widgets, tpl.get("style") or {}, schema_cache)
 
     check_routes(board, layout, placements)
     check_navigation(board, layout, placements)
@@ -305,6 +310,64 @@ def check_layout(board: Board, layout: dict, widget_ids: dict[str, int], style: 
         if lid not in placements:
             board.warn(["widgets", idx, "layout_id"], f"widget '{lid}' is not placed on any page, so it is never shown")
     return placements
+
+
+def fixed_cells(px: float, style: dict) -> int:
+    """Grid cells a fixed axis of px pixels takes: with grid snap each such cell
+    is cell_size pixels, and a tile loses grid_gap (gridToPixel in Studio)."""
+    cell = style.get("cell_size")
+    cell = cell if isinstance(cell, (int, float)) and not isinstance(cell, bool) and cell > 0 else DEFAULT_CELL_SIZE
+    gap = style.get("grid_gap")
+    gap = gap if isinstance(gap, (int, float)) and not isinstance(gap, bool) and gap >= 0 else DEFAULT_GRID_GAP
+    return max(1, math.ceil((px + gap) / cell))
+
+
+def check_fixed_sizes(board: Board, layout: dict, widgets: list, style: dict, cache: dict) -> None:
+    """A widget whose schema declares `layout: {fixedHeight: true, height: <px>}`
+    (or fixedWidth / width) keeps that size: its positions need the flag, and
+    enough cells for it. Without grid snap and overflow Studio ignores the flags."""
+    snapped = style.get("gridSnap") is not False
+    hints: dict[str, tuple[str, list[tuple[str, str, str, float]]]] = {}
+    for w in widgets:
+        if not isinstance(w, dict) or not isinstance(w.get("layout_id"), str):
+            continue
+        version = w.get("version")
+        entry = cache.get((w.get("package_name"), version if isinstance(version, str) else None))
+        block = entry[1].get("layout") if entry and isinstance(entry[1], dict) else None
+        if not isinstance(block, dict):
+            continue
+        axes = [
+            (flag, size, key, block[size])
+            for flag, size, key, overflow in (("fixedHeight", "height", "h", "overflow"), ("fixedWidth", "width", "w", "overflowX"))
+            if block.get(flag) is True
+            and isinstance(block.get(size), (int, float))
+            and not isinstance(block.get(size), bool)
+            and block[size] > 0
+            and (snapped or style.get(overflow))
+        ]
+        if axes:
+            hints[w["layout_id"]] = (str(w.get("package_name")), axes)
+
+    for _route, page, path in iter_pages(layout, [], ["layout"]):
+        grid = page.get("gridLayout") if isinstance(page.get("gridLayout"), list) else []
+        for j, pos in enumerate(grid):
+            if not isinstance(pos, dict) or pos.get("aspectRatio") or pos.get("id") not in hints:
+                continue
+            package, axes = hints[pos["id"]]
+            for flag, size, key, px in axes:
+                cells = fixed_cells(px, style)
+                if pos.get(flag) is not True:
+                    board.warn(
+                        path + ["gridLayout", j],
+                        f"{package} keeps a fixed {size} of about {px:g} px: set {flag}: true "
+                        f"and {key}: {cells}, or it scales with the screen",
+                    )
+                elif isinstance(pos.get(key), (int, float)) and pos[key] < cells:
+                    board.warn(
+                        path + ["gridLayout", j, key],
+                        f"{package} needs about {px:g} px, which is {key}: {cells} with {flag}; "
+                        f"{key}: {pos[key]:g} cuts it off",
+                    )
 
 
 def covered_fraction(boxes: list, columns: int, rows: int) -> float:

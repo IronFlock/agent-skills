@@ -754,7 +754,7 @@ class WidgetCheck:
             if key not in schema:
                 level = "WARN" if key in ("aiSelection",) else "ERROR"
                 self.add(level, file, f"the root needs {key}", key)
-        for key in sorted(set(schema) - {"title", "description", "aiSelection", "type", "properties", "$schema", "$comment"}):
+        for key in sorted(set(schema) - {"title", "description", "aiSelection", "layout", "type", "properties", "$schema", "$comment"}):
             self.warn(file, "unexpected root key", key)
         if schema.get("type") != "object":
             self.error(file, 'the root type must be "object"', "type")
@@ -765,12 +765,39 @@ class WidgetCheck:
         if "e.g. " in first_two:
             self.warn(file, "'e.g. ' in the first two sentences: the widget catalog cuts sentences at '. '; write 'such as'", "description")
         self.check_ai_selection(file, schema.get("aiSelection"), description)
+        self.check_layout(file, schema.get("layout"))
         props = schema.get("properties")
         if isinstance(props, dict):
             self.check_properties(file, props, [], [])
         size = len(json.dumps({"package_name": self.pkg, "version": self.version, "definition_schema": schema, "default_config": self.defaults}, indent=2, ensure_ascii=True))
         if size > AI_SCHEMA_BUDGET:
             self.warn(file, f"schema and default config are {size:,} characters; above {AI_SCHEMA_BUDGET:,} the AI only gets an overview of the top-level settings")
+
+    def check_layout(self, file: str, layout: Any) -> None:
+        """`layout` declares a natural tile size the platform keeps fixed:
+        {fixedHeight: true, height: <px>} and/or {fixedWidth: true, width: <px>}."""
+        if layout is None:
+            return
+        if not isinstance(layout, dict):
+            self.error(file, "layout must be an object such as {fixedHeight: true, height: 48}", "layout")
+            return
+        for key in sorted(set(layout) - {"fixedWidth", "width", "fixedHeight", "height"}):
+            self.warn(file, "layout only has fixedWidth, width, fixedHeight and height", f"layout.{key}")
+        axes = bad = 0
+        for flag, size in (("fixedHeight", "height"), ("fixedWidth", "width")):
+            if flag not in layout and size not in layout:
+                continue
+            value = layout.get(size)
+            if layout.get(flag) is not True:
+                bad += 1
+                self.error(file, f"{size} only counts together with {flag}: true; leave both out for a free {size}", f"layout.{flag}")
+            elif not isinstance(value, (int, float)) or isinstance(value, bool) or value <= 0:
+                bad += 1
+                self.error(file, f"{size} must be the tile's natural {size} in pixels, a positive number", f"layout.{size}")
+            else:
+                axes += 1
+        if not axes and not bad:
+            self.warn(file, "layout fixes neither height nor width; remove it", "layout")
 
     def check_ai_selection(self, file: str, selection: Any, description: str) -> None:
         if selection is None:

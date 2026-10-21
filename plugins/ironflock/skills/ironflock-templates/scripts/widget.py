@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import shutil
 import ssl
@@ -326,6 +327,15 @@ def main() -> int:
     print(f"{args.package}@{version}" + (f" — {args.path}" if args.path else ""))
     if not args.path and schema.get("description"):
         print(_first_sentence(schema["description"], 400))
+    if not args.path:
+        for flag, size, key in (("fixedHeight", "height", "h"), ("fixedWidth", "width", "w")):
+            block = schema.get("layout") if isinstance(schema.get("layout"), dict) else {}
+            if block.get(flag) is True and isinstance(block.get(size), (int, float)):
+                print(
+                    f"Layout: keeps a fixed {size} of about {block[size]:g} px. Give its position "
+                    f"{flag}: true and {key}: ceil(({size} + grid_gap) / cell_size), "
+                    f"{math.ceil((block[size] + 8) / 12)} on the default style."
+                )
     print()
     when = dict(w.split("=", 1) for w in args.when if "=" in w)
     base = [p for p in args.path.split(".")] if args.path else []

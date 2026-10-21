@@ -49,7 +49,7 @@ existing widgets and from how Studio hosts them:
 - the contract with Studio: the properties a widget gets, the events it may send,
   sizing, theming, versions, and the import map of shared libraries;
 - standards for the component code, the config schema (`definition-schema.json`
-  and its `aiSelection` block), the default config, the build and the release;
+  and its `aiSelection` and `layout` blocks), the default config, the build and the release;
 - a starter template, and `new_widget.py`, which scaffolds a new widget repository
   from it;
 - `check_widget.py`, which checks a widget repository against those standards.
@@ -138,7 +138,7 @@ plugins/ironflock/
         ├── references/
         │   ├── host-contract.md         what Studio gives a widget and expects
         │   ├── component.md             standards for the Lit component
-        │   ├── config-schema.md         definition-schema.json, default-data.json, aiSelection
+        │   ├── config-schema.md         definition-schema.json, default-data.json, aiSelection, layout
         │   ├── repo-and-release.md      layout, build, demo, testing in Studio, release
         │   ├── new-widget.md            scaffolding, first publish, platform registration
         │   └── widget-index.md          the existing widgets, and patterns not to copy
@@ -161,7 +161,7 @@ evals/widgets/                           eval prompts, fixtures and grader for i
 to it), then commit the copies here. `bun run schemas:check` reports drift.
 
 **Widget catalog.** Run `python3 tools/build_widget_catalog.py` when a widget is
-added or removed, or when its `aiSelection` text changes. The widget list in that
+added or removed, or when its `aiSelection` text or `layout` changes. The widget list in that
 script mirrors the widgets the platform registers. Widget property names are never copied into this repo:
 `widget.py` and the validator read them live from npm, so widget releases need no
 change here.

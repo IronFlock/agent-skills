@@ -17,18 +17,20 @@ keyword does, as the platform implements it.
 8. [Changing a schema without breaking boards](#changing-a-schema-without-breaking-boards)
 9. [default-data.json](#default-datajson)
 10. [aiSelection](#aiselection)
-11. [Generated types](#generated-types)
-12. [Size limits](#size-limits)
+11. [layout](#layout)
+12. [Generated types](#generated-types)
+13. [Size limits](#size-limits)
 
 ## Who reads the schema
 
 | Reader | What it uses |
 |---|---|
 | Studio's config editor | Builds the settings form: labels from `title`, help tips from `description`, order from `order`, the input from `type`, the data-binding switch from `dataDrivenDisabled`, visibility from `condition`, a text dialog's highlighting from `contentMediaType`. |
+| Studio's board editor | Gives a dropped widget the fixed height or width of the root `layout`. |
 | Studio's renderer | Removes undeclared keys and `null` values inside declared object settings (by the board's pinned version) before the widget gets them. Top-level keys and keys directly in list items pass through. |
-| The IronFlock AI | Picks widgets by the root `description` and `aiSelection`, configures them from the property descriptions, validates its configs against the schema. |
+| The IronFlock AI | Picks widgets by the root `description` and `aiSelection`, configures them from the property descriptions, validates its configs against the schema, and gives a placed widget the fixed size of `layout`. |
 | json2ts (`npm run types`) | Generates `src/definition-schema.d.ts`; every `title` becomes a type name. |
-| The ironflock-templates skill | `widget.py` prints the schema for agents writing board templates; the validator checks board configs against it; the widget catalog is built from `description` and `aiSelection`. |
+| The ironflock-templates skill | `widget.py` prints the schema for agents writing board templates; the validator checks board configs and positions against it; the widget catalog is built from `description`, `aiSelection` and `layout`. |
 
 Descriptions are therefore user and AI documentation at the same time. They are
 the only documentation of a setting most people and agents will ever read.
@@ -40,12 +42,13 @@ the only documentation of a setting most people and agents will ever read.
     "title": "Gauge Chart Configuration",
     "description": "…",
     "aiSelection": { "dataShape": "…", "useWhen": ["…"], "notFor": ["…"] },
+    "layout": { "fixedHeight": true, "height": 48 },
     "type": "object",
     "properties": { … }
 }
 ```
 
-Exactly these five keys.
+Exactly these keys; `layout` only when the widget has a fixed size.
 
 - **`title`** names the root interface json2ts generates
   (`GaugeChartConfiguration`), which the component imports. Renaming it renames
@@ -57,6 +60,7 @@ Exactly these five keys.
   widget does **not** do when people would expect it (widget-value: "performs NO
   aggregation").
 - **`aiSelection`**: see [below](#aiselection).
+- **`layout`**: see [below](#layout).
 
 ## Properties
 
@@ -267,6 +271,31 @@ widget for a request. It is not JSON Schema; every other reader ignores it.
   into the AI's prompt together, and they already use about 44,000 of the 50,000
   characters available for them. Aim for under 2,000 characters for `description`
   and `aiSelection` combined.
+
+## layout
+
+Most widgets fill whatever tile they get. A widget whose content has a natural
+size along one axis declares it here, and the platform keeps that axis fixed:
+
+```json
+"layout": { "fixedHeight": true, "height": 48 }
+"layout": { "fixedWidth": true, "width": 184 }
+```
+
+- `fixedHeight` / `fixedWidth` are the flags a board position carries; `height` /
+  `width` are the tile's natural size in pixels. Each flag needs its size, and a
+  size its flag.
+- Studio sets the flag and the matching number of grid cells when the widget is
+  dropped onto a board, the IronFlock AI does the same when it places the widget,
+  the widget catalog and `widget.py` show it, and the ironflock-templates
+  validator warns about a position without it. Nothing else has to list which
+  widget wants which size.
+- Declare it only for content that does not scale: a form field, a button, a menu
+  bar, a sidebar of labels (widget-filter-dropdown, widget-sidenav). A chart, a
+  gauge or a value scales with its tile and has none.
+- A size that depends on the config, such as widget-scada's symbol shape, cannot be
+  declared here; the platform handles that one separately.
+- Like `aiSelection` it is not JSON Schema: json2ts and the config editor ignore it.
 
 ## Generated types
 

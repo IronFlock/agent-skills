@@ -290,6 +290,14 @@ MUTATIONS: dict[str, tuple[Mutation, list[tuple[str, str, str, str]]]] = {
         lambda r: edit_json(r, SCHEMA, lambda s: s["aiSelection"].update(dataShape=["numbers"])),
         [("ERROR", SCHEMA, "aiSelection.dataShape", "non-empty string")],
     ),
+    "layout size without its flag": (
+        lambda r: edit_json(r, SCHEMA, lambda s: s.update(layout={"height": 48})),
+        [("ERROR", SCHEMA, "layout.fixedHeight", "only counts together with fixedHeight")],
+    ),
+    "layout flag without a size": (
+        lambda r: edit_json(r, SCHEMA, lambda s: s.update(layout={"fixedWidth": True})),
+        [("ERROR", SCHEMA, "layout.width", "natural width in pixels")],
+    ),
     "TODO left in the schema": (
         lambda r: edit_json(r, SCHEMA, lambda s: s["aiSelection"]["useWhen"].append("TODO: more")),
         [("ERROR", SCHEMA, "aiSelection.useWhen.1", "TODO")],

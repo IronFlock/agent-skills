@@ -69,7 +69,9 @@ starting from an empty file, and keep its infrastructure files (`scripts/`,
 3. **`src/default-data.json`**: a small, neutral, valid example of the new config.
 4. **`aiSelection`**: where the AI should use the widget and where a neighbour fits
    better. Then add the converse to those neighbours' `notFor` lists (in their
-   repos, in later releases).
+   repos, in later releases). Add a root `layout` only if the content has a
+   natural height or width that should not scale
+   ([config-schema.md](config-schema.md#layout)).
 5. **README.md and CLAUDE.md**: replace every `TODO:` and describe the widget's own
    data flow and decisions.
 6. **Thumbnails** (`thumbnail.png`, `thumbnail.webp`), see

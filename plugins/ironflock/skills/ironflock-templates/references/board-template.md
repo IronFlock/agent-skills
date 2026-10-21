@@ -582,19 +582,22 @@ fixed width or height (see below).
 
 - **Size for readability.** A chart below roughly 16 × 10 cells is too small to
   read. With few widgets, make them bigger rather than leaving space.
-- **Give navigation bars a fixed size.** Normally, set `fixedWidth: true` on a
-  sidebar's position (widget-sidenav) and `fixedHeight: true` on a top bar's
-  position (widget-navbar). Without it, a bar scales with the screen: a sidebar
-  grows wide on a large monitor and squeezes its labels on a laptop. With it, every
-  column or row the bar spans is `style.cell_size` pixels (default 12) on any
-  screen, and the other columns and rows share the rest. So `w: 16` gives a
-  sidebar of about 190 px, and `h: 5` a top bar of about 60 px (minus
-  `grid_gap`). Other widgets in those columns or rows get the same fixed size,
-  which keeps a button beside the navbar in line with it.
+- **Give fixed-size widgets their size.** A widget whose catalog entry or
+  `widget.py` output has a **Layout** line keeps a fixed height or width (a
+  dropdown filter is about 48 px tall, a sidebar about 184 px wide). Set that
+  flag on its position, `fixedHeight: true` or `fixedWidth: true`, and give the
+  fixed axis `ceil((px + grid_gap) / cell_size)` cells; `widget.py` prints the
+  number for the default style. Without the flag the widget scales with the
+  screen: a sidebar grows wide on a large monitor and squeezes its labels on a
+  laptop. With it, every column or row it spans is `style.cell_size` pixels
+  (default 12) on any screen, and the other columns and rows share the rest.
+  Other widgets in those columns or rows get the same fixed size, which keeps a
+  button beside a navbar in line with it. The validator warns about a missing
+  flag or too few cells.
 
   ```yaml
-  - {id: nav, x: 0, y: 0, w: 16, h: 64, fixedWidth: true}     # widget-sidenav
-  - {id: top, x: 0, y: 0, w: 96, h: 5, fixedHeight: true}     # widget-navbar
+  - {id: nav, x: 0, y: 0, w: 16, h: 64, fixedWidth: true}     # widget-sidenav, 184 px
+  - {id: site, x: 16, y: 0, w: 20, h: 5, fixedHeight: true}   # widget-filter-dropdown, 48 px
   ```
 
 - **Let navigation blend in.** A widget-navbutton normally has no tile border, and
@@ -738,8 +741,9 @@ Some values only exist inside a running platform, and a template cannot know the
 4. Every page fills the grid. Every page can be reached from the home page by
    clicking and leads back to it, no menu item links to `/`, no item's route is a
    prefix of another item's in the same menu, and every route leads to a page.
-5. Sidebars have `fixedWidth` and top navbars `fixedHeight`, and navbuttons have no
-   tile border, unless there is a reason to do otherwise.
+5. Every widget with a Layout line has its `fixedHeight` or `fixedWidth` and
+   enough cells for it, and navbuttons have no tile border, unless there is a
+   reason to do otherwise.
 6. In widget-markdown, every `{{placeholder}}` has a `data` entry, values in CSS are
    plain CSS values, and the markup has no scripts or event handlers. HTML has no
    blank line followed by a line indented by four spaces or more.
