@@ -694,6 +694,12 @@ For every version, HTML follows the rules of Markdown:
 validate.py checks the markup against the version the widget pins, or the latest
 version when it pins none.
 
+On colours, for information: text without a colour of its own is drawn in the
+board's text colour, so it suits light and dark boards alike. A colour written into
+the markup (`style="color:#333"`) stays the same on every theme. That suits text on
+a background the markup sets itself, such as a status badge, but on another theme it
+can be hard to read.
+
 ## SCADA pages
 
 widget-scada draws one industrial symbol (a tank, pump, valve, pipe and so on) per
