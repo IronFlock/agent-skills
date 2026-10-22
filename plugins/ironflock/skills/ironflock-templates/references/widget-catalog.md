@@ -453,7 +453,7 @@ A navigation button widget for in-dashboard navigation between pages or sections
 
 A transient toast / notification widget. The backend publishes rows into a data-backend table; bind the message and severity columns of that table to this widget, and each newly published row pops up a short-lived toast inside the widget tile.
 
-**Data shape:** Newly published rows of a backend table. The message text and a severity (success / error / info / warning) are data-driven, and each new row pops up a short-lived notification inside the tile. Display time, position, stacking limit and colours are static configuration.
+**Data shape:** Newly published rows of a backend table. The message text and a severity (success / error / info / warning) are data-driven, and each new row pops up a short-lived notification inside the tile. The message may span several lines. Display time, position, stacking limit, font size and colours are static configuration.
 
 **Use when:**
 - Events should announce themselves as they happen — a job finished, a batch failed, a threshold was crossed.
