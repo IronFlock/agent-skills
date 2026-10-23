@@ -16,8 +16,8 @@ are defined by its published definition schema (`scripts/widget.py <package>`).
 3. [Binding data](#binding-data): valueRef, tableRef, queryParams, filters, aggregation
 4. [What a binding can and cannot read](#what-a-binding-can-and-cannot-read)
 5. [Pages and navigation](#pages-and-navigation): reachability, highlighting, link
-   resolution, navigation patterns, filter widgets, uploading files with a form,
-   embedding a web UI the app serves
+   resolution, navigation patterns, boards that manage assets, filter widgets,
+   uploading files with a form, embedding a web UI the app serves
 6. [Layout](#layout)
 7. [Style](#style)
 8. [Markdown and HTML](#markdown-and-html): placeholders, HTML blocks
@@ -473,10 +473,13 @@ link such as "Home", "Back to the list" or "Manage documents".
    them with widget-navbutton ("Manage documents", "Back to documents"). The
    section's item stays highlighted on both.
 
-6. **Records that users create, edit and delete** (master data, settings). A list
-   page shows a table of the records, a "New" form (`formButton: $bool:true`) and a
-   data-driven menu of the records (pattern 2 or 3) that opens one edit page per
-   record (`/settings/machines/*`). The edit page holds a widget-form:
+6. **Records that users create, edit and delete** (master data, settings). A
+   data-driven widget-sidenav lists the records (pattern 2 or 3) and opens one edit
+   page per record (`/settings/machines/*`). A "New" form
+   (`formButton: $bool:true`) sits as a floating action button on top of that
+   sidenav, and the list page itself shows an overview of all records, such as a
+   table (see [Boards that manage assets](#boards-that-manage-assets)). The edit
+   page holds a widget-form:
    - Its fields are prefilled from the record: `preFilledValue` is a valueRef with
      a `useRoute` filter on the record's key, and the key itself is a
      `hiddenField`, so a save updates that record.
@@ -489,6 +492,65 @@ link such as "Home", "Back to the list" or "Manage documents".
 
    Hide deleted records by default, and let users show them with a filter that is
    off until it is switched on (see [Filters](#filters)).
+
+### Boards that manage assets
+
+Many boards let users inspect, create and change assets of a few types: machines,
+lines, sites, recipes. Build these boards the same way every time, so users find
+their way around without having to think about it:
+
+1. **The asset types are the main menu.** A widget-navbar (or widget-sidenav) has
+   one fixed item per asset type (`/machines/`, `/lines/`, `/recipes/`), its title
+   links home, and it is on every page (pattern 1). Each item opens the page of
+   that asset type.
+2. **An asset type's page lists its assets in a widget-sidenav.** For assets that
+   users create and change, the list is a data-driven widget-sidenav with one item
+   per asset (pattern 2). It is on the asset type's page and on every page of an
+   asset below it. Its title names the type ("Machines") and links to the type's
+   page (`/machines/`). The type's page itself shows an overview of all its assets,
+   such as a table or the fleet's KPIs, and never stays empty.
+3. **"New" is a floating action button on top of the list.** A widget-form with
+   `formButton: $bool:true` opens the create form in a dialog, and it shows a round
+   floating action button unless `formButtonStyle.fab` is false. Lay it over the
+   top of the sidenav, in the sidenav's header next to its title: a small tile
+   (about 6 × 6 cells for the default button) inside the sidenav's columns, with
+   `z: 1` and a transparent tile border and background. Put it on every page that
+   has the sidenav, at the same position.
+4. **Clicking an asset opens its detail page** (`/machines/*`). The detail page
+   lets users change the asset's settings and delete the asset, with a widget-form
+   prefilled from the record (pattern 6).
+5. **Other aspects of an asset get their own pages, behind tabs.** The selected
+   asset's history, KPIs or alarms live on pages below its detail page
+   (`/machines/*/history`, `/machines/*/kpis`). A widget-navbar above the detail
+   area works as the tab bar, with absolute item routes (`/machines/*/history`).
+   The sidenav stays on these pages, and its item for the asset stays highlighted
+   on all of them (rule 3). The detail page cannot be an item next to the other
+   tabs, because its route is a prefix of theirs (rule 2). Make it the tab bar's
+   title instead: bound to the asset's name, with `route: $str:/machines/*`
+   (pattern 4).
+6. **Sub-assets repeat the same structure one level down.** An asset's sub-assets
+   (the stations of a line) get their own data-driven widget-sidenav inside the
+   asset's detail area, with their own "New" button on top, and their own detail
+   pages and tabs (`/lines/*/stations/*`). Their routes come from a transform
+   (pattern 3).
+7. **Hide a list when it costs more than it gives.** When nested sidenavs leave too
+   little room, or users should focus on one asset, an asset's pages may leave the
+   list out and use the full width. Then put a prominent back button in the
+   top-left corner: a widget-navbutton with `iconName: $str:arrow_back` whose route
+   leads to the page with the list (`/machines/`, or the parent asset's page). Give
+   the button an explicit route. An empty route means "browser back", which leads
+   nowhere on a page opened from a link or bookmark, and the validator reads it as
+   a link home.
+
+An asset's tab page on a 96 × 64 grid:
+
+```text
+types   x=0  y=0  w=96 h=5   widget-navbar: Machines · Lines · Recipes (fixedHeight)
+list    x=0  y=5  w=16 h=59  widget-sidenav of the machines (fixedWidth)
+new     x=10 y=5  w=6  h=6   widget-form, floating action button, z: 1
+tabs    x=16 y=5  w=80 h=5   widget-navbar: title = machine name; History · KPIs
+content x=16 y=10 w=80 h=54  the tab's widgets
+```
 
 ### Filter widgets
 

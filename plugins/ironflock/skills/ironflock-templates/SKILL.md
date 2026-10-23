@@ -167,6 +167,12 @@ complete reference.
   so an item for `/` is highlighted on every page. board-template.md's "Pages and
   navigation" section has the rules and the patterns (sections, list and detail
   pages, records with edit pages), and the validator walks every link to check.
+- **Give boards that manage assets one familiar shape.** The asset types are the
+  main menu. An asset type's page lists its assets in a sidenav, with a "New"
+  floating action button on top. An asset opens its detail page with settings and
+  delete, and further aspects go on tab pages. Sub-assets repeat this one level
+  down. A full-width asset page needs a prominent back button in the top-left
+  corner. board-template.md, "Boards that manage assets", has the details.
 - **Use only names that exist.** Every table, column and widget property you write
   must exist in data-template.yml or the widget's schema. The platform ignores unknown
   keys silently, so an invented key renders as nothing rather than as an error.
