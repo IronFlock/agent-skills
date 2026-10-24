@@ -1,2 +1,2 @@
 ironflock==1.10.0
-aiohttp==3.14.3
+aiohttp==3.14.4
