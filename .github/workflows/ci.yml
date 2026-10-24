@@ -1,0 +1,41 @@
+# Gate (ruff, the validator's regression tests) and workflow lint from the
+# shared IronFlock CI harness. No build job: the plugin ships as files.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  gate:
+    uses: IronFlock/workflows/.github/workflows/python-gate.yml@v1
+    with:
+      python-version: "3.13"
+      skip: build
+
+  workflows:
+    uses: IronFlock/workflows/.github/workflows/workflows-lint.yml@v1
+
+  # The required check of the main-branch ruleset: green only when every job
+  # above succeeded (skipped or cancelled counts as failed).
+  ci-ok:
+    if: ${{ always() }}
+    needs: [gate, workflows]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: all ci jobs succeeded
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "results: $RESULTS"
+          for r in $RESULTS; do [ "$r" = success ] || exit 1; done
