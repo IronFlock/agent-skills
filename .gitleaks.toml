@@ -1,0 +1,5 @@
+# gitleaks: the default rules plus reviewed exceptions for this repository.
+# Each allowlist names the files AND the rule it covers, with the reason.
+[extend]
+useDefault = true
+
