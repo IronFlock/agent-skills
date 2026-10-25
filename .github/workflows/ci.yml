@@ -1,10 +1,11 @@
 # Gate (ruff, the validator's regression tests) and workflow lint from the
 # shared IronFlock CI harness. No build job: the plugin ships as files.
+# Pull requests into main only: the ruleset lets nothing reach main without
+# ci-ok, and the marketplace serves main, so a merge is the publication.
 name: ci
 
 on:
   pull_request:
-  push:
     branches: [main]
   workflow_dispatch:
 
