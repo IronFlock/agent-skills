@@ -9,7 +9,6 @@ name: security
 
 on:
   pull_request:
-  push:
     branches: [main]
   schedule:
     # Mondays 10:41 UTC: catch CVEs disclosed against unchanged code.

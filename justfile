@@ -16,3 +16,23 @@ test:
 refresh-plugin:
     claude plugin marketplace update ironflock
     claude plugin update ironflock@ironflock --scope user
+
+# ------------------------------------------------------------------ merge --
+# Pull requests into main, from IronFlock/workflows (scripts/pr.sh at v1):
+#   just merge [TITLE]   a pull request from this feature branch, merged
+#                        automatically once ci and security are green.
+# The plugin has no version: the marketplace serves main, so a merge is the
+# publication and there are no release recipes.
+[positional-arguments]
+_pr *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    script=$(mktemp)
+    trap 'rm -f "$script"' EXIT
+    gh api -H 'Accept: application/vnd.github.raw' \
+        'repos/IronFlock/workflows/contents/scripts/pr.sh?ref=v1' > "$script"
+    bash "$script" "$@"
+
+[positional-arguments]
+merge TITLE="":
+    just _pr merge - "$1"
