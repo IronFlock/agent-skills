@@ -53,4 +53,4 @@ The widget paints no background of its own, so the board's tile shows through.
 | `npm start` | Dev server on port 8000 with the demo in `demo/index.html`, plus a watch build |
 | `npm run build` | Type check, then the library build to `dist/widget-starter.js` |
 | `npm run types` | Regenerate `src/definition-schema.d.ts` after editing `src/definition-schema.json` |
-| `npm run release` | Bump the patch version, build, tag and push; CI publishes to npm |
+| `just release-patch` | A release pull request; its merge publishes to npm in CI and tags the version (`just merge`: a pull request that releases nothing) |

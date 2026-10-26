@@ -300,8 +300,8 @@ size along one axis declares it here, and the platform keeps that axis fixed:
 ## Generated types
 
 `npm run types` pipes the schema through json2ts into `src/definition-schema.d.ts`.
-Never edit that file; the release preflight regenerates it and refuses to release
-when it differs.
+Never edit that file; the CI gate (`just lint`) regenerates it and fails when it
+differs.
 
 - Every field is optional (`?:`), and every object allows extra keys
   (`[k: string]: unknown`). The types describe what may arrive, not what will.

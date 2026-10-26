@@ -30,14 +30,14 @@ widget-<name>/
 ├── demo/
 │   ├── index.html                  dev page: renders the widget from src/
 │   └── themes/*.json               ECharts themes, as Studio passes them
-├── scripts/
-│   ├── release-preflight.sh        `preversion` gate
-│   └── release-verify.sh           `postversion`: waits for the CI publish
-├── .github/workflows/build-publish.yml   publishes a pushed tag to npm
+├── .github/workflows/
+│   ├── ci.yml                      the gate on pull requests (types current, build)
+│   ├── security.yml                security screening (pull requests, weekly)
+│   └── build-publish.yml           the release: npm publish when a release merges
+├── Justfile                        lint, build, merge, release-patch/-minor/-major
 ├── thumbnail.png, thumbnail.webp   the palette picture
 ├── package.json, package-lock.json
 ├── vite.config.ts, tsconfig.json
-├── .npmrc                          tag-version-prefix="" (bare-semver tags)
 ├── .editorconfig, .prettierrc, .gitignore, .vscode/settings.json
 ├── CLAUDE.md                       agent guidance: commands, architecture, decisions
 └── README.md                       for people using the package
@@ -45,13 +45,13 @@ widget-<name>/
 
 `dist/` is built, ignored by git and published. Generated files that the build
 depends on (`definition-schema.d.ts`, widget-scada's symbol catalog) are committed,
-and the release preflight refuses to release when they are stale.
+and the CI gate (`just lint`) fails when they are stale.
 
 ## package.json
 
 - `"name": "@ironflock/widget-<name>"`; `<name>` is lower-case kebab-case and is
   also the repo name, the folder name, Studio's `package_name` (`widget-<name>`)
-  and the tag prefix.
+  and the release name (`release widget-<name> <version>`).
 - `"main": "dist/widget-<name>.js"`: the CDN serves this file for the bare package
   URL that Studio imports. No `exports`, `browser`, `jsdelivr` or `unpkg` fields
   that point elsewhere.
@@ -61,10 +61,11 @@ and the release preflight refuses to release when they are stale.
 - `"type": "module"`, `"license": "MIT"`, `engines` as in the template.
 - Plain `x.y.z` versions only. The version becomes part of a custom element name,
   and Studio compares versions numerically.
-- **Scripts**, identical across the fleet: `start`, `build`, `watch`, `types`,
-  `preversion` / `version` / `postversion`, `release`, `release:minor`,
-  `release:major`. New widgets also get `typecheck`, and `build` runs `tsc` first,
-  because Vite strips types without checking them.
+- **Scripts**, identical across the fleet: `start`, `build`, `watch`, `types`.
+  New widgets also get `typecheck`, and `build` runs `tsc` first, because Vite
+  strips types without checking them. No `preversion` / `version` /
+  `postversion` hooks: the release writes the version with `npm version`, which
+  would run them; releases run from the `Justfile`.
 - Dependencies: what the widget bundles goes into `dependencies` (or
   `devDependencies`); what it leaves to the host's import map goes into
   `peerDependencies` plus `devDependencies`. `lit` stays in `dependencies` even
@@ -156,35 +157,41 @@ With Studio checked out next to the widgets (`studio/` and
 **Release only when the user asks.** A release publishes to npm, and a published
 version can never be changed or removed.
 
+`main` takes pull requests only, merged automatically once the `ci` and
+`security` checks are green. From a feature branch with everything committed:
+
 ```bash
-npm run release         # patch: 1.2.3 → 1.2.4
-npm run release:minor   # minor: 1.2.3 → 1.3.0
+just merge            # a pull request that releases nothing
+just release-patch    # a release pull request, patch: 1.2.3 → 1.2.4
+just release-minor    # minor: 1.2.3 → 1.3.0
 ```
 
-What happens:
+What `just release-patch` does (the shared `scripts/pr.sh` of IronFlock/workflows):
 
-1. `preversion` runs `scripts/release-preflight.sh`: on `main`, clean tree, not
-   behind `origin/main`, generated files current (`npm run types`, plus `catalog`
-   where it exists), and a passing build. Any failure stops before anything
-   changes.
-2. `npm version` bumps `package.json` and the lockfile; the `version` hook rebuilds
-   `dist/` so the local build registers the new tag.
-3. npm commits and creates an annotated tag with the bare version (`1.2.4`; see
-   `.npmrc`).
-4. `postversion` pushes the commit and the tag, then `release-verify.sh` waits for
-   the GitHub Actions run and fails if the npm publish failed.
-5. CI (`build-publish.yml`) builds the tag and publishes with npm's trusted
-   publishing (OIDC, no token), then creates a GitHub release.
+1. Refuses uncommitted changes, takes the next version from `main`'s
+   `package.json` and writes it to `package.json` and the lockfile
+   (`npm version --no-git-tag-version`).
+2. Commits that bump as `release widget-<name> <version>` on top of the branch
+   (on an up-to-date `main`, on a new branch `release/<version>`), pushes it and
+   opens the pull request with auto-merge.
+3. CI checks it like any pull request, plus a dry run of the release
+   (`npm publish --dry-run`).
+4. The merge runs `.github/workflows/build-publish.yml`: build, `npm publish`
+   with npm's trusted publishing (OIDC, no token; the trusted publisher names
+   this file), then the release GitHub App sets the bare-version tag (`1.2.4`)
+   and creates the GitHub release. `just release-patch` waits for that run and
+   ends on the updated `main`.
 
 Rules:
 
 - Never `npm publish` from a laptop (the only exception is the very first version
-  of a new package), never create or move tags by hand (`--follow-tags` skips
-  lightweight tags), never edit `version` in `package.json` by hand.
+  of a new package), never create or move tags by hand, never edit `version` in
+  `package.json` by hand.
 - Use patch for fixes and small additions, minor for new capabilities. There are no
   breaking releases: boards keep old configs ([config-schema.md](config-schema.md#changing-a-schema-without-breaking-boards)).
-- If CI fails, fix the cause and release again with the next version. Don't delete
-  or reuse the tag.
+- If the release run fails after the merge, re-run it when the cause was
+  transient (a version already on npm is not published again); otherwise fix the
+  cause and release the next version. Don't delete or reuse a tag.
 
 ## After a release
 

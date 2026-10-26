@@ -452,15 +452,12 @@ class WidgetCheck:
         types = str(scripts.get("types", ""))
         if "json2ts" not in types or "src/definition-schema.json" not in types:
             self.warn("package.json", "types should regenerate src/definition-schema.d.ts with json2ts", "scripts.types")
-        expected = {
-            "preversion": "release-preflight.sh",
-            "version": "build",
-            "postversion": "release-verify.sh",
-            "release": "npm version patch",
-        }
-        for script, needle in expected.items():
-            if needle not in str(scripts.get(script, "")):
-                self.warn("package.json", f"the fleet's release pipeline expects {script} to run {needle!r}", f"scripts.{script}")
+        for script in ("preversion", "version", "postversion"):
+            if script in scripts:
+                self.error("package.json", f"`just release-patch` writes the version with npm version, which would run the {script} hook; releases run through a release pull request", f"scripts.{script}")
+        for script in ("release", "release:minor", "release:major"):
+            if script in scripts:
+                self.warn("package.json", f"{script} is the old npm-version release; drop it (just release-patch)", f"scripts.{script}")
         for script in ("link", "unlink"):
             if "RESWARM/frontend" in str(scripts.get(script, "")):
                 self.warn("package.json", f"{script} targets ../RESWARM/frontend, which no longer exists; Studio's dev server reads the sibling checkout", f"scripts.{script}")
@@ -469,26 +466,25 @@ class WidgetCheck:
         if types_field and build and build[0].startswith("vite") and "dts(" not in build[1]:
             self.warn("package.json", f"types points at {types_field}, which a Vite build without vite-plugin-dts never produces; drop the field", "types")
 
-        npmrc = self.read(".npmrc") or ""
-        if not re.search(r'^\s*tag-version-prefix\s*=\s*""\s*$', npmrc, re.M):
-            self.error(".npmrc", 'needs tag-version-prefix="": releases are tagged with the bare version, which release-verify.sh and CI expect')
-        workflows = sorted(p for p in (self.repo / ".github" / "workflows").glob("*.y*ml"))
-        if not workflows:
-            self.error(".github/workflows", "no workflow: nothing publishes a release tag to npm")
+        justfile = self.read("Justfile") or ""
+        for recipe in ("lint", "build", "merge", "release-patch"):
+            if not re.search(rf"^{re.escape(recipe)}\b[^\n]*:", justfile, re.M):
+                self.warn("Justfile", f"needs the fleet's {recipe} recipe: the CI gate and the release run the Justfile's recipes", recipe)
+        workflows = self.repo / ".github" / "workflows"
+        for name in ("ci.yml", "security.yml"):
+            if not (workflows / name).is_file():
+                self.warn(f".github/workflows/{name}", "missing: main takes only pull requests whose ci and security checks passed")
+        where = ".github/workflows/build-publish.yml"
+        flow = self.read(where)
+        if flow is None:
+            self.error(where, "missing: npm's trusted publisher names this file, and its run publishes a merged release")
         else:
-            if len(workflows) > 1:
-                self.warn(".github/workflows", "more than one workflow; npm's trusted publisher is bound to one workflow file")
-            flow = workflows[0].read_text(encoding="utf-8")
-            where = workflows[0].relative_to(self.repo).as_posix()
             if "id-token: write" not in flow:
                 self.error(where, "needs `permissions: id-token: write` for npm trusted publishing")
             if "npm publish" not in flow:
                 self.error(where, "never runs npm publish")
             if re.search(r"npm (install|i)\b", flow) and "npm ci" not in flow:
                 self.warn(where, "use npm ci, so CI builds exactly the lockfile")
-        for script in ("release-preflight.sh", "release-verify.sh"):
-            if script in json.dumps(scripts) and not (self.repo / "scripts" / script).is_file():
-                self.error(f"scripts/{script}", "package.json runs it, but it is missing")
         lock = self.read("package-lock.json")
         if lock is None:
             self.warn("package-lock.json", "missing; CI installs with npm ci")
