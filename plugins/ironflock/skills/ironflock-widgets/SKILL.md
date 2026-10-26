@@ -54,7 +54,7 @@ events, and Studio does all fetching, writing and navigating.
      drive a browser, do; otherwise ask the user to look.
    - For integration, Studio's dev server picks up the sibling checkout
      ([references/repo-and-release.md](references/repo-and-release.md#testing-in-studio)).
-6. **Stop before releasing.** `npm run release` publishes to npm, and a published
+6. **Stop before releasing.** `just release-patch` publishes to npm, and a published
    version can never be changed. Release only when the user asks, and then tell
    them which platform steps the release needs
    ([references/repo-and-release.md](references/repo-and-release.md#after-a-release)).
@@ -131,8 +131,9 @@ Each of these comes from how Studio hosts widgets or from a bug that shipped.
 12. **ECharts**: register every component with `echarts.use`, build each option from
     `structuredClone(template)` (never from `getOption()`), keep the canvas
     background transparent, and dispose of instances.
-13. **Release only through `npm run release`, and only when asked.** Never
-    `npm publish` by hand, tag by hand or edit the version.
+13. **Release only through `just release-patch`, and only when asked.** It opens
+    a release pull request; its merge publishes in CI. Never `npm publish` by
+    hand, tag by hand or edit the version.
 
 ## Scripts
 

@@ -121,9 +121,17 @@ MUTATIONS: dict[str, tuple[Mutation, list[tuple[str, str, str, str]]]] = {
         lambda r: edit_json(r, "package.json", lambda p: p.update(files=["dist", "thumbnail.png", "thumbnail.webp"])),
         [("ERROR", "package.json", "files", '"src"')],
     ),
-    "prefixed tags": (
-        lambda r: (r / ".npmrc").unlink(),
-        [("ERROR", ".npmrc", "-", 'tag-version-prefix=""')],
+    "old npm-version release hook": (
+        lambda r: edit_json(r, "package.json", lambda p: p["scripts"].update(postversion="git push --follow-tags")),
+        [("ERROR", "package.json", "scripts.postversion", "npm version")],
+    ),
+    "no release recipe": (
+        lambda r: edit(r, "Justfile", lambda t: t.replace("release-patch:", "release-later:")),
+        [("WARN", "Justfile", "release-patch", "release-patch recipe")],
+    ),
+    "no security workflow": (
+        lambda r: (r / ".github/workflows/security.yml").unlink(),
+        [("WARN", ".github/workflows/security.yml", "-", "security checks")],
     ),
     "no OIDC permission": (
         lambda r: edit(r, ".github/workflows/build-publish.yml", lambda t: t.replace("id-token: write", "")),

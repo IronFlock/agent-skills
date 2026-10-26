@@ -55,8 +55,8 @@ npm start          # the demo, on http://localhost:8000/demo/
 
 The starter shows the latest value of each data series. It is there to be
 replaced, but it already follows every rule in this skill; change it rather than
-starting from an empty file, and keep its infrastructure files (`scripts/`,
-`.github/`, `.npmrc`, configs) as they are.
+starting from an empty file, and keep its infrastructure files (`.github/`,
+`Justfile`, configs) as they are.
 
 ## Make it yours
 
@@ -85,8 +85,12 @@ The user does this; it needs their GitHub and npm accounts. They create the GitH
 repository `IronFlock/widget-<name>` and push `main`. npm only lets CI publish
 (trusted publishing) to a package that already exists, so an owner of the
 `@ironflock` npm scope publishes the very first version once by hand; every later
-version goes through `npm run release`. Keep exactly one workflow file in
-`.github/workflows/`: the trusted publisher is bound to its file name.
+version goes through `just release-patch` (a release pull request, published in
+CI). The trusted publisher names `.github/workflows/build-publish.yml`; keep that
+file name. The repository also needs the IronFlock repository settings before
+its first pull request (IronFlock/workflows README, "Pull requests from a
+laptop"): squash merges, the `main` and tag rulesets, the `release` environment
+with the release App's key.
 
 ## Register it on the platform
 
