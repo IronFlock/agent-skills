@@ -284,11 +284,82 @@ def grade_new_app(app: Path, errors, warnings):
     ]
 
 
+HEX = re.compile(r"#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?\b")
+
+
+def luminance(color):
+    """Relative luminance (WCAG) of a #rrggbb or #rrggbbaa colour, else None."""
+    m = HEX.fullmatch(str(color).strip()) if color else None
+    if not m:
+        return None
+    r, g, b = (int(m[0][i:i + 2], 16) / 255 for i in (1, 3, 5))
+
+    def lin(c):
+        return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+
+    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
+
+
+def contrast(a, b):
+    la, lb = luminance(a), luminance(b)
+    if la is None or lb is None:
+        return None
+    return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+
+
+def state_colors(widgets, state):
+    """Every colour the widgets give a state: signal colorMap, statehistory stateMap, table stateMap (pairs split on , or :)."""
+    found = set()
+    for w in widgets:
+        for path, v in walk(w.get("chartconfig")):
+            if isinstance(v, dict) and isinstance(v.get("color"), str):
+                key = str(v.get("condition", v.get("name", ""))).replace("$str:", "").strip(" '\"=")
+                if key.upper() == state:
+                    found.add(v["color"].replace("$str:", "").strip().lower())
+            elif isinstance(v, str) and path and path[-1] == "stateMap":
+                for m in re.finditer(rf"['\"]{state}['\"]\s*[,:]\s*['\"]([^'\"]+)['\"]", v, re.I):
+                    found.add(m[1].strip().lower())
+    return found
+
+
+def grade_design(app: Path, errors, warnings):
+    path = app / ".ironflock/board-template.yml"
+    board = load(path) or {}
+    header = []
+    for line in path.read_text().splitlines() if path.exists() else []:
+        if line.startswith("#"):
+            header.append(line)
+        elif line.strip():
+            break
+    viewers = re.search(r"operator|supervisor|screen|hall|wall|distance|met(?:re|er)s?\b|laptop|glance", " ".join(header), re.I)
+    style = board.get("style") if isinstance(board.get("style"), dict) else {}
+    colors = {k: style.get(k) for k in ("background_color", "text_color", "tile_background_color", "tile_border_color")}
+    theme = (style.get("theme") or {}).get("theme_name") if isinstance(style.get("theme"), dict) else None
+    complete = bool(theme) and all(luminance(v) is not None for v in colors.values())
+    background = luminance(colors["background_color"])
+    ratio = contrast(colors["text_color"], colors["tile_background_color"])
+    widgets = [w for w in board.get("widgets") or [] if isinstance(w, dict)]
+    fault = state_colors(widgets, "FAULT")
+    layout = board.get("layout") if isinstance(board.get("layout"), dict) else {}
+    home = [p for p in layout.get("gridLayout") or [] if isinstance(p, dict)]
+    coverage = [w for w in warnings if "widgets cover" in w]
+    return [
+        check("validate.py reports no errors", not errors, f"{len(errors)} error(s)" + (f": {errors[0][:160]}" if errors else "")),
+        check("the header says who looks at the board and where", viewers, " / ".join(header[:4])[:160] or "no header comment"),
+        check("style names a theme and all four board colours", complete, f"theme {theme}, colours {colors}"),
+        check("a dark background, for a screen in the hall", background is not None and background < 0.25, f"background luminance {background}"),
+        check("text reads at 4.5:1 or better against the tiles", ratio is not None and ratio >= 4.5, f"contrast {ratio and round(ratio, 1)}"),
+        check("FAULT has one colour on every widget that shows a state", len(fault) == 1, f"FAULT colours {sorted(fault)}"),
+        check("the home page has at most nine tiles and fills the grid", 0 < len(home) <= 9 and not coverage, f"{len(home)} tile(s)" + (f", {coverage[0][:120]}" if coverage else "")),
+    ]
+
+
 GRADERS = {
     "overview-board": grade_overview,
     "multi-page-navigation": grade_multipage,
     "ports-params-data": grade_ports,
     "new-app": grade_new_app,
+    "wall-screen-board": grade_design,
 }
 
 

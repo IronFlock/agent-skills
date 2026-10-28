@@ -15,15 +15,17 @@ are defined by its published definition schema (`scripts/widget.py <package>`).
 2. [Literal values](#literal-values)
 3. [Binding data](#binding-data): valueRef, tableRef, queryParams, filters, aggregation
 4. [What a binding can and cannot read](#what-a-binding-can-and-cannot-read)
-5. [Pages and navigation](#pages-and-navigation): reachability, highlighting, link
+5. [Designing a board](#designing-a-board): the brief, what goes where, one
+   meaning per colour, the look, a sketch on a design canvas
+6. [Pages and navigation](#pages-and-navigation): reachability, highlighting, link
    resolution, navigation patterns, boards that manage assets, filter widgets,
    uploading files with a form, embedding a web UI the app serves
-6. [Layout](#layout)
-7. [Style](#style)
-8. [Markdown and HTML](#markdown-and-html): placeholders, HTML blocks
-9. [SCADA pages](#scada-pages)
-10. [Left to the board editor](#left-to-the-board-editor)
-11. [Checklist](#checklist)
+7. [Layout](#layout)
+8. [Style](#style): the keys, and the presets
+9. [Markdown and HTML](#markdown-and-html): placeholders, HTML blocks
+10. [SCADA pages](#scada-pages)
+11. [Left to the board editor](#left-to-the-board-editor)
+12. [Checklist](#checklist)
 
 [example-board.yml](example-board.yml) is a complete, valid three-page board. It
 has navigation, a data-driven machine menu, route filtering, aggregation and a
@@ -329,6 +331,131 @@ computes those either. When a widget needs one, add a transform to
 data-template.yml that computes it in SQL and bind to the transform. The same goes
 for "latest value per machine, summed", or anything else that combines rows in a
 way the aggregation table above cannot express.
+
+## Designing a board
+
+A board is glanced at, not studied. Before you place a widget, decide what the
+board is for, and write that decision where the next person who edits the board
+finds it: in the comment header at the top of board-template.yml, under the
+schema line, next to the tables and pages the header already names.
+
+### The brief
+
+Answer these in the header, one line each:
+
+- **Who looks at the board, where, and from how far.** Operators glancing at a
+  wall screen in the hall from ten metres, a supervisor at a laptop, a technician
+  on a tablet next to the machine. This decides the look, how many tiles a page
+  can carry, and how big the numbers have to be.
+- **What question each page answers.** The home page answers "is everything all
+  right, and if not, where?". Every other page answers one question of its own:
+  "how did press-1 run today?", "what are the settings?". A page with two jobs
+  becomes two pages.
+- **What people look for first.** On the home page that is usually a state (how
+  many machines run, which one has a fault) or one headline figure. It gets the
+  most prominent place and the biggest tile.
+- **What users change on the board**, if anything: the settings a form writes,
+  the functions a switch calls. Controls get a page or a corner of their own,
+  never a place between the readings.
+- **The states that matter and their colours** (see below).
+
+```yaml
+# yaml-language-server: $schema=https://ironflock.com/schemas/board-template/v1.yml
+# Board of machine-monitor, bound to measurements and machine_status.
+# Viewers: operators on the wall screen in the hall, from the line (control-room
+# preset: dark, few big tiles); the shift supervisor opens it on a laptop too.
+# /           is every machine running? the states first, then the temperature
+#             and vibration trends and the power draw right now
+# /machines   the list; /machines/* one machine's readings and its target speed
+# States: RUNNING green, IDLE grey, FAULT red, the same on every widget.
+```
+
+### What goes where
+
+- **States first, then the headline figure, then trends, then detail.** Readers
+  scan from the top left. The top band holds the states (widget-signal, or a
+  widget-table with a state column) and the headline figure (widget-value, or
+  widget-gauge when the figure only means something against limits). Trends
+  (widget-linechart, widget-statehistory) go below. Everything that has to be
+  read rather than seen (tables, forms, texts) goes on a page of its own.
+- **Size follows importance.** What people look for first is the biggest tile on
+  the page. Tiles of the same kind get the same size. A tile nobody can read from
+  where they stand (a table or a form on a wall screen) does not belong on that
+  page.
+- **Fewer, bigger tiles.** A wall screen carries six to nine tiles. A page read at
+  a desk carries up to about twelve. Beyond that, split the page by question and
+  link the pages (Pages and navigation). The grid is still filled completely.
+- **One widget per data shape.** Choose the widget from the data, with the
+  catalog: one figure → widget-value; a figure against limits → widget-gauge; a
+  state → widget-signal; change over time → widget-linechart; states over time →
+  widget-statehistory; several fields per entity → widget-table; a text →
+  widget-label. Never show the same value twice on one page.
+- **Repeat the same shape for the same thing.** One gauge per machine, all the
+  same size, in one row, in the same order as the machine list and the table.
+
+### One colour, one meaning
+
+Colour on a board carries state and nothing else. The board's chrome (the four
+style colours) is neutral, chart series take their colours from the theme, and a
+state colour appears only where it means something:
+
+- **Pick the four state colours once** (each preset in Style suggests a set) and
+  write the same value for the same meaning into every widget: widget-signal
+  `signals[].colorMap[].color`, widget-table `stateMap` (a string of pairs,
+  `$str:'RUNNING': '#22c55e', 'IDLE': '#94a3b8', 'FAULT': '#ef4444'`),
+  widget-statehistory `stateMap[].color`, widget-gauge
+  `sections.sectionLimits[].sectionColor`, and widget-toast's severity colours. A
+  fault that is red in the table and orange on the signal is two states to the
+  reader.
+- **Nothing else gets a state colour.** Text stays in the board's text colour (no
+  `fontColor`, `valueColor` or `labelColor` unless the colour is a state), tiles
+  keep the preset's tile colour (`custom_style` only on navigation, see Layout),
+  and decorative colours are left out. On a board where everything is coloured,
+  nothing is an alarm.
+- **Limits are shown, not told.** A figure that has limits is a gauge whose
+  sections carry the limits in the state colours. A legend such as "red = fault"
+  is only needed where a state has no widget of its own.
+- **Colours in markup are frozen.** HTML in widget-markdown keeps its colours on
+  every theme (Markdown and HTML), so a state colour goes in there only as a
+  bound column, never as a literal.
+
+### Pick a look
+
+Choose a preset from Style by the viewing situation in the brief: `control-room`
+for wall screens and HMIs, `office` for desks and laptops, `daylight` for tablets
+and bright halls. Copy its `style` block whole, and its state colours into the
+widgets. When the user names brand colours, give them to the tile border or the
+navigation band, never to a state, and keep the preset's text and tile colours so
+the board stays readable. When neither the request nor the app says where the
+board is looked at, take `office`: most boards are opened at a desk or on a
+laptop. Ask only when the app itself points at a wall screen or a tablet (an HMI
+next to a machine, an andon board, a shop-floor display) and the request does not
+say. Say in your report which preset you chose and why.
+
+### Sketch it first, when there is a canvas
+
+When the user wants to see the board before it exists, or asks for a mockup or a
+design, and your environment has a design canvas (in Claude Code, the Artifact
+tool's Design type), draw a wireframe before writing YAML:
+
+- **One artboard per page, 1440 × 960 px.** That is the 3:2 of the default
+  96 × 64 grid, so one cell is 15 px. Draw each tile as a rectangle at its grid
+  position (`x`, `y`, `w`, `h` times 15), in the preset's tile colour with the
+  preset's border on the preset's background, and write into it the widget type,
+  the title and the table and column it binds
+  (`widget-gauge · Temperature · measurements.temperature`). Signals and gauge
+  sections take the state colours.
+- **One swatch artboard.** The four board colours and the four state colours as
+  labelled squares, each with the style key or the state it stands for.
+- **Nothing a widget cannot render.** No typography, shadows, icons or components
+  of your own. The artboard is the plan for the grid, not a picture to rebuild in
+  widget-markdown.
+
+Show it, take the user's changes on the artboard, then transcribe the approved
+artboard tile by tile (`x = left / 15`, `w = width / 15`, rounded to whole cells)
+and the swatches into `style` and the widgets' colour keys. Without a canvas, or
+when the user did not ask to see the board first, write the band plan in text (as
+in Layout) and go on. The sketch never blocks the work.
 
 ## Pages and navigation
 
@@ -706,6 +833,73 @@ style:
 `overflow: true` makes the board scroll (cells are then `cell_size` pixels) instead
 of scaling to the screen.
 
+A style that names only a theme takes its four colours from the theme (its
+background, title text and axis line colours), so `theme: {theme_name: dark}`
+alone renders dark tiles. Set all four colours anyway: then the board looks the
+same after a theme update, and the board editor stores all four on every save.
+Without `style`, the platform defaults apply: `#fefefe` background, `#1a1430`
+text, `#ffffff80` tiles with a `#fefefe` border.
+
+### Presets
+
+Each preset is a complete `style` block plus the four state colours for the
+widgets (Designing a board). Pick one by the viewing situation, copy it whole, and
+change it only when the user asks for brand colours.
+
+**control-room**: wall screens and HMIs, read from a distance, often under harsh
+light. Dark, few tiles, big numbers.
+
+```yaml
+style:
+    theme: {theme_name: dark}
+    background_color: '#0f172a'
+    text_color: '#e2e8f0'
+    tile_background_color: '#1e293b'
+    tile_border_color: '#334155'
+    tile_border_radius: 8px
+    grid_gap: 8
+    columns: 96
+    rows: 64
+# states: ok '#22c55e'  warning '#f59e0b'  alarm '#ef4444'  idle '#94a3b8'
+```
+
+**office**: desks and laptops, a supervisor's or manager's overview with more
+tiles and tables. Light, soft contrast.
+
+```yaml
+style:
+    theme: {theme_name: light}
+    background_color: '#f1f5f9'
+    text_color: '#1e293b'
+    tile_background_color: '#ffffff'
+    tile_border_color: '#e2e8f0'
+    tile_border_radius: 12px
+    grid_gap: 8
+    columns: 96
+    rows: 64
+# states: ok '#16a34a'  warning '#d97706'  alarm '#dc2626'  idle '#64748b'
+```
+
+**daylight**: tablets and panels next to the machine, bright halls, outdoors.
+Highest contrast, hard edges.
+
+```yaml
+style:
+    theme: {theme_name: light}
+    background_color: '#ffffff'
+    text_color: '#111827'
+    tile_background_color: '#f8fafc'
+    tile_border_color: '#9ca3af'
+    tile_border_radius: 4px
+    grid_gap: 8
+    columns: 96
+    rows: 64
+# states: ok '#15803d'  warning '#b45309'  alarm '#b91c1c'  idle '#4b5563'
+```
+
+In every preset the text reads at 11:1 or better against the tiles and each
+state colour at 3:1 or better, so they stay legible on cheap screens.
+
 ## Markdown and HTML
 
 widget-markdown renders Markdown and HTML. A `{{name}}` placeholder shows the value
@@ -814,7 +1008,11 @@ Some values only exist inside a running platform, and a template cannot know the
 5. Every widget with a Layout line has its `fixedHeight` or `fixedWidth` and
    enough cells for it, and navbuttons have no tile border, unless there is a
    reason to do otherwise.
-6. In widget-markdown, every `{{placeholder}}` has a `data` entry, values in CSS are
+6. The header says who looks at the board and where, and which look was chosen.
+   `style` sets the theme and all four colours (a preset, or the user's brand
+   colours on the preset's text and tile colours). Every state colour means one
+   thing on every widget, and nothing else is coloured.
+7. In widget-markdown, every `{{placeholder}}` has a `data` entry, values in CSS are
    plain CSS values, and the markup has no scripts or event handlers. HTML has no
    blank line followed by a line indented by four spaces or more.
-7. `scripts/validate.py <app-dir>` (run it as SKILL.md shows) reports no errors.
+8. `scripts/validate.py <app-dir>` (run it as SKILL.md shows) reports no errors.

@@ -26,6 +26,12 @@
       "fixture": null,
       "prompt": "Build a new IronFlock app called tank-monitor in this empty folder. It runs on the IPCs next to our storage tanks: each IPC reads the fill level (%) and the temperature (°C) of its tank. Simulate the readings for now. Operators set the low-level alarm limit in one place for all tanks, and every IPC must apply a change at once, also an IPC that was offline when the limit was changed. Each IPC also serves a small web page with its tank's live level, which we want to open from anywhere and see inside the app's dashboard. The dashboard shows every tank's current level and alarm state, and has a page per tank.",
       "expected_output": "A complete app: Dockerfile and edge code using the ironflock SDK; a settings table written by a board form and followed by the code (read at start and subscribed, with ironflock 1.10.0 or later, which delivers what was saved while the IPC was offline, and no session code); the web page's port in port-template.yml, its tunnel URL written to a table and embedded in the board on a per-tank page; a web page that is pushed to, not polled; a program that stops on SIGTERM; validate.py passes."
+    },
+    {
+      "id": 5,
+      "name": "wall-screen-board",
+      "prompt": "Our presses-and-lathes app needs a board for the big screen in the hall: operators glance at it from the line, about ten metres away, and the shift supervisor opens the same board on a laptop. It must show at a glance whether every machine is running and which one has a fault, the temperature and vibration trend of the last 8 hours, and the power draw right now. Choose a look that suits the hall.",
+      "expected_output": "A board-template.yml whose comment header says who looks at the board and where and which look was chosen; style names a theme and all four board colours of a dark, high-contrast preset; the home page has few, large tiles that fill the grid; FAULT has one colour on every widget that shows a state; passes validate.py without errors."
     }
   ]
 }
