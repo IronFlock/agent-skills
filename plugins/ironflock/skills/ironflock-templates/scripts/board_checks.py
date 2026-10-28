@@ -251,6 +251,16 @@ def iter_pages(page: dict, route: list[str], path: list):
                 yield from iter_pages(child, route + [str(name)], path + ["subRoutes", name])
 
 
+def is_transient(route: list, page: dict) -> bool:
+    """A page that only holds the pages below it: it has no widgets of its own,
+    and users open the pages below it directly, so it need not be reachable.
+    The home page is never one: the board opens on it."""
+    subs = page.get("subRoutes")
+    return bool(route) and not page.get("gridLayout") and isinstance(subs, dict) and any(
+        isinstance(child, dict) for child in subs.values()
+    )
+
+
 def check_layout(board: Board, layout: dict, widget_ids: dict[str, int], style: dict) -> dict[str, list[list[str]]]:
     """Returns layout_id -> routes of the pages it is placed on."""
     placements: dict[str, list[list[str]]] = {}
@@ -292,7 +302,8 @@ def check_layout(board: Board, layout: dict, widget_ids: dict[str, int], style: 
                 boxes.append((x, y, w, h, ppath))
 
         if not grid:
-            board.warn(path + ["gridLayout"], f"page {label} has no widgets")
+            if not is_transient(route, page):  # check_navigation warns if users reach it
+                board.warn(path + ["gridLayout"], f"page {label} has no widgets")
             continue
         if snapped and not overflow_y and not overflow_x and not has_aspect and columns * rows <= 1_000_000:
             coverage = covered_fraction(boxes, int(columns), int(rows))
@@ -1246,7 +1257,8 @@ def check_menu_highlighting(board: Board, i: int, w: dict, pages: list[tuple] | 
 
 
 def check_navigation(board: Board, layout: dict | None, placements: dict) -> None:
-    """Every page must be reachable from the home page by clicking, and lead back.
+    """Every page users see must be reachable from the home page by clicking, and
+    lead back. A transient page, which only holds the pages below it, need not be.
 
     Walks the board the way a user does: start on '/', follow every link of every
     navigation widget on the current page, as the widget and the board navigator
@@ -1262,7 +1274,13 @@ def check_navigation(board: Board, layout: dict | None, placements: dict) -> Non
                 check_menu_highlighting(board, i, w, pages_of)
     if not isinstance(layout, dict):
         return
-    pages = {tuple(route): path for route, _page, path in iter_pages(layout, [], ["layout"])}
+    pages: dict[tuple, list] = {}
+    transient: set[tuple] = set()
+    for route, page, path in iter_pages(layout, [], ["layout"]):
+        pages[tuple(route)] = path
+        if is_transient(route, page):
+            transient.add(tuple(route))
+    holders = {pattern[:-1] for pattern in pages if pattern}
     on_page: dict[tuple, list[NavLink]] = {}
     for i, links in links_of.items():
         for route in placements.get(widgets[i].get("layout_id"), []):
@@ -1310,14 +1328,28 @@ def check_navigation(board: Board, layout: dict | None, placements: dict) -> Non
     for pattern, path in pages.items():
         label = page_label(pattern)
         if pattern not in reached:
+            if pattern in transient:
+                continue  # users open the pages below it, which are checked on their own
             message = f"page {label} cannot be reached by clicking from the home page: " + unreachable_hint(
                 board, pattern, reached, on_page, widgets
             )
+            if pattern in holders:
+                message += (
+                    ". If it only holds the pages below it, leave its gridLayout empty (gridLayout: []): "
+                    "such a page need not be reachable"
+                )
             if unknown:
                 board.warn(path, message + f" (the validator could not follow the data-driven menu {', '.join(repr(u) for u in unknown)}; check by hand)")
             else:
                 board.error(path, message)
-        elif any(state not in back for state in reached[pattern]):
+            continue
+        if pattern in transient:
+            board.warn(
+                path + ["gridLayout"],
+                f"page {label} has no widgets, but users reach it by clicking and see an empty page. "
+                "Give it content, or link only the pages below it",
+            )
+        if any(state not in back for state in reached[pattern]):
             board.error(
                 path,
                 f"page {label} has no way back to the home page: put the board's menu on it, whose "
@@ -1340,10 +1372,16 @@ def unreachable_hint(board: Board, pattern: tuple, reached: dict, on_page: dict,
                 "with '/' (a route with '*' drops it). Bind the items' route to an absolute route "
                 "computed in a transform: '/a/' || id_column || ... AS route"
             )
-    if pattern and pattern[-1] == "*":
+    if pattern and pattern[-1] == "*" and parent in reached:
         return (
             f"no navigation widget on a reachable page links to it. Give {page_label(parent)} a "
             "data-driven menu whose items lead to these pages"
+        )
+    if pattern and pattern[-1] == "*":
+        return (
+            "no navigation widget on a reachable page links to it. Give a reachable page a data-driven "
+            "menu whose items lead to these pages, with the items' route bound to an absolute route "
+            "computed in a transform: '/a/' || id_column || ... AS route"
         )
     return "no navigation widget on a reachable page links to it. Add it to a menu, or link it with a widget-navbutton"
 

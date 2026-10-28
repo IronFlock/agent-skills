@@ -354,23 +354,31 @@ layout:                         # /
   the same id to each page. Give it the same position on every page, because moving
   it in the editor moves it everywhere.
 
-### Every page is reached by clicking
+### Every page users see is reached by clicking
 
 People move through a board only by clicking: nobody types a route, and a kiosk
 screen has no address bar. So:
 
-- **Every page must be reachable from the home page** (`/`) through a series of
-  clicks, and **every page must lead back home.** A page that nothing links to
+- **Every page users see must be reachable from the home page** (`/`) through a
+  series of clicks, and **must lead back home.** A page that nothing links to
   cannot be opened, and a page without a way back traps its user. The validator
   follows every link from the home page the way the board does, and reports each
-  page it cannot reach, and each page with no way back, as an error.
+  such page it cannot reach, and each page with no way back, as an error.
+- **A page that only holds the pages below it need not be reachable.** The route
+  `/devices/*` needs a `devices` page above it, but users may open each device
+  straight from a menu on another page and never see `/devices` itself. Give such
+  a transient page no widgets (`gridLayout: []`), and the validator skips it. A
+  page with widgets is one users see, so it must be reachable. If a link opens an
+  empty page after all, the validator warns, because users see a blank screen.
+  A data-driven menu on another page reaches `/devices/*` only with absolute item
+  routes computed in a transform (`'/devices/' || device_key AS route`, as in
+  pattern 3): a relative route from `/` opens `/<device_key>`.
 - **Only navigation widgets move between pages:** widget-navbar, widget-sidenav and
   widget-navbutton. A widget-table `button` or `image` cell opens its link in a new
   browser tab, so it cannot move inside the board. Use those cells for external
   links only.
 - **Put the same menu on every page of one level, at the same position**, so it
-  reads as the board's menu. A parent page that exists only to hold `*` children
-  (`/machines`) still needs content: make it the list that leads to them.
+  reads as the board's menu.
 
 ### How menu items are highlighted
 
