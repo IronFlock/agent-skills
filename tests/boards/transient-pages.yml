@@ -1,0 +1,93 @@
+# yaml-language-server: $schema=https://ironflock.com/schemas/board-template/v1.yml
+# Transient pages: a page that only holds the pages below it (gridLayout: []) need
+# not be reachable by clicking. The alarm menu on the home page opens
+# /machines/<id>/alarms/<state> straight away, so /machines, /machines/* and
+# /machines/*/alarms are never opened. A page with widgets must be reachable
+# (/reports), and a link that opens an empty page shows a blank screen (/archive).
+# Nothing links /sites/*: it is reported, its transient page /sites is not.
+# expect-none: layout.subRoutes.machines
+# expect-none: layout.subRoutes.machines.gridLayout
+# expect-none: layout.subRoutes.machines.subRoutes.*
+# expect-none: layout.subRoutes.machines.subRoutes.*.gridLayout
+# expect-none: layout.subRoutes.machines.subRoutes.*.subRoutes.alarms
+# expect-none: layout.subRoutes.machines.subRoutes.*.subRoutes.alarms.gridLayout
+# expect-none: layout.subRoutes.machines.subRoutes.*.subRoutes.alarms.subRoutes.*
+# expect: ERROR layout.subRoutes.reports :: leave its gridLayout empty
+# expect-none: layout.subRoutes.reports.subRoutes.daily
+# expect: WARN  layout.subRoutes.archive.gridLayout :: users reach it by clicking and see an empty page
+# expect-none: layout.subRoutes.sites
+# expect-none: layout.subRoutes.sites.gridLayout
+# expect: ERROR layout.subRoutes.sites.subRoutes.* :: Give a reachable page a data-driven menu
+name: transient-pages
+widgets:
+    - layout_id: nav
+      package_name: widget-sidenav
+      version: 1.0.19
+      chartconfig:
+          title: $str:Plant
+          route: $str:/
+          navItems:
+              - {label: $str:Daily report, route: $str:/reports/daily}
+              - {label: $str:Archive, route: $str:/archive/}
+    - layout_id: alarm-list
+      package_name: widget-sidenav
+      version: 1.0.19
+      chartconfig:
+          title: $str:Alarms
+          navItems:
+              tableRef:
+                  tablename: machine_alarm_links
+                  format: {label: state, route: route}
+                  queryParams: {limit: 50}
+    - layout_id: text
+      package_name: widget-markdown
+      version: 1.0.11
+      chartconfig:
+          markdown: |
+              Page content.
+layout:
+    gridLayout:
+        - {id: nav, x: 0, y: 0, w: 16, h: 64}
+        - {id: alarm-list, x: 16, y: 0, w: 16, h: 64}
+        - {id: text, x: 32, y: 0, w: 64, h: 64}
+    subRoutes:
+        machines:
+            gridLayout: []
+            subRoutes:
+                '*':
+                    gridLayout: []
+                    subRoutes:
+                        alarms:
+                            gridLayout: []
+                            subRoutes:
+                                '*':
+                                    gridLayout:
+                                        - {id: nav, x: 0, y: 0, w: 16, h: 64}
+                                        - {id: alarm-list, x: 16, y: 0, w: 16, h: 64}
+                                        - {id: text, x: 32, y: 0, w: 64, h: 64}
+        reports:
+            gridLayout:
+                - {id: nav, x: 0, y: 0, w: 16, h: 64}
+                - {id: text, x: 16, y: 0, w: 80, h: 64}
+            subRoutes:
+                daily:
+                    gridLayout:
+                        - {id: nav, x: 0, y: 0, w: 16, h: 64}
+                        - {id: text, x: 16, y: 0, w: 80, h: 64}
+        archive:
+            gridLayout: []
+            subRoutes:
+                '*':
+                    gridLayout:
+                        - {id: nav, x: 0, y: 0, w: 16, h: 64}
+                        - {id: text, x: 16, y: 0, w: 80, h: 64}
+        sites:
+            gridLayout: []
+            subRoutes:
+                '*':
+                    gridLayout:
+                        - {id: nav, x: 0, y: 0, w: 16, h: 64}
+                        - {id: text, x: 16, y: 0, w: 80, h: 64}
+style:
+    columns: 96
+    rows: 64

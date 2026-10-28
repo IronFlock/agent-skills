@@ -160,13 +160,16 @@ complete reference.
   and bind widget-embed to it. Never hard-code a device's address, port or URL.
 - **Bind, don't paste.** If a value lives in a table, bind the widget to it with a
   data reference. Pasted numbers go stale the moment the board is installed.
-- **Make every page reachable by clicking, and the way there obvious.** People
-  only click through a board; nobody types a route. Every page must be reachable
-  from the home page and lead back to it. Home is a menu's title, never a menu
-  item: an item is highlighted whenever the current route starts with its route,
-  so an item for `/` is highlighted on every page. board-template.md's "Pages and
-  navigation" section has the rules and the patterns (sections, list and detail
-  pages, records with edit pages), and the validator walks every link to check.
+- **Make every page users see reachable by clicking, and the way there obvious.**
+  People only click through a board; nobody types a route. Every page with widgets
+  must be reachable from the home page and lead back to it. A page that only holds
+  the pages below it (`/devices` above `/devices/*`, with `gridLayout: []`) need
+  not be reachable itself, as long as those pages are. Home is a menu's title,
+  never a menu item: an item is highlighted whenever the current route starts with
+  its route, so an item for `/` is highlighted on every page. board-template.md's
+  "Pages and navigation" section has the rules and the patterns (sections, list and
+  detail pages, records with edit pages), and the validator walks every link to
+  check.
 - **Give boards that manage assets one familiar shape.** The asset types are the
   main menu. An asset type's page lists its assets in a sidenav, with a "New"
   floating action button on top. An asset opens its detail page with settings and
