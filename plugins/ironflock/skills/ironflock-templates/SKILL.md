@@ -36,7 +36,7 @@ in it is described.
 1. **Read before writing.** Look at the existing `.ironflock/` files and at the app's
    code. The code shows what the app actually publishes (`publish_to_table` calls)
    and which functions it registers (`register_device_function` calls). The templates
-   have to agree with it. If templates already exist, run the validator (step 5)
+   have to agree with it. If templates already exist, run the validator (step 6)
    once before changing anything, so you can tell findings that were already there
    from ones you introduce. Before you design an app, write its edge code or change
    how its parts talk to each other, read
@@ -64,14 +64,24 @@ in it is described.
    the data yet, say so and change the code too. For each table, decide whether
    users of the app should work with it directly. Mark tables that only hold the
    app's internal details `private: true` (app-templates.md explains when).
-4. **Write the file.** For the board, read
+4. **Design the board before you write it.** Read "Designing a board" in
+   [references/board-template.md](references/board-template.md). Decide who looks
+   at the board and where, what question each page answers, what people look for
+   first, and which look (a preset in its Style section) suits that viewing
+   situation, `office` when nothing says otherwise. Write those decisions into
+   the board's comment header. When the
+   user wants to see the board before it exists and your environment has a design
+   canvas (in Claude Code, the Artifact tool's Design type), sketch the pages as
+   wireframes there first, as that section describes. Otherwise write the band
+   plan in text and go on.
+5. **Write the file.** For the board, read
    [references/board-template.md](references/board-template.md) and the complete
    example [references/example-board.yml](references/example-board.yml) first,
    choose widgets with [references/widget-catalog.md](references/widget-catalog.md),
    and look up each chosen widget's exact properties (see below). For the other four
    files, read [references/app-templates.md](references/app-templates.md) and the
    file's schema.
-5. **Validate, fix and repeat until there are no errors:**
+6. **Validate, fix and repeat until there are no errors:**
 
    ```bash
    python3 ${CLAUDE_SKILL_DIR}/scripts/validate.py <app-dir>
@@ -84,13 +94,13 @@ in it is described.
    or install `pyyaml` and `jsonschema`. Warnings are judgment calls. Read each one
    and fix it unless it is deliberate. The validator has its own test suite, so a
    clean run is enough; there is no need to seed mistakes to test it.
-6. **Report** what you created, which tables and widgets connect, and anything the
-   app's code still has to do. Tell the user they can open the board in IronFlock's
-   board editor to adjust it visually. The editor reads and writes the same
-   `board-template.yml`. For a new app, add how to get it running: push it to the
-   app's repository in IronFlock and run it on a device from the IDE. That
-   development run has no remote-access tunnels; they come with a production
-   install.
+7. **Report** what you created, which look you chose and why, which tables and
+   widgets connect, and anything the app's code still has to do. Tell the user
+   they can open the board in IronFlock's board editor to adjust it visually. The
+   editor reads and writes the same `board-template.yml`. For a new app, add how
+   to get it running: push it to the app's repository in IronFlock and run it on
+   a device from the IDE. That development run has no remote-access tunnels; they
+   come with a production install.
 
 ## Widget schemas
 
@@ -158,6 +168,10 @@ complete reference.
 - **Reach a device's web UI through its tunnel.** Declare the port in
   port-template.yml, write the URL from `getRemoteAccessUrlForPort` into a table,
   and bind widget-embed to it. Never hard-code a device's address, port or URL.
+- **One colour, one meaning.** The chosen preset's four state colours mark ok,
+  warning, alarm and idle, with the same value on every widget. The board's chrome
+  stays neutral and nothing else is coloured. board-template.md, "Designing a
+  board", has the rules and the key each widget takes its colours from.
 - **Bind, don't paste.** If a value lives in a table, bind the widget to it with a
   data reference. Pasted numbers go stale the moment the board is installed.
 - **Make every page users see reachable by clicking, and the way there obvious.**

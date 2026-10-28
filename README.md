@@ -22,6 +22,9 @@ tunnels and embedded in the board. It holds:
 - a starter app, and `new_app.py`, which scaffolds a new app from it: a Python
   program that keeps each device's state and readings in tables, applies the
   settings users save on the board, and serves a live view that the board embeds;
+- a design step for the board: a brief (who looks at it, where, and what each
+  page answers), a visual hierarchy, one meaning per colour, three style presets,
+  and a wireframe on a design canvas when the agent has one;
 - the rules for writing the integration templates, the files in the app's
   `.ironflock/` folder:
 
@@ -214,7 +217,11 @@ the architecture guide and the starter app were added, the skill scored 28/28
 `new-app` scored 9/10: the agent worked the architecture out from the SDK's
 public sources with twice the tokens and time, but its board had 31 validator
 errors (unquoted numeric `layout_id`s, which the board editor does not show, and
-numeric route-filter values).
+numeric route-filter values). The fifth prompt, `wall-screen-board`, came with the
+design step on 2026-10-28 and grades the brief, the preset and the state colours.
+On that day it scored 7/7 with the skill and 6/7 without: the agent without it
+chose a dark look and consistent state colours by itself, but spread 13 tiles over
+the wall screen, label widgets as card headers among them.
 
 **Evaluate the widget skill** the same way with `evals/widgets/`:
 `python3 evals/widgets/grade.py setup <iteration-dir>` clones the fixture widgets
