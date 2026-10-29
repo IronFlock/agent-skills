@@ -174,6 +174,11 @@ values:
   value: `[false]` matches `false` and unset (unset reads as `false`), `"true"`
   never matches `true`. Values must not contain `:`, which the editor's decoding
   cuts off.
+- **`false` in the list of an enum target matches a target left unset.** List it
+  to keep a property visible before anything is chosen: widget-form shows Target
+  Column for every input type plus `false`, so a new field tab has it before a
+  type is picked, and only a `section` hides it. The editor, the AI's validator,
+  the board validator and `check_widget.py` all read it that way.
 - **Never point at a sibling inside a bindable array**: once the array is bound,
   the sibling reads as unset and the field is always hidden.
 - The editor hides the field and deletes its value when the condition is not met.
@@ -314,8 +319,13 @@ differs.
 ## Size limits
 
 - The AI loads a widget's schema and default config together; when the JSON is
-  longer than 40,000 characters (non-ASCII characters count six), it gets only an
+  longer than 50,000 characters (non-ASCII characters count six), it gets only an
   overview of the top-level properties. Today only widget-scada is over the limit,
-  with a generated schema of 230 KB.
+  with a generated schema of 230 KB; widget-form, the largest of the others, is
+  about 40,000. The JSON is indented, so depth costs: a `condition` listing ten
+  values inside a list item takes about 430 characters there.
+- 50,000 is also the most any AI tool result can hold. When the AI fetches several
+  widgets' schemas in one call, a schema that would push the result past it is
+  left out with a note to fetch it alone.
 - Keep descriptions informative but not repetitive. Don't paste the same paragraph
   into every item of a list.
