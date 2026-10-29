@@ -130,7 +130,7 @@ INERT = {
     "hidden": "nothing implements it",
 }
 
-AI_SCHEMA_BUDGET = 40_000  # characters of the schema + default config the AI gets in full
+AI_SCHEMA_BUDGET = 50_000  # characters of the schema + default config the AI gets in full (ai: MAX_WIDGET_SCHEMA_CHARS)
 AI_ROUTING_BUDGET = 2_500  # characters of description + aiSelection, a share of a shared prompt
 
 
@@ -932,6 +932,11 @@ class WidgetCheck:
                     self.error(file, f"{value!r} never matches a boolean target (compared with ===)", path)
         elif ttype == "string" and isinstance(target.get("enum"), list):
             for value in values:
+                # The editor reads an unset target as false, so false shows the
+                # property while nothing is chosen yet (widget-form's Target
+                # Column before a field type is picked).
+                if value is False:
+                    continue
                 if value not in target["enum"]:
                     self.error(file, f"{value!r} is not one of the target's enum values", path)
         else:

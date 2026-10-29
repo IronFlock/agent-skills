@@ -12,6 +12,8 @@
 4. Every mutation below plants one known mistake in a fresh finished copy, and
    check_widget.py must report it: the expected level, file, path and part of
    the message. Each mutation is a negative control for one check.
+5. Every accepted shape below is correct, and check_widget.py must report
+   nothing for it: a positive control for a check that once misfired.
 
 Offline and without node: the json2ts and --typecheck comparisons need a
 node_modules and are exercised by hand (see README).
@@ -90,6 +92,22 @@ DEFAULTS = "src/default-data.json"
 
 def series_item(s: dict) -> dict:
     return s["properties"]["dataseries"]["items"]["properties"]
+
+
+def with_style_condition(s: dict, shown_for: list) -> None:
+    """Give each series a literal Style enum and show its unit only for the
+    listed styles."""
+    series_item(s).update(
+        style={
+            "title": "Style",
+            "description": "How the value is drawn.",
+            "type": "string",
+            "enum": ["plain", "boxed"],
+            "dataDrivenDisabled": True,
+            "order": 6,
+        }
+    )
+    series_item(s)["unit"].update(condition={"relativePath": "../style", "showIfValueIn": shown_for})
 
 
 def add_code(code: str) -> Callable[[str], str]:
@@ -290,6 +308,10 @@ MUTATIONS: dict[str, tuple[Mutation, list[tuple[str, str, str, str]]]] = {
         ),
         [("WARN", SCHEMA, "dataseries.[].unit", "can be bound to data")],
     ),
+    "condition on a value the enum lacks": (
+        lambda r: edit_json(r, SCHEMA, lambda s: with_style_condition(s, ["plain", "fancy"])),
+        [("ERROR", SCHEMA, "dataseries.[].unit", "'fancy' is not one of the target's enum values")],
+    ),
     "notFor that routes nowhere": (
         lambda r: edit_json(r, SCHEMA, lambda s: s["aiSelection"]["notFor"].append("Anything with a map.")),
         [("WARN", SCHEMA, "aiSelection.notFor.1", "names no widget")],
@@ -376,6 +398,14 @@ MUTATIONS: dict[str, tuple[Mutation, list[tuple[str, str, str, str]]]] = {
     ),
 }
 
+# name: mutation of a finished widget that is correct, so the checker must
+# report nothing (a positive control for a check that once misfired).
+ACCEPTED: dict[str, Mutation] = {
+    # false matches an unset enum target in the editor, the AI and the board
+    # validator (widget-form shows Target Column before a field type is picked).
+    "false in an enum condition": lambda r: edit_json(r, SCHEMA, lambda s: with_style_condition(s, ["plain", False])),
+}
+
 
 def main() -> int:
     failed = 0
@@ -457,6 +487,18 @@ def main() -> int:
                 for f in found:
                     print(f"     found {f}")
             failed += bool(problems)
+
+        # 5. Correct shapes stay clean.
+        for name, mutate in ACCEPTED.items():
+            repo = base / "accepted" / name.replace(" ", "-") / "widget-sample"
+            shutil.copytree(finished, repo)
+            mutate(repo)
+            found = findings(repo)
+            status = "ok  " if not found else "FAIL"
+            print(f"{status} accepted: {name}")
+            for f in found:
+                print(f"     unexpected {f}")
+            failed += bool(found)
     print(f"\n{failed} failure(s)")
     return 1 if failed else 0
 
