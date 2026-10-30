@@ -99,8 +99,9 @@ in it is described.
    they can open the board in IronFlock's board editor to adjust it visually. The
    editor reads and writes the same `board-template.yml`. For a new app, add how
    to get it running: push it to the app's repository in IronFlock and run it on
-   a device from the IDE. That development run has no remote-access tunnels; they
-   come with a production install.
+   a device from the IDE. That development run gets a private tunnel for each
+   http(s) port, which its developers open from the IDE's side menu; the URLs the
+   board embeds come with a production install.
 
 ## Widget schemas
 
