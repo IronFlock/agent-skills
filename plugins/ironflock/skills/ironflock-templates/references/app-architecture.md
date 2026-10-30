@@ -259,8 +259,10 @@ What the device agent gives a container and expects from it:
   kills it. Start it in exec form (`CMD ["python", "-u", "main.py"]`), never
   through a shell.
 - **Development runs.** Running the app from the IDE is a development run (`ENV`
-  is `DEV`): it writes to the app's development tables, gets default parameters
-  and no remote-access tunnels.
+  is `DEV`): it writes to the app's development tables and gets default
+  parameters. Each http(s) port gets a private tunnel that only users with the
+  Develop privilege on the device open, from the IDE's side menu; tcp/udp ports
+  get none.
 - **Architectures.** Devices are arm64, amd64 or armv7. A `Dockerfile.<arch>`
   next to the `Dockerfile` overrides it for one architecture.
 
@@ -305,8 +307,8 @@ remote-access tunnel of its port:
    tunnel on, and serves it as HTTPS with websockets.
 2. **Write its URL into a table.** `getRemoteAccessUrlForPort(port)` gives the
    tunnel's URL. Write it into the device's row of an entity table keyed by
-   `device_key`, at start. Only production installs get tunnels: a development
-   run writes no URL (the SDK would give it the production install's).
+   `device_key`, at start. A development run writes no URL: the SDK gives it the
+   production install's, and its own tunnel is opened from the IDE's side menu.
 3. **Embed it in the board.** Bind widget-embed's `webUrl` to that column,
    filtered to one device (board-template.md, "Embedding a web UI the app
    serves").

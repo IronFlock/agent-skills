@@ -122,7 +122,9 @@ Docs: <https://ironflock.com/docs/remote-access/port-template>
 
 Ports the app serves (a web UI, a video stream, VNC, an OPC UA server), offered
 as remote-access tunnels. A production install switches every declared port's
-tunnel on; users with the network privilege on the device can switch it off. An
+tunnel on; users with the network privilege on the device can switch it off. A
+development run gets a tunnel for each `http`/`https` port, which only users with
+the Develop privilege on the device open, from the IDE's side menu. An
 `http` tunnel stays private (IronFlock login or account API key) unless the port
 is switched Public; a `tcp`/`udp` tunnel is a raw port with no login in front, so
 the app must authenticate its clients itself.
@@ -139,8 +141,8 @@ the app must authenticate its clients itself.
   to the user.
 - **To show a device's web UI on the board**, the app writes the URL from
   `getRemoteAccessUrlForPort(<port>)` into the device's row of a table, and the
-  board's widget-embed binds `webUrl` to that column. Tunnels exist for production
-  installs only. app-architecture.md ("Web UIs on the device") has the whole
+  board's widget-embed binds `webUrl` to that column. Only a production install
+  writes that URL. app-architecture.md ("Web UIs on the device") has the whole
   pattern, and board-template.md the binding.
 
 ## ai-template.yml

@@ -758,8 +758,8 @@ webUrl:
 - Set `multiEmbed: $bool:false`. With `multiEmbed: $bool:true`, `data` takes a
   tableRef with the format `{url: ui_url, title: device_name}` and shows every
   device's page side by side, which suits a handful of devices.
-- Only production installs have tunnels. A development run writes no URL, and its
-  embed stays empty.
+- A development run writes no URL, and its embed stays empty. Its developers open
+  its web UI from the IDE's side menu instead.
 
 ## Layout
 
