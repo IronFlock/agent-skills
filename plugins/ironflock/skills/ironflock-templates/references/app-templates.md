@@ -123,8 +123,10 @@ Docs: <https://ironflock.com/docs/remote-access/port-template>
 Ports the app serves (a web UI, a video stream, VNC, an OPC UA server), offered
 as remote-access tunnels. A production install switches every declared port's
 tunnel on; users with the network privilege on the device can switch it off. A
-development run gets a tunnel for each `http`/`https` port, which only users with
-the Develop privilege on the device open, from the IDE's side menu. An
+development run gets a tunnel for each declared port while it runs: an
+`http`/`https` one that only users with the Develop privilege on the device
+open, from the IDE's side menu, and a `tcp`/`udp` one without a switch, whose
+remote port the SDK reads once the tunnel is up. An
 `http` tunnel stays private (IronFlock login or account API key) unless the port
 is switched Public; a `tcp`/`udp` tunnel is a raw port with no login in front, so
 the app must authenticate its clients itself.

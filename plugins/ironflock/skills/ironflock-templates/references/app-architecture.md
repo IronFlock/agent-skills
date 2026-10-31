@@ -261,8 +261,9 @@ What the device agent gives a container and expects from it:
 - **Development runs.** Running the app from the IDE is a development run (`ENV`
   is `DEV`): it writes to the app's development tables and gets default
   parameters. Each http(s) port gets a private tunnel that only users with the
-  Develop privilege on the device open, from the IDE's side menu; tcp/udp ports
-  get none.
+  Develop privilege on the device open, from the IDE's side menu. Each tcp/udp
+  port gets a tunnel with no switch and no login, whose address
+  `getRemoteAccessUrlForPort` returns once it is up.
 - **Architectures.** Devices are arm64, amd64 or armv7. A `Dockerfile.<arch>`
   next to the `Dockerfile` overrides it for one architecture.
 

@@ -100,8 +100,9 @@ in it is described.
    editor reads and writes the same `board-template.yml`. For a new app, add how
    to get it running: push it to the app's repository in IronFlock and run it on
    a device from the IDE. That development run gets a private tunnel for each
-   http(s) port, which its developers open from the IDE's side menu; the URLs the
-   board embeds come with a production install.
+   http(s) port, which its developers open from the IDE's side menu, and a
+   tunnel without a switch for each tcp/udp port; the URLs the board embeds come
+   with a production install.
 
 ## Widget schemas
 
