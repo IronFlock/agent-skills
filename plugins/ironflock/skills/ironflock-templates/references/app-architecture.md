@@ -11,13 +11,14 @@ starter app in `assets/app-template/` follows all of them; scaffold it with
 2. [Rules](#rules)
 3. [Where each kind of data goes](#where-each-kind-of-data-goes)
 4. [Reading and writing state with the SDK](#reading-and-writing-state-with-the-sdk)
-5. [Following what the board writes](#following-what-the-board-writes)
-6. [Commands, device functions and topics](#commands-device-functions-and-topics)
-7. [The container on the device](#the-container-on-the-device)
-8. [Docker Compose](#docker-compose)
-9. [Web UIs on the device](#web-uis-on-the-device)
-10. [Several devices](#several-devices)
-11. [Checklist](#checklist)
+5. [Entity tables: current state, updates and deletes](#entity-tables-current-state-updates-and-deletes)
+6. [Following what the board writes](#following-what-the-board-writes)
+7. [Commands, device functions and topics](#commands-device-functions-and-topics)
+8. [The container on the device](#the-container-on-the-device)
+9. [Docker Compose](#docker-compose)
+10. [Web UIs on the device](#web-uis-on-the-device)
+11. [Several devices](#several-devices)
+12. [Checklist](#checklist)
 
 ## The parts of an app
 
@@ -82,7 +83,7 @@ needs no address and no credentials.
 | Readings over time | a table with `tsp` | `publish_to_table`, `publish_rows_to_table` | charts with time windows and aggregation |
 | The current state of a device, machine or order | an entity table (`maintainLatestFlagFor`) | a row with the key, `tsp` and the changed columns | the `{latest: true}` filter |
 | Limits, setpoints, recipes people set for the app | a table the board's widget-form writes | the form | every device, as in [Following what the board writes](#following-what-the-board-writes) |
-| Records people create, edit and delete | an entity table with a `deleted` column | the form, with `deleteFlagColumn` | board-template.md, pattern 6 |
+| Records people create, edit and delete | an entity table with a `deleted` column | the form, with `deleteFlagColumn` | the `{latest: true}` filter plus a filter on `deleted`, live; see [Entity tables](#entity-tables-current-state-updates-and-deletes) |
 | Errors and notices for operators | the `error-logs` table | `report_error(error, user_message=...)` | widget-toast |
 | Images, documents, recordings | the app's file storage (`flock.files`) | `files.put` | the file's URL in a column, shown by a widget |
 | Passwords, API keys | a `secret: true` column | any table write | `reveal_secrets`, `verify_secret`, in the app's own containers only |
@@ -144,7 +145,8 @@ the connection, so a program that runs until it is stopped never returns from
   change. A column the row leaves out keeps its value; `None` clears it.
 - **There is no delete.** Retire an entity by writing `deleted: True` and filter
   it out where it is read (board forms write the flag through
-  `deleteFlagColumn`). Old rows age out with the table's `dropAfter`.
+  `deleteFlagColumn`). Old rows age out with the table's `dropAfter`. The next
+  section has the rules.
 - **The SDK hides the connection.** The program calls everything on its
   `IronFlock` object and never deals with sessions: the SDK reconnects, restores
   subscriptions and device functions, and delivers to a table subscription the
@@ -160,6 +162,43 @@ the connection, so a program that runs until it is stopped never returns from
 - **A table's columns are its contract.** A key the code writes that no column
   declares is dropped, and a column nobody writes stays empty; neither raises.
   Keep data-template.yml and the code in step.
+
+## Entity tables: current state, updates and deletes
+
+An entity table (`maintainLatestFlagFor`) is the history of its entities: every
+change is a new row with the key, a `tsp` and the changed columns. The platform
+never edits or deletes a row, and nothing has to, because the readers pick the
+current state at read time:
+
+- **Current state is a read mode, not a view.** The `{latest: true}` filter
+  returns the newest row per entity key, chosen by `tsp` when the read runs.
+  Board bindings and `getHistory` take it alike. The table keeps every version;
+  the filter shows one per entity.
+- **It is live.** A widget bound to the table with `{latest: true}` gets every
+  new row in realtime, in under a second, and replaces the entity's row with
+  it. The old version disappears from the widget the moment the new one arrives.
+  Nothing has to be refreshed, recomputed or scheduled.
+- **A delete is a column.** Give the table a boolean `deleted` column. Deleting
+  writes a row with `deleted: true` (the board's form does this through
+  `deleteFlagColumn`), and saving the record again writes `deleted: false`,
+  which restores it. Readers filter on the column (the OR group in
+  board-template.md, "Filters", which also lets users show deleted records).
+  The latest filter picks the newest row per entity first and applies the
+  other conditions afterwards, so an entity whose newest row is deleted drops
+  out of the widget as soon as that row arrives, and an older, undeleted row
+  never takes its place.
+- **Never build a transform for this.** A view that deduplicates an entity table
+  by key or hides its deleted rows reproduces what the two filters do, but a
+  transform reaches the board only on its `schedule` tick, so every change
+  shows up seconds or minutes late. Transforms are for what a binding cannot
+  compute: joins, arithmetic, aggregations over current rows. When such a
+  transform needs the current state of entities, select it in its SQL with
+  `DISTINCT ON (<key>) ... ORDER BY <key>, tsp DESC` and filter `deleted` there.
+- **Code reads it the same way.** `getHistory(table, {"limit": 500, "filterAnd":
+  [{"latest": True}, {"column": "deleted", "operator": "=", "value": False,
+  "dataType": "boolean"}]})` gives the current, undeleted entities; `subscribe_to_table` delivers each new
+  row, and a program applies it to its copy of the entity, or drops the entity
+  when the row says `deleted`.
 
 ## Following what the board writes
 
@@ -354,7 +393,9 @@ Rules for the page:
 1. All state is in tables, each with one writer named in its description, and
    every column the code writes is declared in data-template.yml.
 2. Every row has a `tsp`; state rows are written on change and hold only the key
-   and the changed columns.
+   and the changed columns. Entity tables are read with `{latest: true}` and a
+   filter on `deleted`, never through a transform that deduplicates or cleans
+   them.
 3. Board-written state is followed in the three steps above, with `ironflock`
    1.10.0 or later; the code never touches `flock.connection`, and `main()` never
    returns.

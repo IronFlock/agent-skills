@@ -284,6 +284,57 @@ def grade_new_app(app: Path, errors, warnings):
     ]
 
 
+def filters(ref):
+    """Every filter object of a binding, also inside OR groups."""
+    for f in (ref.get("queryParams") or {}).get("filterAnd") or []:
+        if isinstance(f, dict):
+            if isinstance(f.get("filters"), list):
+                yield from (g for g in f["filters"] if isinstance(g, dict))
+            else:
+                yield f
+
+
+def grade_records(app: Path, errors, warnings):
+    """A records table the board shows live: bound with the latest filter and a
+    filter on its soft-delete column, never through a transform."""
+    board = load(app / ".ironflock/board-template.yml") or {}
+    data = (load(app / ".ironflock/data-template.yml") or {}).get("data") or {}
+    widgets = [w for w in board.get("widgets") or [] if isinstance(w, dict)]
+    fixture = {"measurements", "machine_status"}
+    notes = [
+        t for t in data.get("tables") or []
+        if isinstance(t, dict) and t.get("tablename") not in fixture and t.get("maintainLatestFlagFor")
+        and any(isinstance(c, dict) and c.get("dataType") == "boolean" for c in t.get("columns") or [])
+    ]
+    table = notes[0] if notes else {}
+    name = table.get("tablename")
+    flags = {c["id"] for c in table.get("columns") or [] if isinstance(c, dict) and c.get("dataType") == "boolean"}
+    over_it = [
+        t.get("tablename") for t in data.get("transforms") or []
+        if isinstance(t, dict) and name and re.search(rf"\b{re.escape(name)}\b", str(t.get("sql", "")))
+    ]
+    lists = [
+        (w.get("package_name"), w.get("layout_id"))
+        for w in widgets
+        for k, r in refs(w)
+        if k == "tableRef" and r.get("tablename") == name and has_latest(r)
+        and any(f.get("column") in flags for f in filters(r))
+    ]
+    forms = [
+        w.get("layout_id") for w in widgets
+        if w.get("package_name") == "widget-form"
+        and str(((w.get("chartconfig") or {}).get("deleteFlagColumn") or {}).get("tablename")) == name
+        and ((w.get("chartconfig") or {}).get("deleteFlagColumn") or {}).get("column") in flags
+    ]
+    return [
+        check("validate.py reports no errors", not errors, f"{len(errors)} error(s)" + (f": {errors[0][:160]}" if errors else "")),
+        check("a notes table is an entity table with a boolean soft-delete column", table, f"{name}: key {table.get('maintainLatestFlagFor')}, flags {sorted(flags)}" if table else "no such table"),
+        check("no transform deduplicates or cleans the notes table", table and not over_it, f"transforms over it: {over_it}"),
+        check("a list binds the table itself with the latest filter and a filter on the flag", lists, f"{lists}"),
+        check("a form deletes through deleteFlagColumn on that column", forms, f"forms {forms}"),
+    ]
+
+
 HEX = re.compile(r"#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?\b")
 
 
@@ -360,6 +411,7 @@ GRADERS = {
     "ports-params-data": grade_ports,
     "new-app": grade_new_app,
     "wall-screen-board": grade_design,
+    "records-live": grade_records,
 }
 
 

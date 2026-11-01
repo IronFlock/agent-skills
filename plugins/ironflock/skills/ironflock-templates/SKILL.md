@@ -167,6 +167,15 @@ complete reference.
   device was offline. Neither side calls the other, nothing polls, and app code
   never touches the SDK's connection or sessions. app-architecture.md has the rules
   and the code patterns.
+- **An entity table shows its current state live, without a view.** A table with
+  `maintainLatestFlagFor` is a history: a change is a new row, a delete is a new
+  row with `deleted: true`. A widget bound to that table with the
+  `{latest: true}` filter and a filter on `deleted` shows exactly the current,
+  undeleted entities, and follows every change in under a second: a new row
+  replaces the entity's row, a deleting row removes it. Never add a transform to
+  pick the newest row per entity or to hide deleted rows. A transform refreshes
+  on its schedule, so it would only make the board late. app-architecture.md,
+  "Entity tables", has the rules.
 - **Reach a device's web UI through its tunnel.** Declare the port in
   port-template.yml, write the URL from `getRemoteAccessUrlForPort` into a table,
   and bind widget-embed to it. Never hard-code a device's address, port or URL.
