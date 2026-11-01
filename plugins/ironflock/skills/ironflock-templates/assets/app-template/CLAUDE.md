@@ -36,6 +36,12 @@ app is installed on. `.ironflock/` connects it to the platform.
   needs a `tsp`. The platform drops unknown keys and rows without `tsp` silently.
 - Write a device's state only when it changes. On an entity table a row carries
   just the key, `tsp` and the changed columns; the others keep their values.
+- The board reads an entity table's current state with the `{latest: true}`
+  filter on the table itself, live: a new row replaces the entity's row in every
+  widget. Records users delete get a boolean `deleted` column that the widgets
+  filter on. Never add a transform (a view) to pick the newest row per entity or
+  to hide deleted rows; a transform refreshes on a schedule and would only show
+  the same rows late.
 - Append what must not be lost (state changes, records) with `append_to_table`:
   it waits for a restarting data backend. Publish high-rate readings with
   `publish_to_table`, which waits only for the connection: a row published while

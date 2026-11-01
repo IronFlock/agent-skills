@@ -53,19 +53,37 @@ read them.
   (by `tsp`) is the entity's current state. To change an entity, send a new row with
   the key, a `tsp` and only the changed columns. A column the row omits is inherited
   from the previous row, and an explicit `null` clears it. Use it for state such as
-  machine status, settings or orders. Read the current state with the
-  `{latest: true}` filter (see board-template.md); there is no `latest_flag` column.
+  machine status, settings or orders, and for records users create and edit. Read
+  the current state with the `{latest: true}` filter (see board-template.md);
+  there is no `latest_flag` column. The filter is live: a widget bound with it
+  replaces an entity's row the moment a new one arrives, so the board shows the
+  current version of every entity without any view in between.
+- **Records users can delete get a boolean `deleted` column**, and nothing else.
+  A delete is a row with `deleted: true` (the board's form writes it through
+  `deleteFlagColumn`), and readers filter on the column. With the latest filter
+  this hides the entity as soon as the deleting row arrives, live. See
+  app-architecture.md, "Entity tables".
 - Transforms are SQL views over the app's own tables. Boards can bind to them, but
   board-side aggregation only works on plain tables. Do the aggregation in the
   transform's SQL instead.
+- **Never write a transform to pick the newest row per entity or to hide deleted
+  rows.** The `{latest: true}` filter and a filter on `deleted` do that on the
+  table itself, live; a transform would show the same rows late. A transform is
+  for what a binding cannot compute. When it needs the current state of an
+  entity table, select it in SQL with
+  `SELECT DISTINCT ON (<key>) ... ORDER BY <key>, tsp DESC` and filter `deleted`
+  there.
 - **A transform's `sql` can be any single SQL `SELECT` statement**, with PostgreSQL
   and TimescaleDB semantics. That includes CTEs (`WITH ... SELECT`). When a
   computation needs intermediate steps, put them in CTEs of one transform rather
   than chaining several transforms.
 - **A transform reaches open boards only on its `schedule` tick**, not when a table
   underneath changes. With `* * * * *` a new record shows up in a transform-driven
-  menu or list up to a minute late. Give the views behind menus, lists and live
-  states a seconds tick: a sixth, leading field is seconds (`*/5 * * * * *`).
+  menu or list up to a minute late. So bind menus, lists and states to tables
+  wherever filters can express what they show (current state and deleted records
+  are filters, see above), and give the transforms that remain behind menus,
+  lists and live states a seconds tick: a sixth, leading field is seconds
+  (`*/5 * * * * *`).
 - **Mark app-internal tables and transforms `private: true`.** Decide this for
   every table. Users of the app should see only data that means something to them:
   values they analyze, chart, alarm on or build dashboards with. Internal details

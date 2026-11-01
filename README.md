@@ -15,10 +15,10 @@ the `ironflock` SDK, the board as the app's central UI bound live to those
 tables, and web UIs that devices serve themselves, reached through remote-access
 tunnels and embedded in the board. It holds:
 
-- the architecture's rules and patterns: where each kind of data goes, how a
-  device follows what users set on the board, device functions and topics, what
-  the device agent does with a container or a Compose stack, and web UIs on
-  devices;
+- the architecture's rules and patterns: where each kind of data goes, how an
+  entity table's current state and its deletes are read live, how a device
+  follows what users set on the board, device functions and topics, what the
+  device agent does with a container or a Compose stack, and web UIs on devices;
 - a starter app, and `new_app.py`, which scaffolds a new app from it: a Python
   program that keeps each device's state and readings in tables, applies the
   settings users save on the board, and serves a live view that the board embeds;
@@ -221,7 +221,11 @@ numeric route-filter values). The fifth prompt, `wall-screen-board`, came with t
 design step on 2026-10-28 and grades the brief, the preset and the state colours.
 On that day it scored 7/7 with the skill and 6/7 without: the agent without it
 chose a dark look and consistent state colours by itself, but spread 13 tiles over
-the wall screen, label widgets as card headers among them.
+the wall screen, label widgets as card headers among them. The sixth prompt,
+`records-live`, came on 2026-11-01 with the entity-table rules (the latest and
+soft-delete filters show records live, a transform does not) and grades that the
+notes list is bound to the table itself with both filters and that no transform
+cleans it; it has not been run yet.
 
 **Evaluate the widget skill** the same way with `evals/widgets/`:
 `python3 evals/widgets/grade.py setup <iteration-dir>` clones the fixture widgets

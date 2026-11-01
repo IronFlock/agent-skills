@@ -240,6 +240,12 @@ filterAnd:
   them is hidden. It is never replaced by an older row. There is no `latest_flag`
   column, so don't filter on one.
 
+  The filter is live. The widget gets every new row of the table in realtime, in
+  under a second, and a new row replaces the entity's previous row in the widget.
+  So a table bound with this filter shows the current version of every entity,
+  although the table keeps them all. No transform is needed for that, and one
+  would only show the same rows on its schedule tick.
+
 - **From the URL path:** `useRoute: true`, where `value` is the index of the route
   segment. On `/machines/press-1`, segment `'1'` is `machines` and `'2'` is
   `press-1`. See [Pages and navigation](#pages-and-navigation).
@@ -262,6 +268,12 @@ filterAnd:
             - {column: deleted, operator: '=', value: false, dataType: boolean}
             - {column: deleted, operator: '=', value: show_deleted, dataType: boolean, useFilter: true}
   ```
+
+  With the latest filter in the same list, this is the live list of current
+  records: a row with `deleted: true` removes its entity from the widget the
+  moment it arrives, because the newest row per entity is picked first and this
+  condition hides it afterwards. An older, undeleted row never comes back. Bind
+  lists, menus and tables of records to the table this way, not to a transform.
 
 ### Aggregation
 
@@ -330,7 +342,10 @@ There's no arithmetic, ratio, join or derived column in a binding, and no widget
 computes those either. When a widget needs one, add a transform to
 data-template.yml that computes it in SQL and bind to the transform. The same goes
 for "latest value per machine, summed", or anything else that combines rows in a
-way the aggregation table above cannot express.
+way the aggregation table above cannot express. A transform refreshes on its
+schedule and never live, so use one only for what no filter can do. The current
+row of each entity and the hiding of deleted records are filters (see above),
+never a transform.
 
 ## Designing a board
 
@@ -625,8 +640,13 @@ link such as "Home", "Back to the list" or "Manage documents".
    - `deleteNavigationRoute` leads back to the list, which the form opens after a
      delete.
 
-   Hide deleted records by default, and let users show them with a filter that is
-   off until it is switched on (see [Filters](#filters)).
+   Bind the sidenav, the overview table and every other widget that shows the
+   records to the table itself, with `{latest: true}` and a filter on the
+   soft-delete column. They then show the current version of each record and
+   follow a save or a delete within a second. Hide deleted records by default,
+   and let users show them with a filter that is off until it is switched on
+   (see [Filters](#filters)). Never put a transform between the table and these
+   widgets to deduplicate or clean the records; it would only delay them.
 
 ### Boards that manage assets
 
@@ -1001,7 +1021,9 @@ Some values only exist inside a running platform, and a template cannot know the
    constant is prefixed.
 3. Bindings sit at the right kind of property (valueRef on single values, tableRef
    on lists), each tableRef has a `limit` and a `format` shaped like its items, and
-   aggregations have a complete window.
+   aggregations have a complete window. Entity tables are bound with
+   `{latest: true}`, records with a filter on their `deleted` column, and no
+   transform deduplicates or cleans them.
 4. Every page fills the grid. Every page can be reached from the home page by
    clicking and leads back to it, no menu item links to `/`, no item's route is a
    prefix of another item's in the same menu, and every route leads to a page.

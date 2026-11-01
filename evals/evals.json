@@ -32,6 +32,12 @@
       "name": "wall-screen-board",
       "prompt": "Our presses-and-lathes app needs a board for the big screen in the hall: operators glance at it from the line, about ten metres away, and the shift supervisor opens the same board on a laptop. It must show at a glance whether every machine is running and which one has a fault, the temperature and vibration trend of the last 8 hours, and the power draw right now. Choose a look that suits the hall.",
       "expected_output": "A board-template.yml whose comment header says who looks at the board and where and which look was chosen; style names a theme and all four board colours of a dark, high-contrast preset; the home page has few, large tiles that fill the grid; FAULT has one colour on every widget that shows a state; passes validate.py without errors."
+    },
+    {
+      "id": 6,
+      "name": "records-live",
+      "prompt": "Operators keep maintenance notes per machine in our presses-and-lathes app: a note has the machine id, a text and a due date, and operators create, edit and delete notes on the board. Our first attempt listed deleted notes and both versions of an edited note, and the view we then added to clean the list up only refreshes once a minute, which the operators hate. Fix it properly: the list must show only the current version of each note, without the deleted ones, and change within a second of a save or a delete.",
+      "expected_output": "data-template.yml gains a notes table that is an entity table (maintainLatestFlagFor on the note's key) with a boolean soft-delete column, and no transform over it; the board lists the notes from the table itself with the latest-per-entity filter and a filter on the soft-delete column, and creates, edits and deletes them with widget-forms whose deleteFlagColumn is that column; validate.py passes."
     }
   ]
 }
