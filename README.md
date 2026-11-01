@@ -15,6 +15,12 @@ the `ironflock` SDK, the board as the app's central UI bound live to those
 tables, and web UIs that devices serve themselves, reached through remote-access
 tunnels and embedded in the board. It holds:
 
+- an interview before a new app or a refactor (how much the user codes, what
+  the app is for and gives its users, which entities it deals with, and the
+  follow-ups), and the entity model that the tables, the board's lists, forms
+  and pages are built from: one entity table per entity, keyed by what
+  identifies it, and a list, a "New" form in a dialog and a detail page with
+  edit and delete for every entity users manage;
 - the architecture's rules and patterns: where each kind of data goes, how an
   entity table's current state and its deletes are read live, how a device
   follows what users set on the board, device functions and topics, what the
@@ -124,7 +130,7 @@ plugins/ironflock/
     ├── ironflock-templates/
     │   ├── SKILL.md                     workflow and principles
     │   ├── references/
-    │   │   ├── app-architecture.md      how an app is built: state, data flow, containers, web UIs
+    │   │   ├── app-architecture.md      how an app is built: the interview, entities, state, data flow, containers, web UIs
     │   │   ├── board-template.md        board format, data bindings, pages, layout
     │   │   ├── example-board.yml        a complete, valid three-page board
     │   │   ├── widget-catalog.md        which widget for which data (generated)
@@ -209,7 +215,11 @@ them must be a real defect.
 `evals/evals.json` against a fresh copy of `evals/fixtures/machine-monitor`, once
 with the skill and once without, then score the runs with
 `uv run evals/grade.py <iteration-dir>` (layout: `<eval-name>/<config>/app`). An
-eval with `"fixture": null` (`new-app`) starts in an empty `app` folder instead.
+eval with `"fixture": null` (`new-app`, `camera-app-interview`) starts in an
+empty `app` folder instead. An eval with an `answers` field is a conversation:
+when the agent asks its questions, answer them from that field and let it
+finish; for `camera-app-interview`, also save the agent's first reply as
+`QUESTIONS.md` next to `app`, because the grader reads it.
 Run the skill under test from its files, not from an installed copy of the
 plugin, and keep the agent without the skill away from both. On 2026-10-17, after
 the architecture guide and the starter app were added, the skill scored 28/28
@@ -225,7 +235,13 @@ the wall screen, label widgets as card headers among them. The sixth prompt,
 `records-live`, came on 2026-11-01 with the entity-table rules (the latest and
 soft-delete filters show records live, a transform does not) and grades that the
 notes list is bound to the table itself with both filters and that no transform
-cleans it; it has not been run yet.
+cleans it; it has not been run yet. The seventh, `camera-app-interview`, came
+the same day with the interview and the entity model: a vague request the agent
+has to ask about first. It grades the first reply for the questions about the
+user's coding experience, the app's goal and its entities, and the app for one
+entity table per entity, lists bound to those tables with both filters, a "New"
+form that opens in a dialog and a delete through `deleteFlagColumn`; it has not
+been run yet either.
 
 **Evaluate the widget skill** the same way with `evals/widgets/`:
 `python3 evals/widgets/grade.py setup <iteration-dir>` clones the fixture widgets
