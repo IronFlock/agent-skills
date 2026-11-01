@@ -49,6 +49,11 @@ read them.
   them (the schema reserves those ids). `device_key` identifies the device that
   published the row, which makes it the natural pivot for "one series per device" and
   the usual entity key: `maintainLatestFlagFor: [device_key]`.
+- **One table per entity, named after it in the plural and keyed by what
+  identifies it** (`cameras` with `maintainLatestFlagFor: [camera_id]`): the
+  entities from the interview, see app-architecture.md, "The entities". A child
+  entity carries its parent's key as a column, and readings and events carry the
+  key of the entity they belong to, so a filter on the key shows them per entity.
 - `maintainLatestFlagFor` makes a table an entity table: the newest row per entity
   (by `tsp`) is the entity's current state. To change an entity, send a new row with
   the key, a `tsp` and only the changed columns. A column the row omits is inherited

@@ -2,7 +2,15 @@
 
 Guidance for coding agents working on this IronFlock app.
 
-TODO: describe in a paragraph what this app does and for whom.
+TODO: describe in a paragraph what this app does and for whom, then keep the
+entity table below current: what the app deals with, how each kind of thing is
+identified, who writes it and what users do with it on the board.
+
+| Entity | Key | Written by | On the board |
+|---|---|---|---|
+| device, with the machine at it | `device_key` | the device, about itself | list, state, live view |
+| measurement | `device_key` + `tsp` | the device | trends |
+| settings | none: one row for all devices | the board's form | the Settings page |
 
 ## How it is built
 
@@ -36,6 +44,12 @@ app is installed on. `.ironflock/` connects it to the platform.
   needs a `tsp`. The platform drops unknown keys and rows without `tsp` silently.
 - Write a device's state only when it changes. On an entity table a row carries
   just the key, `tsp` and the changed columns; the others keep their values.
+- A new kind of thing the app deals with is a new entity table
+  (`maintainLatestFlagFor` on what identifies it), and the tables that refer to
+  it carry its key. When users create and change it, the board gets its list
+  bound to that table, a "New" form that opens in a dialog, and a detail page
+  with the edit form and delete, as the `ironflock-templates` skill describes
+  ("Boards that manage assets").
 - The board reads an entity table's current state with the `{latest: true}`
   filter on the table itself, live: a new row replaces the entity's row in every
   widget. Records users delete get a boolean `deleted` column that the widgets

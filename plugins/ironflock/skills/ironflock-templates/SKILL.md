@@ -1,6 +1,6 @@
 ---
 name: ironflock-templates
-description: Build IronFlock apps: their architecture (edge containers that keep all state in the app's tables through the ironflock SDK, the board as the central UI, device web UIs embedded through remote-access tunnels), a starter app to scaffold, and the integration files in the app's .ironflock/ folder, with a validator. These are board-template.yml (the board: widgets, data bindings, pages, layout), data-template.yml (tables and transforms), env-template.yml (parameters), port-template.yml (remote-access ports) and ai-template.yml (AI agents). Use this whenever you create, design or change an IronFlock app or its edge code, add or change a board, dashboard or widget, bind a widget to live data, add a table or column, expose a parameter or port, or define an app's AI agent. Also use it when the user mentions IronFlock, Reswarm or a .ironflock folder, even if they don't say "template". To change a widget's own code (the @ironflock/widget-* packages), use ironflock-widgets instead.
+description: Build IronFlock apps: their architecture (edge containers that keep all state in the app's tables through the ironflock SDK, the board as the central UI, device web UIs embedded through remote-access tunnels), the interview and entity model a new app or a refactor starts from, a starter app to scaffold, and the integration files in the app's .ironflock/ folder, with a validator. These are board-template.yml (widgets, data bindings, pages, layout), data-template.yml (tables and transforms), env-template.yml (parameters), port-template.yml (remote-access ports) and ai-template.yml (AI agents). Use this whenever you create, design, refactor or change an IronFlock app or its edge code, add or change a board, dashboard or widget, bind a widget to live data, add a table or column, expose a parameter or port, or define an app's AI agent. Also use it when the user mentions IronFlock, Reswarm or a .ironflock folder. To change a widget's own code (the @ironflock/widget-* packages), use ironflock-widgets instead.
 allowed-tools: Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/*), Bash(uv run ${CLAUDE_SKILL_DIR}/scripts/*)
 ---
 
@@ -36,12 +36,23 @@ in it is described.
 1. **Read before writing.** Look at the existing `.ironflock/` files and at the app's
    code. The code shows what the app actually publishes (`publish_to_table` calls)
    and which functions it registers (`register_device_function` calls). The templates
-   have to agree with it. If templates already exist, run the validator (step 6)
+   have to agree with it. If templates already exist, run the validator (step 7)
    once before changing anything, so you can tell findings that were already there
    from ones you introduce. Before you design an app, write its edge code or change
    how its parts talk to each other, read
    [references/app-architecture.md](references/app-architecture.md).
-2. **Start a new app from the starter.** For a new app in an empty folder (or one
+2. **Ask before you build or refactor.** A new app, and a refactor (a new
+   purpose, new entities, a new way the parts talk to each other), start with a
+   short interview, before the first file. "Understanding the app first" in
+   [references/app-architecture.md](references/app-architecture.md) has the
+   questions: how much the user codes, what the app is for and what it gives
+   its users, which entities it deals with and how each one is identified, and
+   the follow-ups those answers call for. Ask only what the request leaves
+   open, all in one message, and wait for the answers. When the request already
+   answers everything, write your understanding down in a few lines (users,
+   goal, entities with their keys) and go on; the user corrects it at the
+   cheapest moment. A small change to an existing app needs no interview.
+3. **Start a new app from the starter.** For a new app in an empty folder (or one
    holding only `.git`), scaffold it:
 
    ```bash
@@ -59,29 +70,38 @@ in it is described.
    existing app, including the demo app IronFlock puts into a new app's
    repository: use the starter's files as the reference for changing the app's
    own, and ask before replacing demo code.
-3. **Data comes first.** A board can only show what a table in `data-template.yml`
-   holds. Design or extend the tables before the board. If the code doesn't publish
-   the data yet, say so and change the code too. For each table, decide whether
-   users of the app should work with it directly. Mark tables that only hold the
-   app's internal details `private: true` (app-templates.md explains when).
-4. **Design the board before you write it.** Read "Designing a board" in
+4. **Entities first, then the tables.** The entities from the interview are the
+   app's model ("The entities" in app-architecture.md): one entity table per
+   entity, keyed by what identifies it, and tables of readings and events that
+   carry those keys. For each entity, decide who writes it (the devices, the
+   board's forms, a service) and what users do with it on the board: see it in
+   a list, create it, change it, delete it. A board can only show what a table
+   in `data-template.yml` holds, so design or extend the tables before the
+   board. If the code doesn't publish the data yet, say so and change the code
+   too. For each table, decide whether users of the app should work with it
+   directly. Mark tables that only hold the app's internal details
+   `private: true` (app-templates.md explains when).
+5. **Design the board before you write it.** Read "Designing a board" in
    [references/board-template.md](references/board-template.md). Decide who looks
    at the board and where, what question each page answers, what people look for
    first, and which look (a preset in its Style section) suits that viewing
    situation, `office` when nothing says otherwise. Write those decisions into
-   the board's comment header. When the
-   user wants to see the board before it exists and your environment has a design
-   canvas (in Claude Code, the Artifact tool's Design type), sketch the pages as
-   wireframes there first, as that section describes. Otherwise write the band
-   plan in text and go on.
-5. **Write the file.** For the board, read
+   the board's comment header. Every entity users manage gets the shape of
+   "Boards that manage assets" there: its list (a widget-sidenav as the way to
+   each one, a widget-table as the overview) bound to the entity table itself,
+   a "New" form that opens in a dialog on top of the list, and a detail page
+   with the edit form and delete. When the user wants to see the board before
+   it exists and your environment has a design canvas (in Claude Code, the
+   Artifact tool's Design type), sketch the pages as wireframes there first, as
+   that section describes. Otherwise write the band plan in text and go on.
+6. **Write the file.** For the board, read
    [references/board-template.md](references/board-template.md) and the complete
    example [references/example-board.yml](references/example-board.yml) first,
    choose widgets with [references/widget-catalog.md](references/widget-catalog.md),
    and look up each chosen widget's exact properties (see below). For the other four
    files, read [references/app-templates.md](references/app-templates.md) and the
    file's schema.
-6. **Validate, fix and repeat until there are no errors:**
+7. **Validate, fix and repeat until there are no errors:**
 
    ```bash
    python3 ${CLAUDE_SKILL_DIR}/scripts/validate.py <app-dir>
@@ -94,8 +114,9 @@ in it is described.
    or install `pyyaml` and `jsonschema`. Warnings are judgment calls. Read each one
    and fix it unless it is deliberate. The validator has its own test suite, so a
    clean run is enough; there is no need to seed mistakes to test it.
-7. **Report** what you created, which look you chose and why, which tables and
-   widgets connect, and anything the app's code still has to do. Tell the user
+8. **Report** what you created, the entities and their tables, which look you
+   chose and why, which tables and widgets connect, and anything the app's code
+   still has to do. Tell the user
    they can open the board in IronFlock's board editor to adjust it visually. The
    editor reads and writes the same `board-template.yml`. For a new app, add how
    to get it running: push it to the app's repository in IronFlock and run it on
@@ -167,6 +188,15 @@ complete reference.
   device was offline. Neither side calls the other, nothing polls, and app code
   never touches the SDK's connection or sessions. app-architecture.md has the rules
   and the code patterns.
+- **The entities are the app's backbone.** An app is shaped by what it deals
+  with: a camera app by IPCs, cameras, streams, sources and AI models, a vehicle
+  app by cars, drivers, routes and drives. Get that list, each entity's
+  identifying key and the relations right before anything else, because every
+  table, page and form, and most of the code, follow from them. Each entity gets
+  its own entity table, keyed by what identifies it, and an entity users manage
+  gets a list, a "New" form in a dialog, and a detail page with edit and delete
+  on the board, all bound to the entity table itself. app-architecture.md, "The
+  entities", has the rules.
 - **An entity table shows its current state live, without a view.** A table with
   `maintainLatestFlagFor` is a history: a change is a new row, a delete is a new
   row with `deleted: true`. A widget bound to that table with the

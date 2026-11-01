@@ -335,6 +335,96 @@ def grade_records(app: Path, errors, warnings):
     ]
 
 
+def flag_columns(table):
+    """The boolean columns of a table: its soft-delete flag candidates."""
+    return {c["id"] for c in table.get("columns") or [] if isinstance(c, dict) and c.get("dataType") == "boolean" and "id" in c}
+
+
+def grade_entities(app: Path, errors, warnings):
+    """A vague request for a camera app: the agent asks before it builds (its
+    first reply is saved as QUESTIONS.md next to the app folder), then models
+    the app from the entities the answers name, with a list, a "New" form in a
+    dialog and a delete for each entity users manage, all bound to the entity
+    tables themselves."""
+    questions_file = app.parent / "QUESTIONS.md"
+    questions = questions_file.read_text(errors="ignore") if questions_file.exists() else ""
+
+    def asked(pattern):
+        """(passed, evidence) for a question the first reply should have asked."""
+        hit = "?" in questions and bool(re.search(pattern, questions, re.I))
+        return hit, "no QUESTIONS.md next to app" if not questions else "asked" if hit else "not asked"
+
+    board = load(app / ".ironflock/board-template.yml") or {}
+    data = (load(app / ".ironflock/data-template.yml") or {}).get("data") or {}
+    widgets = [w for w in board.get("widgets") or [] if isinstance(w, dict)]
+    tables = [t for t in data.get("tables") or [] if isinstance(t, dict)]
+    entity_tables = [t for t in tables if t.get("maintainLatestFlagFor")]
+
+    def entity(stem):
+        """The entity table of one entity: named after it (cameras), else the flagged one, else any whose name holds the stem."""
+        candidates = [t for t in entity_tables if re.search(stem, str(t.get("tablename")), re.I)]
+        candidates.sort(key=lambda t: (str(t.get("tablename")).lower() not in (stem, stem + "s"), not flag_columns(t)))
+        return candidates[0] if candidates else None
+
+    found = {name: t for name, t in (("cameras", entity("camera")), ("models", entity("model")), ("streams", entity("stream"))) if t}
+    managed_names = {str(t.get("tablename")) for t in found.values()}
+    unflagged = sorted(name for name, t in found.items() if not flag_columns(t))
+    detections = [
+        str(t.get("tablename")) for t in tables
+        if not t.get("maintainLatestFlagFor") and re.search(r"detect|defect|event|count", str(t.get("tablename")), re.I)
+        and any(isinstance(c, dict) and re.search(r"stream|camera", str(c.get("id")), re.I) for c in t.get("columns") or [])
+    ]
+    entity_names = {str(t.get("tablename")) for t in entity_tables}
+    cleaned = {
+        str(t.get("tablename")) for t in data.get("transforms") or []
+        if isinstance(t, dict) and any(re.search(rf"\b{re.escape(e)}\b", str(t.get("sql", ""))) for e in entity_names)
+    }
+    lists, via_transform = defaultdict(set), []
+    for w in widgets:
+        if w.get("package_name") not in ("widget-table", "widget-sidenav"):
+            continue
+        for k, r in refs(w):
+            if k != "tableRef":
+                continue
+            name = str(r.get("tablename"))
+            if name in cleaned:
+                via_transform.append((w.get("layout_id"), name))
+            for ename, t in found.items():
+                if name == t.get("tablename") and has_latest(r) and any(f.get("column") in flag_columns(t) for f in filters(r)):
+                    lists[ename].add(w.get("layout_id"))
+    unlisted = sorted(set(found) - set(lists))
+
+    def form_tables(w):
+        return {
+            str(f["targetColumn"].get("tablename"))
+            for f in (w.get("chartconfig") or {}).get("formFields") or []
+            if isinstance(f, dict) and isinstance(f.get("targetColumn"), dict)
+        }
+
+    forms = [w for w in widgets if w.get("package_name") == "widget-form"]
+    creates = [
+        w.get("layout_id") for w in forms
+        if str((w.get("chartconfig") or {}).get("formButton")).lower() in ("true", "$bool:true") and form_tables(w) & managed_names
+    ]
+    deletes = [
+        w.get("layout_id") for w in forms
+        if str(((w.get("chartconfig") or {}).get("deleteFlagColumn") or {}).get("tablename")) in managed_names
+    ]
+    return [
+        check("validate.py reports no errors", not errors, f"{len(errors)} error(s)" + (f": {errors[0][:160]}" if errors else "")),
+        check("the first reply asks how much the user codes", *asked(r"experience|proficien|comfortable|familiar|developer|programm|coding|write code|code yourself|technical")),
+        check("the first reply asks what the app is for and what it gives its users", *asked(r"goal|value|purpose|achieve|problem|outcome|benefit|what .{0,40}\bfor\b|why")),
+        check("the first reply asks what the app deals with (its entities)", *asked(r"entit|things|objects|deal with|kinds? of|keep track|manage|track|model")),
+        check("entity tables for cameras and models, each keyed", {"cameras", "models"} <= set(found), f"entity tables {sorted(entity_names)}"),
+        check("the entities users manage have a boolean deleted column", found and not unflagged, f"without a flag: {unflagged}"),
+        check("a detections table carries the stream's or camera's key and is no entity table", detections, f"detections tables {detections}"),
+        check("every managed entity has a list bound to its table with the latest filter and a filter on the flag", found and not unlisted, f"lists {dict(lists)}, unlisted {unlisted}"),
+        check("no list is bound to a transform over an entity table", not via_transform, f"via transforms: {via_transform}"),
+        check("a form that opens in a dialog (formButton) creates a managed entity", creates, f"forms {creates}"),
+        check("a form deletes a managed entity through deleteFlagColumn", deletes, f"forms {deletes}"),
+    ]
+
+
 HEX = re.compile(r"#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?\b")
 
 
@@ -412,6 +502,7 @@ GRADERS = {
     "new-app": grade_new_app,
     "wall-screen-board": grade_design,
     "records-live": grade_records,
+    "camera-app-interview": grade_entities,
 }
 
 

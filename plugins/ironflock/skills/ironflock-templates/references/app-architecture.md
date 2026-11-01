@@ -1,6 +1,7 @@
 # How an IronFlock app is built
 
-The rules and patterns for an app's architecture: where its state lives, how its
+The rules and patterns for an app's architecture: what to ask before building
+it, how its entities become tables and pages, where its state lives, how its
 parts talk to each other, and what the platform does with its containers. The
 starter app in `assets/app-template/` follows all of them; scaffold it with
 `scripts/new_app.py <name>` (see SKILL.md) and adapt it.
@@ -9,16 +10,18 @@ starter app in `assets/app-template/` follows all of them; scaffold it with
 
 1. [The parts of an app](#the-parts-of-an-app)
 2. [Rules](#rules)
-3. [Where each kind of data goes](#where-each-kind-of-data-goes)
-4. [Reading and writing state with the SDK](#reading-and-writing-state-with-the-sdk)
-5. [Entity tables: current state, updates and deletes](#entity-tables-current-state-updates-and-deletes)
-6. [Following what the board writes](#following-what-the-board-writes)
-7. [Commands, device functions and topics](#commands-device-functions-and-topics)
-8. [The container on the device](#the-container-on-the-device)
-9. [Docker Compose](#docker-compose)
-10. [Web UIs on the device](#web-uis-on-the-device)
-11. [Several devices](#several-devices)
-12. [Checklist](#checklist)
+3. [Understanding the app first](#understanding-the-app-first)
+4. [The entities](#the-entities)
+5. [Where each kind of data goes](#where-each-kind-of-data-goes)
+6. [Reading and writing state with the SDK](#reading-and-writing-state-with-the-sdk)
+7. [Entity tables: current state, updates and deletes](#entity-tables-current-state-updates-and-deletes)
+8. [Following what the board writes](#following-what-the-board-writes)
+9. [Commands, device functions and topics](#commands-device-functions-and-topics)
+10. [The container on the device](#the-container-on-the-device)
+11. [Docker Compose](#docker-compose)
+12. [Web UIs on the device](#web-uis-on-the-device)
+13. [Several devices](#several-devices)
+14. [Checklist](#checklist)
 
 ## The parts of an app
 
@@ -49,32 +52,147 @@ needs no address and no credentials.
 
 ## Rules
 
-1. **The tables are the app's state.** Whatever the board, another device, a
+1. **The entities come first.** What the app deals with, how each kind of thing
+   is identified and how they relate decide the tables, the board's pages and
+   the code. Settle that list before the first table (see
+   [The entities](#the-entities)).
+2. **The tables are the app's state.** Whatever the board, another device, a
    restarted container or an AI agent needs is in a table. A container keeps only
    what it can rebuild from the tables, such as an in-memory copy of its
    settings.
-2. **The parts talk through the tables, not to each other.** A device writes
+3. **The parts talk through the tables, not to each other.** A device writes
    what it measures and the state it is in, and the board shows it. The board
    writes what users decide, and the devices apply it. Neither calls the other,
    so the board works while devices are offline, and devices work while nobody
    has the board open. Device functions are for the few requests that need an
    answer from a device right now (see
    [Commands](#commands-device-functions-and-topics)).
-3. **One writer per table.** Each table is written by the devices (each one about
+4. **One writer per table.** Each table is written by the devices (each one about
    itself), by the board, or by one service. Say which in the table's
    `description`. Two writers of the same rows overwrite each other's changes.
-4. **Desired state, not commands.** To change what devices do, write the target
+5. **Desired state, not commands.** To change what devices do, write the target
    into a table (a limit, a setpoint, a recipe, a schedule) and let every device
    apply the newest row. A device that was offline applies it when it comes back,
    and applying it twice changes nothing.
-5. **Write on change, follow live, never poll.** Write an entity's row when one
+6. **Write on change, follow live, never poll.** Write an entity's row when one
    of its values changes, and measurements at their sample rate. Readers follow
    the tables in realtime: the board's bindings, `subscribe_to_table` on a
    device, a websocket in a device's web UI. A timer that re-reads a table is
    always the wrong design.
-6. **The board is the UI; a device's web UI adds to it.** Serve a web page from a
+7. **The board is the UI; a device's web UI adds to it.** Serve a web page from a
    device only for what a board cannot show: a machine's own HMI, video, a
    high-rate live view, an operator screen at the machine. The board embeds it.
+
+## Understanding the app first
+
+A new app, and a refactor that changes what an app is or does, start with a
+short interview, before the first file. A wrong guess here costs the most to
+undo, because everything below follows from the answers. Ask in one message,
+only what the request leaves open, and wait:
+
+- **How much does the user code?** Ask it plainly when the request does not
+  show it: "Do you write code yourself, and in which language?" A developer
+  gets the code, the design decisions and the trade-offs, in their language
+  when the SDK has it (Python, JavaScript, Go). Someone who does not code gets
+  a working app in Python, explanations in their own terms, and the steps to
+  run it in IronFlock without touching a file; questions to them are about
+  their work, never about tables or widgets.
+- **What is the app for, and what does it give its users?** The goal in one
+  sentence, and the value: what someone can see, decide or stop doing once the
+  app runs. The board's home page answers that goal, and whatever does not
+  serve it stays out of the first version.
+- **What does the app deal with?** Its entities: the kinds of things it keeps
+  track of, whether users create them or the devices find them. Ask for the
+  list, how each one is identified (a name, a number, a serial, an address),
+  and how they relate (an IPC has cameras, a camera has one stream). The next
+  section turns the answer into tables and pages.
+- **The follow-ups the answers call for**, as far as they still matter:
+  - who uses the app, where and on what (an operator at a wall screen, a
+    technician on a tablet, a manager at a desk), which is the board's brief
+    in board-template.md;
+  - where the data comes from: the machine, sensor or system, its protocol,
+    the sample rate, what is read and what is computed;
+  - what users set or change while the app runs, and what differs per device
+    (a parameter) rather than per app (a settings table);
+  - what the devices do on their own, and what waits for a user's decision;
+  - what must be seen at a glance, what should raise an alarm, and how long
+    data is kept;
+  - whether a device serves a web page of its own, and who may open it;
+  - what exists already: code, tables, a board, data that must survive.
+
+Write the answers down where the next person finds them: the goal and the
+value in README.md ("What it does"), the entities with their keys in CLAUDE.md
+and in the `description` of data-template.yml. When the request already answers
+the questions, state your understanding in a few lines (users, goal, entities
+with their keys) and go on without waiting; the user corrects it at the
+cheapest moment. A small change to an existing app needs no interview.
+
+## The entities
+
+An app is shaped by what it deals with. A camera app deals with IPCs, cameras,
+streams, sources and AI models; a vehicle app with cars, drivers, routes and
+drives; a maintenance app with machines, tasks and reports. That list, with
+each entity's identifying key and the relations between them, is the app's
+model. Every table, page and form, and most of the code, follow from it, so get
+it right before anything else, and keep it in CLAUDE.md as a table:
+
+| Entity | Key | Written by | On the board |
+|---|---|---|---|
+| IPC | `device_key` | the device, about itself | list, state |
+| camera | `camera_id`, the name users give it | the board's forms | list, new, edit, delete |
+| camera state | `camera_id` | the device | the state next to each camera |
+| model | `model_id` | the board's forms | list, new, edit, delete |
+| stream | `stream_id`, with `camera_id` and `model_id` | the board's forms | list per camera, new, edit, delete |
+| detection | `stream_id` + `tsp` | the device | chart and table per stream |
+
+**From the entities to the tables:**
+
+- **One entity table per entity**, named after it in the plural (`cameras`,
+  `streams`), with `maintainLatestFlagFor` on the column(s) that identify it.
+  The key is something users or devices know: a name, a code, a serial number,
+  a plate, an address, or `device_key` for an entity that is the device itself.
+  There is no generated id. A "New" form asks for the key as a required field
+  (with `validation` when it has a format), and a device writes the key it
+  reads from the hardware.
+- **Relations are key columns.** A child carries its parent's key (`streams`
+  has `camera_id`), an assignment is a column on the entity that gets assigned
+  to (`streams.model_id`), and a many-to-many is an entity of its own, keyed by
+  both. A binding cannot join, so the board shows a relation by filtering the
+  child's table on the parent's key from the route (pattern 2 in
+  board-template.md), and a transform joins only for what a filter cannot show.
+- **Readings and events carry the entity's key.** `detections` has `stream_id`
+  and `tsp`, `drives` has `car_id` and `driver_id`. These tables have no
+  `maintainLatestFlagFor`, because every row counts.
+- **One writer per entity table**, as everywhere. An entity users create and
+  change (a camera's name and address, a model) is written by the board's
+  forms and has a `deleted` column. An entity the device finds or watches is
+  written by the device, keyed the same way. When both sides have something to
+  say about one entity, split it: a definition table the board writes
+  (`cameras`) and a state table the device writes (`camera_status`, keyed by
+  `camera_id`), shown side by side.
+- **The entity at each device** (the machine the device is attached to) is keyed
+  by `device_key` and written by the device about itself (see
+  [Several devices](#several-devices)).
+
+**From the entities to the board.** Every entity users manage gets the shape of
+"Boards that manage assets" in board-template.md:
+
+| Users want to | Widget | Bound to |
+|---|---|---|
+| see the entities | widget-table as the overview on the type's page, widget-sidenav as the way to each one | the entity table itself, with `{latest: true}` and the filter on `deleted` |
+| create one | widget-form with `formButton: $bool:true`: a floating action button over the list that opens the form in a dialog | the entity table; the fields are the key and what a new entity needs |
+| change one | widget-form on the entity's detail page (`/cameras/*`), prefilled from the record, the key a `hiddenField` filled from the route | the same table |
+| delete one | that form's `deleteButton`, with `deleteFlagColumn` on `deleted` and `deleteNavigationRoute` back to the list | the same table |
+
+Give the "New" form the same `deleteFlagColumn` as the edit form, so every row
+carries the flag. The lists, and a detail page's view of one entity, are bound
+to the raw entity table with the two filters and never to a transform: a
+transform refreshes on its schedule tick, so the list would stop following a
+save or a delete live (see
+[Entity tables](#entity-tables-current-state-updates-and-deletes)). An entity
+the devices write is listed the same way, without the forms. Readings and
+events are not listed as entities but shown as charts and tables over a time
+window, filtered by the entity's key.
 
 ## Where each kind of data goes
 
@@ -390,24 +508,29 @@ Rules for the page:
 
 ## Checklist
 
-1. All state is in tables, each with one writer named in its description, and
+1. The entity model is written down in CLAUDE.md: each entity has its own
+   entity table, keyed by what identifies it, relations and readings carry
+   those keys, and every entity users manage has a list, a "New" form in a
+   dialog, and a detail page with edit and delete on the board, bound to the
+   table itself.
+2. All state is in tables, each with one writer named in its description, and
    every column the code writes is declared in data-template.yml.
-2. Every row has a `tsp`; state rows are written on change and hold only the key
+3. Every row has a `tsp`; state rows are written on change and hold only the key
    and the changed columns. Entity tables are read with `{latest: true}` and a
    filter on `deleted`, never through a transform that deduplicates or cleans
    them.
-3. Board-written state is followed in the three steps above, with `ironflock`
+4. Board-written state is followed in the three steps above, with `ironflock`
    1.10.0 or later; the code never touches `flock.connection`, and `main()` never
    returns.
-4. Table writes in long-running loops catch `RuntimeError`; expected failures
+5. Table writes in long-running loops catch `RuntimeError`; expected failures
    are handled in the program and reported with `report_error` and a
    `user_message`.
-5. The program exits on SIGTERM, starts in exec form and logs unbuffered.
-6. Nothing polls: the board binds, devices subscribe, web UIs push.
-7. Each served port is declared in port-template.yml, its URL comes from
+6. The program exits on SIGTERM, starts in exec form and logs unbuffered.
+7. Nothing polls: the board binds, devices subscribe, web UIs push.
+8. Each served port is declared in port-template.yml, its URL comes from
    `getRemoteAccessUrlForPort` and is written to a table, and the board embeds it
    from there.
-8. A Compose app follows the rules above: no `env_file:`, no `profiles:`, no
+9. A Compose app follows the rules above: no `env_file:`, no `profiles:`, no
    `${VAR}` host ports, named volumes for files, and only the ports users need
    published.
-9. `scripts/validate.py <app-dir>` reports no errors.
+10. `scripts/validate.py <app-dir>` reports no errors.

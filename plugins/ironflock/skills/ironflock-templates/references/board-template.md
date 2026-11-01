@@ -651,8 +651,10 @@ link such as "Home", "Back to the list" or "Manage documents".
 ### Boards that manage assets
 
 Many boards let users inspect, create and change assets of a few types: machines,
-lines, sites, recipes. Build these boards the same way every time, so users find
-their way around without having to think about it:
+lines, sites, recipes. The asset types are the app's entities that users manage
+(app-architecture.md, "The entities"), so the entity model decides the menu,
+the lists and the forms. Build these boards the same way every time, so users
+find their way around without having to think about it:
 
 1. **The asset types are the main menu.** A widget-navbar (or widget-sidenav) has
    one fixed item per asset type (`/machines/`, `/lines/`, `/recipes/`), its title
@@ -663,14 +665,18 @@ their way around without having to think about it:
    per asset (pattern 2). It is on the asset type's page and on every page of an
    asset below it. Its title names the type ("Machines") and links to the type's
    page (`/machines/`). The type's page itself shows an overview of all its assets,
-   such as a table or the fleet's KPIs, and never stays empty.
+   such as a widget-table of them or the fleet's KPIs, and never stays empty. The
+   sidenav and the table are bound to the entity table itself, with
+   `{latest: true}` and the filter on `deleted` (pattern 6).
 3. **"New" is a floating action button on top of the list.** A widget-form with
    `formButton: $bool:true` opens the create form in a dialog, and it shows a round
    floating action button unless `formButtonStyle.fab` is false. Lay it over the
    top of the sidenav, in the sidenav's header next to its title: a small tile
    (about 6 × 6 cells for the default button) inside the sidenav's columns, with
    `z: 1` and a transparent tile border and background. Put it on every page that
-   has the sidenav, at the same position.
+   has the sidenav, at the same position. Its fields are the asset's key
+   (required, with `validation` when it has a format) and what a new asset
+   needs, and it has the same `deleteFlagColumn` as the edit form.
 4. **Clicking an asset opens its detail page** (`/machines/*`). The detail page
    lets users change the asset's settings and delete the asset, with a widget-form
    prefilled from the record (pattern 6).
