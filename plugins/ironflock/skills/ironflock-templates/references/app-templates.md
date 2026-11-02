@@ -83,12 +83,17 @@ read them.
   computation needs intermediate steps, put them in CTEs of one transform rather
   than chaining several transforms.
 - **A transform reaches open boards only on its `schedule` tick**, not when a table
-  underneath changes. With `* * * * *` a new record shows up in a transform-driven
-  menu or list up to a minute late. So bind menus, lists and states to tables
-  wherever filters can express what they show (current state and deleted records
-  are filters, see above), and give the transforms that remain behind menus,
-  lists and live states a seconds tick: a sixth, leading field is seconds
-  (`*/5 * * * * *`).
+  underneath changes — unless the app's code asks for it: the SDK's
+  `refresh_transform(<transform>)` runs the transform's tick now (the refresh
+  of a materialized view, then its rows to the open boards), so a device that
+  has just written the rows a transform aggregates calls it once after the
+  batch instead of relying on a fast schedule. The board's own writes (a form
+  save) reach no code, so with `* * * * *` a record the board saves shows up in a
+  transform-driven menu or list up to a minute late. So bind menus, lists and
+  states to tables wherever filters can express what they show (current state
+  and deleted records are filters, see above), and give the transforms that
+  remain behind menus, lists and live states a seconds tick: a sixth, leading
+  field is seconds (`*/5 * * * * *`).
 - **Mark app-internal tables and transforms `private: true`.** Decide this for
   every table. Users of the app should see only data that means something to them:
   values they analyze, chart, alarm on or build dashboards with. Internal details

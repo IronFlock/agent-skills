@@ -343,7 +343,8 @@ computes those either. When a widget needs one, add a transform to
 data-template.yml that computes it in SQL and bind to the transform. The same goes
 for "latest value per machine, summed", or anything else that combines rows in a
 way the aggregation table above cannot express. A transform refreshes on its
-schedule and never live, so use one only for what no filter can do. The current
+schedule, or when the app's code calls `refresh_transform` after its writes, and
+never on a board's save, so use one only for what no filter can do. The current
 row of each entity and the hiding of deleted records are filters (see above),
 never a transform.
 
@@ -648,6 +649,36 @@ link such as "Home", "Back to the list" or "Manage documents".
    (see [Filters](#filters)). Never put a transform between the table and these
    widgets to deduplicate or clean the records; it would only delay them.
 
+   **Or edit in a dialog on the list page.** When a record has only a few fields
+   and no pages of its own (a lookup list, settings per record), skip the edit
+   page: the overview widget-table gets a column of type `edit`, its `values`
+   bound to the record's key column with the same `{latest: true}` and `deleted`
+   filters as the other columns, and `styling: {parameterKey: $str:edit}`. One
+   widget-form on the same page has `formButton: $bool:true` and
+   `openParameter: $str:edit`. A click on a row's pen button sets `?edit=<key>`
+   on the page URL, the form opens as a dialog (on a board it shows no button of
+   its own), and closing it with Save, Delete or Cancel removes the parameter
+   again. Its fields are prefilled like the edit page's, with a `useFilter`
+   filter on the parameter in place of the `useRoute` one:
+
+   ```yaml
+   preFilledValue:
+       valueRef:
+           tablename: machines
+           column: name
+           queryParams:
+               limit: 1
+               filterAnd:
+                   - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
+                   - {column: machine_id, operator: '=', value: edit, dataType: string, useFilter: true}
+   ```
+
+   The key is again a `hiddenField` with the same binding, and
+   `deleteNavigationRoute` can stay empty, because the dialog closes by itself.
+   Keep the "New" form as its own tile. The validator checks that the parameter
+   an `edit` column sets is read, by a form's `openParameter` or a `useFilter`
+   filter, and that a form's `openParameter` is set by some widget.
+
 ### Boards that manage assets
 
 Many boards let users inspect, create and change assets of a few types: machines,
@@ -679,7 +710,10 @@ find their way around without having to think about it:
    needs, and it has the same `deleteFlagColumn` as the edit form.
 4. **Clicking an asset opens its detail page** (`/machines/*`). The detail page
    lets users change the asset's settings and delete the asset, with a widget-form
-   prefilled from the record (pattern 6).
+   prefilled from the record (pattern 6). An asset type without pages of its own
+   (a lookup list, a few settings per record) is edited in a dialog on the
+   type's page instead: the overview table gets an `edit` column and the form
+   `openParameter` (the dialog variant of pattern 6).
 5. **Other aspects of an asset get their own pages, behind tabs.** The selected
    asset's history, KPIs or alarms live on pages below its detail page
    (`/machines/*/history`, `/machines/*/kpis`). A widget-navbar above the detail
@@ -722,6 +756,10 @@ Filter widgets set URL parameters for other widgets to read:
 - **widget-filter-calendar:** set `startKey` and `endKey`. Each widget it should
   filter needs `timeStartParam` and `timeEndParam` with those names, plus a
   complete time window, which serves as the default range.
+- **widget-table, a column of type `edit`:** its buttons set `styling.parameterKey`
+  to the clicked row's value, the record's key. Widgets that should show that
+  record filter with `useFilter: true, value: <key>`, and a widget-form with
+  `openParameter` opens on it (pattern 6, the dialog variant).
 
 ### Uploading files with a form
 

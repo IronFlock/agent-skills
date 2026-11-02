@@ -1,0 +1,143 @@
+# yaml-language-server: $schema=https://ironflock.com/schemas/board-template/v1.yml
+# Edit dialog wiring: a widget-table 'edit' column sets a URL parameter to the
+# clicked row's key, and a widget-form with openParameter opens on it with its
+# fields filtered by it. No versions are pinned: the configs are checked against
+# the latest published schemas, so the edit column and openParameter only pass
+# the schema check once widget-table and widget-form with them are released.
+# The wired pair: the form's binding reads 'edit', which the edit column sets.
+# Until those releases, the schema check reports the two new properties
+# themselves, so their paths carry no expect-none yet.
+# expect-none: widgets[1].chartconfig.formFields[0].preFilledValue.valueRef.queryParams.filterAnd[1].value
+# expect: WARN  widgets[0].chartconfig.columns[2] :: needs styling.parameterKey
+# expect: WARN  widgets[0].chartconfig.columns[3].styling.parameterKey :: no widget reads 'inspect'
+# expect: WARN  widgets[2].chartconfig.openParameter :: no widget on this board sets the URL parameter 'review'
+# expect: WARN  widgets[3].chartconfig.openParameter :: only applies with formButton
+# expect: WARN  widgets[4].chartconfig.openParameter :: no field's preFilledValue is filtered by it
+name: edit-dialog-board
+widgets:
+    - layout_id: machines
+      package_name: widget-table
+      chartconfig:
+          title: $str:Machines
+          columns:
+              - header: $str:Machine
+                type: $str:string
+                values:
+                    tableRef:
+                        tablename: machine_status
+                        format: {value: machine_id}
+                        queryParams:
+                            limit: 50
+                            filterAnd:
+                                - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
+              - header: $str:Edit
+                type: $str:edit
+                values:
+                    tableRef:
+                        tablename: machine_status
+                        format: {value: machine_id}
+                        queryParams:
+                            limit: 50
+                            filterAnd:
+                                - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
+                styling:
+                    parameterKey: $str:edit
+              - header: $str:Broken
+                type: $str:edit
+                values:
+                    tableRef:
+                        tablename: machine_status
+                        format: {value: machine_id}
+                        queryParams:
+                            limit: 50
+                            filterAnd:
+                                - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
+              - header: $str:Inspect
+                type: $str:edit
+                values:
+                    tableRef:
+                        tablename: machine_status
+                        format: {value: machine_id}
+                        queryParams:
+                            limit: 50
+                            filterAnd:
+                                - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
+                styling:
+                    parameterKey: $str:inspect
+    - layout_id: edit-form
+      package_name: widget-form
+      chartconfig:
+          title: $str:Edit machine
+          formButton: $bool:true
+          openParameter: $str:edit
+          formFields:
+              - label: $str:Machine
+                type: $str:textfield
+                hiddenField: $bool:true
+                targetColumn: {tablename: machine_status, column: machine_id, dataType: string}
+                preFilledValue:
+                    valueRef:
+                        tablename: machine_status
+                        column: machine_id
+                        queryParams:
+                            limit: 1
+                            filterAnd:
+                                - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
+                                - {column: machine_id, operator: '=', value: edit, dataType: string, useFilter: true}
+              - label: $str:Target speed
+                type: $str:numberfield
+                targetColumn: {tablename: machine_status, column: target_rpm, dataType: numeric}
+                preFilledValue:
+                    valueRef:
+                        tablename: machine_status
+                        column: target_rpm
+                        queryParams:
+                            limit: 1
+                            filterAnd:
+                                - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
+                                - {column: machine_id, operator: '=', value: edit, dataType: string, useFilter: true}
+    - layout_id: review-form
+      package_name: widget-form
+      chartconfig:
+          title: $str:Review
+          formButton: $bool:true
+          openParameter: $str:review
+          formFields:
+              - label: $str:State
+                type: $str:textfield
+                targetColumn: {tablename: machine_status, column: state, dataType: string}
+                preFilledValue:
+                    valueRef:
+                        tablename: machine_status
+                        column: state
+                        queryParams:
+                            limit: 1
+                            filterAnd:
+                                - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
+                                - {column: machine_id, operator: '=', value: review, dataType: string, useFilter: true}
+    - layout_id: inline-form
+      package_name: widget-form
+      chartconfig:
+          title: $str:Inline
+          openParameter: $str:edit
+          formFields:
+              - label: $str:State
+                type: $str:textfield
+                targetColumn: {tablename: machine_status, column: state, dataType: string}
+    - layout_id: blind-form
+      package_name: widget-form
+      chartconfig:
+          title: $str:Blind
+          formButton: $bool:true
+          openParameter: $str:edit
+          formFields:
+              - label: $str:State
+                type: $str:textfield
+                targetColumn: {tablename: machine_status, column: state, dataType: string}
+layout:
+    gridLayout:
+        - {id: machines, x: 0, y: 0, w: 60, h: 64}
+        - {id: edit-form, x: 60, y: 0, w: 6, h: 6}
+        - {id: review-form, x: 66, y: 0, w: 6, h: 6}
+        - {id: inline-form, x: 72, y: 0, w: 24, h: 30}
+        - {id: blind-form, x: 72, y: 30, w: 6, h: 6}

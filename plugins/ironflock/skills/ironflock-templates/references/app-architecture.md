@@ -181,14 +181,15 @@ it right before anything else, and keep it in CLAUDE.md as a table:
 |---|---|---|
 | see the entities | widget-table as the overview on the type's page, widget-sidenav as the way to each one | the entity table itself, with `{latest: true}` and the filter on `deleted` |
 | create one | widget-form with `formButton: $bool:true`: a floating action button over the list that opens the form in a dialog | the entity table; the fields are the key and what a new entity needs |
-| change one | widget-form on the entity's detail page (`/cameras/*`), prefilled from the record, the key a `hiddenField` filled from the route | the same table |
+| change one | widget-form on the entity's detail page (`/cameras/*`), prefilled from the record, the key a `hiddenField` filled from the route; for an entity without pages of its own, a dialog on the list page instead, opened by the table's `edit` column through the form's `openParameter` (board-template.md, pattern 6) | the same table |
 | delete one | that form's `deleteButton`, with `deleteFlagColumn` on `deleted` and `deleteNavigationRoute` back to the list | the same table |
 
 Give the "New" form the same `deleteFlagColumn` as the edit form, so every row
 carries the flag. The lists, and a detail page's view of one entity, are bound
 to the raw entity table with the two filters and never to a transform: a
-transform refreshes on its schedule tick, so the list would stop following a
-save or a delete live (see
+transform refreshes on its schedule tick (or when the app's own code calls
+`refresh_transform` after its writes, which does not cover a save the board
+makes), so the list would stop following a save or a delete live (see
 [Entity tables](#entity-tables-current-state-updates-and-deletes)). An entity
 the devices write is listed the same way, without the forms. Readings and
 events are not listed as entities but shown as charts and tables over a time
@@ -248,6 +249,7 @@ the connection, so a program that runs until it is stopped never returns from
 | Read | `getHistory(table, {"limit": n, ...})` | The newest matching rows, oldest first |
 | Read the current state | `getHistory(table, {"limit": n, "filterAnd": [{"latest": True}]})` | The newest row per entity |
 | Read aggregated | `get_series_history(table, params)` | One row per time bucket |
+| Refresh a transform | `refresh_transform(transform)` | Runs the transform's tick now: the boards bound to it get its rows at once instead of at its next `schedule` tick. Call it once after a batch of writes |
 | Follow | `subscribe_to_table(table, handler)` | Every new row, as the platform stores it, also across reconnects |
 | Report an error | `report_error(error, user_message=...)` | A row in `error-logs`, shown by widget-toast |
 | Delete | a row with `deleted: True` | Rows are history; see below |
@@ -308,8 +310,13 @@ current state at read time:
 - **Never build a transform for this.** A view that deduplicates an entity table
   by key or hides its deleted rows reproduces what the two filters do, but a
   transform reaches the board only on its `schedule` tick, so every change
-  shows up seconds or minutes late. Transforms are for what a binding cannot
-  compute: joins, arithmetic, aggregations over current rows. When such a
+  shows up seconds or minutes late (a `refresh_transform` call after the
+  device's own writes helps only for those; the board's saves and deletes
+  reach no code that could call it). Transforms are for what a binding cannot
+  compute: joins, arithmetic, aggregations over current rows. When the
+  device's code writes the rows such a transform aggregates — a batch import,
+  a recomputation — call `refresh_transform(<transform>)` once after the
+  batch, and the boards bound to the transform update at once. When such a
   transform needs the current state of entities, select it in its SQL with
   `DISTINCT ON (<key>) ... ORDER BY <key>, tsp DESC` and filter `deleted` there.
 - **Code reads it the same way.** `getHistory(table, {"limit": 500, "filterAnd":
@@ -381,7 +388,7 @@ refuses other registrations.
 `publish("myapp.events", ...)` and `subscribe("myapp.events", handler)`. Pick
 names in your own namespace. Names that start with a digit, `sys.`, `wamp.`,
 `bulk.`, `transformed.`, `databackend.errors.`, `files.`, `append.`,
-`appendBulk.`, `history.` or `secret.` belong to the platform. The board cannot
+`appendBulk.`, `history.`, `secret.` or `transform.` belong to the platform. The board cannot
 subscribe to topics: whatever it shows must be in a table.
 
 ## The container on the device

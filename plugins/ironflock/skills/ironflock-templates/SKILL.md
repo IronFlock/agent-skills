@@ -204,8 +204,9 @@ complete reference.
   undeleted entities, and follows every change in under a second: a new row
   replaces the entity's row, a deleting row removes it. Never add a transform to
   pick the newest row per entity or to hide deleted rows. A transform refreshes
-  on its schedule, so it would only make the board late. app-architecture.md,
-  "Entity tables", has the rules.
+  on its schedule (or when the device's code calls `refresh_transform` after its
+  own writes, never on a board's save), so it would only make the board late.
+  app-architecture.md, "Entity tables", has the rules.
 - **Reach a device's web UI through its tunnel.** Declare the port in
   port-template.yml, write the URL from `getRemoteAccessUrlForPort` into a table,
   and bind widget-embed to it. Never hard-code a device's address, port or URL.
@@ -230,7 +231,10 @@ complete reference.
   floating action button on top. An asset opens its detail page with settings and
   delete, and further aspects go on tab pages. Sub-assets repeat this one level
   down. A full-width asset page needs a prominent back button in the top-left
-  corner. board-template.md, "Boards that manage assets", has the details.
+  corner. An entity with only a few fields and no pages of its own is edited in
+  a dialog from its list instead, through the table's `edit` column and the
+  form's `openParameter`. board-template.md, "Boards that manage assets", has
+  the details.
 - **Use only names that exist.** Every table, column and widget property you write
   must exist in data-template.yml or the widget's schema. The platform ignores unknown
   keys silently, so an invented key renders as nothing rather than as an error.

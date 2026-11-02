@@ -121,19 +121,21 @@ A doughnut/pie chart widget for visualizing proportional data as circular segmen
 
 A data table widget for displaying structured information in rows and columns. Use this widget to present lists, records, or any tabular data with customizable column types and formatting.
 
-**Data shape:** Rows and columns. Each columns[] entry binds one column of the source data and declares how to render it — string, number with precision, timestamp with format, boolean, state with a colour map, image, or a clickable button with a link. The row count is whatever the query returns.
+**Data shape:** Rows and columns. Each columns[] entry binds one column of the source data and declares how to render it — string, number with precision, timestamp with format, boolean, state with a colour map, image, or a clickable button with a link. The row count is whatever the query returns. An 'edit' column shows one icon button per row: its values are the record key, and a click writes that key into the page URL under styling.parameterKey, so a widget-form opening on that parameter, or any widget filtering on it, shows the clicked record.
 
 **Use when:**
 - The user needs to read individual records — event logs, device inventories, order lists, alarm histories.
 - More than two or three fields per row matter, so no chart can carry them all.
 - Exact values matter more than trends or comparisons.
 - Each row should offer a link or action of its own (a column of type 'button').
+- Each row needs an edit or open action that hands the record to another widget on the page — a column of type 'edit' with styling.parameterKey, next to a widget-form opening on that parameter or a detail widget bound with a Parameter filter on that key.
 
 **Not for:**
 - Spotting a trend, comparing magnitudes, or seeing a distribution — use widget-linechart; a table makes the reader do the work a chart does for them.
 - One number that matters more than the rest — use widget-value, or widget-gauge to read it against a range.
 - Shares of a total — use widget-doughnut when the parts are a fixed set that arrive as columns of one row (or as one value each); when the parts are rows of the result (one row per cause or program), use widget-linechart with dataseries[].type: 'bar'.
 - Text written by hand rather than queried — use widget-markdown.
+- Entering or changing a record's fields — use widget-form; an 'edit' column only selects the record for a form on the same page.
 
 ### widget-heatmap
 
@@ -316,7 +318,7 @@ An iframe embed widget for displaying external web content within the dashboard.
 
 A form widget for collecting user input and storing it in database tables. Use this widget to create data entry interfaces for manual input, configuration settings, user feedback, or any scenario requiring structured data collection.
 
-**Data shape:** Writes rather than reads. Each formFields[] entry maps one input control to a database column through targetColumn, and submitting stores a row. Field types cover text, number, dropdown, checkbox, textarea, datetime, secret and file, with validation, required flags, defaults and conditional visibility. A file field uploads one file into a FleetFiles namespace of the app and stores the file's key in its string column. A secret field is a masked, write-only input.
+**Data shape:** Writes rather than reads. Each formFields[] entry maps one input control to a database column through targetColumn, and submitting stores a row. Fields can share a row (width, fieldLayout.defaultWidth), and an entry of type section is a heading that groups the fields after it.
 
 **Use when:**
 - A person needs to enter or correct data that is then persisted — manual readings, maintenance notes, quality checks, configuration values, feedback.
@@ -324,6 +326,8 @@ A form widget for collecting user input and storing it in database tables. Use t
 - Records should also be deletable or flagged as deleted from the dashboard (deleteButton, deleteFlagColumn).
 - A record comes with a document, image or data file, such as a new SOP revision as a PDF: a field of type 'file' stores the file with the row (fileNamespace, acceptedFileTypes).
 - A password or API token is entered: a 'secret' field masks it and never shows the saved value. Target a 'secret: true' column, which FleetDB encrypts.
+- A long form should read as a compact sheet, not one tall column: fields side by side (width, fieldLayout.defaultWidth), row breaks (newRow), headed groups shown or hidden together (type section), and compact fields for a desktop board (fieldLayout.density).
+- A table's 'edit' column (or a link) sets ?edit=<id> and one form edits that record: set openParameter to 'edit' and bind preFilledValue to the latest row filtered by it (useFilter); the dialog opens pre-filled and closes back to the table.
 
 **Not for:**
 - Narrowing what other widgets display — that is filtering, not data entry. Use widget-filter-dropdown or widget-filter-calendar.
