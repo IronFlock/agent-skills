@@ -166,8 +166,8 @@ the app must authenticate its clients itself.
   to the user.
 - **To show a device's web UI on the board**, the app writes the URL from
   `getRemoteAccessUrlForPort(<port>)` into the device's row of a table, and the
-  board's widget-embed binds `webUrl` to that column. Only a production install
-  writes that URL. app-architecture.md ("Web UIs on the device") has the whole
+  board's widget-embed binds `webUrl` to that column. A development run writes
+  the URL of its own tunnel, ending in `-dev`. app-architecture.md ("Web UIs on the device") has the whole
   pattern, and board-template.md the binding.
 
 ## ai-template.yml

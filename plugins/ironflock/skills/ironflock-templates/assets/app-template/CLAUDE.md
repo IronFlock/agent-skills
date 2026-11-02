@@ -75,5 +75,8 @@ app is installed on. `.ironflock/` connects it to the platform.
 
 Push to the app's repository and run the app on a device from the IronFlock IDE.
 That is a development run: it writes to the app's development tables, gets the
-parameters' default values and no remote-access tunnel. Open its live view on
-the device's network, at the address `main.py` prints when it starts.
+parameters' default values and a private tunnel for the live view, whose URL
+(ending in `-dev`) `main.py` writes into `devices.ui_url`. Only users with the
+Develop privilege on the device can open it, also from the IDE's side menu. On
+the device's network the live view is at the address `main.py` prints when it
+starts.
