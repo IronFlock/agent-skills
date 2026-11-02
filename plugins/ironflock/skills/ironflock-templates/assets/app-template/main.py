@@ -125,14 +125,12 @@ async def show(reading: dict | None, state: str) -> None:
 async def announce() -> None:
     """Write this device's row with the URL the board embeds as its live view.
 
-    A development run writes no URL: the SDK would give it the production install's.
-    Open its live view from the IDE's side menu, or on the device's network at the
-    address printed here."""
-    production = os.environ.get("ENV", "").upper() == "PROD"
-    url = flock.getRemoteAccessUrlForPort(UI_PORT) if production else None
+    A development run writes the URL of its own tunnel, which ends in -dev and only
+    users with the Develop privilege on the device can open."""
+    url = flock.getRemoteAccessUrlForPort(UI_PORT)
     await flock.append_to_table("devices", {"tsp": now(), "ui_url": url})
     lan = f"http://{os.environ.get('DEVICE_LAN_IP')}:{os.environ.get(f'DEVICE_PORT_FOR_{UI_PORT}')}"
-    print(f"Live view: {url or 'open it from the IDE in development'}, on the device's network: {lan}")
+    print(f"Live view: {url}, on the device's network: {lan}")
 
 
 # --- main -------------------------------------------------------------------

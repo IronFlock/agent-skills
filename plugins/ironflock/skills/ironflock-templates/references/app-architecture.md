@@ -417,10 +417,12 @@ What the device agent gives a container and expects from it:
   through a shell.
 - **Development runs.** Running the app from the IDE is a development run (`ENV`
   is `DEV`): it writes to the app's development tables and gets default
-  parameters. Each http(s) port gets a private tunnel that only users with the
-  Develop privilege on the device open, from the IDE's side menu. Each tcp/udp
-  port gets a tunnel with no login, whose address `getRemoteAccessUrlForPort`
-  returns once it is up. Those users can switch each port's tunnel off.
+  parameters. Each port gets a tunnel of its own, whose label ends in `-dev`, so
+  it never collides with the production install's. An http(s) one is private:
+  only users with the Develop privilege on the device open it, from the IDE's
+  side menu or at the URL `getRemoteAccessUrlForPort` returns. A tcp/udp one has
+  no login, and `getRemoteAccessUrlForPort` returns its address once it is up.
+  Those users can switch each port's tunnel off.
 - **Architectures.** Devices are arm64, amd64 or armv7. A `Dockerfile.<arch>`
   next to the `Dockerfile` overrides it for one architecture.
 
@@ -465,8 +467,10 @@ remote-access tunnel of its port:
    tunnel on, and serves it as HTTPS with websockets.
 2. **Write its URL into a table.** `getRemoteAccessUrlForPort(port)` gives the
    tunnel's URL. Write it into the device's row of an entity table keyed by
-   `device_key`, at start. A development run writes no URL: the SDK gives it the
-   production install's, and its own tunnel is opened from the IDE's side menu.
+   `device_key`, at start. A development run writes the URL of its own tunnel
+   (its label ends in `-dev`) into the development tables, and only users with
+   the Develop privilege on the device can open it. `ironflock` 1.11.0 and
+   earlier give a development run the production install's URL instead.
 3. **Embed it in the board.** Bind widget-embed's `webUrl` to that column,
    filtered to one device (board-template.md, "Embedding a web UI the app
    serves").
