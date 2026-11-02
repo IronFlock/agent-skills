@@ -112,6 +112,29 @@ read them.
 - To read another app's tables, list it under `consumes:`. Board widgets that bind
   to those tables then need `provider_app` on their data reference (see
   board-template.md).
+- **An app that needs host access declares `privileged:`** next to `data:`, with a
+  `reason` the user reads when granting it:
+
+  ```yaml
+  privileged:
+    reason: Reads the PLC over the serial port /dev/ttyUSB0
+  ```
+
+  The user grants privileged access at install or update and can revoke it in
+  the app's project settings. A Compose app declares it exactly when its
+  docker-compose.yml uses privileged settings, and the validator checks both
+  directions, as the publish does. A single-image app declares it to run
+  privileged with the device's `/dev`; without the declaration it publishes
+  with a warning in the build log and runs without host devices, extra
+  capabilities and the host D-Bus. A development run needs no grant: its build
+  is privileged exactly when `.ironflock/data-template.yml` declares
+  `privileged`, and a Compose build fails like a publish when the file uses
+  privileged settings without it. app-architecture.md ("The container on the
+  device" and "Docker Compose") lists what counts as privileged (networks with
+  host-level drivers and `cgroup_parent` included), that `include` and
+  `extends` with a `file` are rejected, and what happens without the grant.
+  `data:` stays required: an app without tables writes `data: {}` next to
+  `privileged`.
 
 ## env-template.yml
 

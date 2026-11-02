@@ -16,11 +16,20 @@ Then the starter app: assets/app-template must produce no findings at all, and
 scripts/new_app.py must scaffold an app from it that keeps no trace of the
 starter's name, produces no findings either, and is never overwritten.
 
+Then privileged access: scripts/compose_privileges.py must classify every case
+of privileged-compose-fixture.json (a byte-identical copy of the test vectors
+the platform and the device agent share) exactly as its `features` say, and
+validate.py must report each of those settings when data-template.yml does not
+declare `privileged`, nothing when it does, and the declaration itself when the
+compose file requests no privileged settings. `include` and `extends` with a
+file are reported either way, as files to merge into docker-compose.yml.
+
 Needs network access for the widget schemas (cached after the first run).
 """
 
 from __future__ import annotations
 
+import json
 import re
 import shutil
 import subprocess
@@ -34,6 +43,7 @@ VALIDATE = SKILL / "scripts/validate.py"
 EXAMPLE = SKILL / "references/example-board.yml"
 STARTER = SKILL / "assets/app-template"
 NEW_APP = SKILL / "scripts/new_app.py"
+FIXTURE = ROOT / "privileged-compose-fixture.json"
 FINDING = re.compile(r"^(ERROR|WARN)\s+(\S+) (\S+): (.*)$")
 EXPECT = re.compile(r"^# expect:\s*(ERROR|WARN)\s+(\S+)\s+::\s+(.*)$")
 EXPECT_NONE = re.compile(r"^# expect-none:\s*(\S+)\s*$")
@@ -77,6 +87,129 @@ def check_starter() -> list[str]:
     return problems
 
 
+def check_privileged() -> tuple[int, list[str]]:
+    """Problems with the compose classifier and with validate.py's privileged check."""
+    sys.path.insert(0, str(SKILL / "scripts"))
+    import compose_privileges
+
+    fixture = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    problems = []
+    if list(compose_privileges.SERVICE_KEYS) != fixture["serviceKeyOrder"]:
+        problems.append("compose_privileges.SERVICE_KEYS is not the fixture's serviceKeyOrder")
+    problems += check_classifier_shapes(compose_privileges, fixture["topLevelOrder"])
+    with tempfile.TemporaryDirectory() as tmp:
+        app = Path(tmp) / "app"
+        shutil.copytree(ROOT / "app", app)
+        data_template = app / ".ironflock" / "data-template.yml"
+        undeclared = data_template.read_text(encoding="utf-8")
+        declared = undeclared + "privileged:\n  reason: Reads the PLC over the serial port /dev/ttyUSB0\n"
+
+        def findings(compose: dict | None, template: str, name: str) -> list[tuple[str, str, str]]:
+            data_template.write_text(template, encoding="utf-8")
+            compose_file = app / "docker-compose.yml"
+            compose_file.unlink(missing_ok=True)
+            if compose is not None:
+                compose_file.write_text(json.dumps(compose, indent=2), encoding="utf-8")
+            return validate(app, name)
+
+        merge = "a release carries only docker-compose.yml"
+        for case in fixture["cases"]:
+            name, features = case["name"], case["features"]
+            got = compose_privileges.classify(case["compose"])
+            if got != features:
+                problems.append(f"{name}: classify() gave {got}")
+
+            def wanted(features: list[dict]) -> list[tuple[str, str]]:
+                """(text, message part) for the ERROR each feature must get."""
+                return [
+                    (
+                        (f'service "{f["service"]}": ' if f["service"] else "") + f"{f['feature']} {f['value']} ",
+                        merge if f["feature"] in ("include", "extends") else "declare privileged.reason",
+                    )
+                    for f in features
+                ]
+
+            def missing(found: list[tuple[str, str, str]], wanted: list[tuple[str, str]]) -> bool:
+                return len(found) != len(wanted) or any(
+                    not any(lvl == "ERROR" and text in msg and part in msg for lvl, _, msg in found) for text, part in wanted
+                )
+
+            found = findings(case["compose"], undeclared, name)
+            if missing(found, wanted(features)):
+                problems.append(f"{name}, undeclared: expected an ERROR for each of {wanted(features)}, got {found}")
+            found = findings(case["compose"], declared, name)
+            other_files = wanted([f for f in features if f["feature"] in ("include", "extends")])
+            if features and missing(found, other_files):
+                problems.append(f"{name}, declared: expected an ERROR only for each of {other_files}, got {found}")
+            if not features and [(lvl, path) for lvl, path, _ in found] != [("ERROR", "privileged")]:
+                problems.append(f"{name}, declared without privileged settings: expected one ERROR at privileged, got {found}")
+
+        # A single-image app may declare it (full access to the device) or not.
+        for template, label in ((undeclared, "undeclared"), (declared, "declared")):
+            if found := findings(None, template, f"single image, {label}"):
+                problems.append(f"single image, {label}: expected no findings, got {found}")
+        # The schema requires a reason with text in it.
+        blank = undeclared + 'privileged:\n  reason: "  "\n'
+        if [(lvl, path) for lvl, path, _ in findings(None, blank, "blank reason")] != [("ERROR", "privileged.reason")]:
+            problems.append("a blank privileged.reason is not reported")
+    return len(fixture["cases"]), problems
+
+
+def check_classifier_shapes(compose_privileges, top_level_order: list[str]) -> list[str]:
+    """The cases the fixture leaves out, with the same vectors as the platform's and the device agent's tests."""
+    problems = []
+    # No fixture case has every top-level section; one compose with all of
+    # them, written in reverse, reports them in topLevelOrder.
+    compose = {
+        "include": ["other.yml"],
+        "configs": {"c": {"file": "/etc/c"}},
+        "secrets": {"s": {"file": "/etc/s"}},
+        "networks": {"n": {"external": True}},
+        "volumes": {"v": {"external": True}},
+    }
+    section = {
+        "volume_external": "volumes",
+        "network_external": "networks",
+        "secret_file": "secrets",
+        "config_file": "configs",
+        "include": "include",
+    }
+    order = [section[f["feature"]] for f in compose_privileges.classify(compose)]
+    if order != top_level_order:
+        problems.append(f"top-level sections come in the order {order}, not the fixture's topLevelOrder")
+
+    # null and "" are unset; any mapping or list is a truthy external or name;
+    # non-strings are JSON-encoded (compactly, as the platform does).
+    compose = {
+        "include": {"path": ["a.yml", "b.yml"]},
+        "services": {
+            "app": {"cgroup_parent": None, "extends": "base", "ipc": {"mode": "$<x>"}},
+            "web": {"cgroup_parent": False, "extends": {"file": 7, "service": "x"}},
+        },
+        "networks": {
+            "a": {"external": {}},
+            "b": {"driver": None, "driver_opts": {}, "external": 0, "name": ""},
+            "c": {"driver": "", "name": []},
+            "d": None,
+        },
+    }
+    expected = [
+        {"service": "app", "feature": "ipc", "value": '{"mode":"$<x>"}'},
+        {"service": "web", "feature": "cgroup_parent", "value": "false"},
+        {"service": "", "feature": "network_external", "value": "a"},
+        {"service": "", "feature": "network_external", "value": "c"},
+        {"service": "", "feature": "include", "value": '["a.yml","b.yml"]'},
+    ]
+    for compose, want in (
+        (compose, expected),
+        ({"include": None, "services": {}}, []),
+        ({"include": [{}]}, [{"service": "", "feature": "include", "value": "null"}]),  # no path: JSON null
+    ):
+        if (got := compose_privileges.classify(compose)) != want:
+            problems.append(f"classify({compose}) gave {got}, expected {want}")
+    return problems
+
+
 def main() -> int:
     failed = 0
     for board in [EXAMPLE, *sorted((ROOT / "boards").glob("*.yml"))]:
@@ -99,6 +232,11 @@ def main() -> int:
         failed += bool(problems)
     problems = check_starter()
     print(f"{'ok  ' if not problems else 'FAIL'} starter app and new_app.py")
+    for problem in problems:
+        print(f"     {problem}")
+    failed += bool(problems)
+    cases, problems = check_privileged()
+    print(f"{'ok  ' if not problems else 'FAIL'} privileged access: {cases} compose case(s)")
     for problem in problems:
         print(f"     {problem}")
     failed += bool(problems)

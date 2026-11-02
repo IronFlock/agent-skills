@@ -73,6 +73,24 @@ properties:
           app's one bucket.
         items:
           $ref: "#/$defs/namespace"
+  privileged:
+    type: object
+    description: >-
+      Requests privileged access to the device for this app's containers. A
+      compose app needs it when its docker-compose.yml uses privileged settings
+      (privileged, cap_add, devices, host namespaces, host bind mounts, ...);
+      the publish fails without it. A single-image app needs it to run with
+      the device's /dev, all Linux capabilities and the host D-Bus. The user
+      grants it at install or update and can revoke it in the app's project
+      settings; without the grant the app runs without these settings.
+    required: [reason]
+    additionalProperties: false
+    properties:
+      reason:
+        type: string
+        minLength: 1
+        pattern: "\\S"
+        description: Human-readable reason for the privileged access, shown to the user when granting
 
 $defs:
   consume:
