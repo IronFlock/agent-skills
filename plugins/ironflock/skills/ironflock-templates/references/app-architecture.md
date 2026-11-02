@@ -401,8 +401,20 @@ What the device agent gives a container and expects from it:
   restarts and updates (deleted with the app), and `/shared`, shared by all apps
   on the device. Keep the app's state in tables anyway, and use these for files
   that belong to the device, such as a downloaded model or a cache.
-- **Hardware.** A single-image container runs privileged, with the device's
-  `/dev`, on Docker's bridge network.
+- **Hardware.** A single-image container runs on Docker's bridge network with
+  Docker's defaults: no `/dev`, no extra capabilities, no host D-Bus. To reach
+  hardware (a serial port, USB, GPIO, CAN, BLE), declare `privileged.reason` in
+  data-template.yml (app-templates.md). The user consents at install and at
+  update, and can revoke it in the app's project settings. With the grant the
+  container runs privileged, with the device's `/dev`, all capabilities and the
+  host D-Bus; without it, with Docker's defaults. Without the declaration the
+  release still publishes, with a warning in the build log, and runs with
+  Docker's defaults. A development run needs no grant and follows the
+  declaration: its build runs privileged exactly when
+  `.ironflock/data-template.yml` declares `privileged`. Apps published before
+  the declaration existed keep running privileged until a user revokes it. To
+  ask for less than everything, use a one-service docker-compose.yml with
+  `devices: [/dev/ttyUSB0]` (see Docker Compose below).
 - **Logs.** Everything the program writes to stdout and stderr is the app's log
   in IronFlock. Write it unbuffered (`python -u`).
 - **Start.** The container must be running 30 seconds after it starts, or the
@@ -445,10 +457,36 @@ one app. What changes compared with a single image:
   the host port as written in the file. Publish only what users should reach,
   and let services talk to each other over the Compose network by service name.
   A `${VAR}` host port is not managed: it gets no remapping and no tunnel.
-- **Nothing is added.** The agent grants Compose services no privileges and no
-  devices. Declare `privileged`, `devices` or `device_cgroup_rules` yourself. A
-  `devices:` entry names hardware that must exist, or the container does not
-  start; `device_cgroup_rules` with a `/dev` volume works on every device.
+- **Privileged settings need a declaration and the user's grant.** The agent
+  adds no privileges and no devices; a service gets what the file declares.
+  These settings count as privileged: `privileged`, `cap_add`, `devices`,
+  `device_cgroup_rules`, `security_opt` other than `no-new-privileges`,
+  `network_mode`, `pid`, `ipc`, `uts`, `userns_mode` or `cgroup` set to `host`
+  or `container:…`, `cgroup_parent`, bind mounts of host paths or of paths
+  outside the app's folder (except read-only `/etc/localtime` and
+  `/etc/timezone`), named pipes, `volumes_from: container:…`, top-level volumes
+  with `driver_opts`, `external` or `name`, top-level networks with a `driver`
+  other than `bridge` (`macvlan`, `ipvlan`, `host`), `driver_opts`, `external`
+  or `name`, and secrets or configs read from a file outside the app's folder.
+  A file that uses any of them needs `privileged.reason` in data-template.yml,
+  and one that uses none must not declare it: the publish fails otherwise, and
+  the validator reports both. `include`, and `extends` with a `file`, fail the
+  publish with or without the declaration: a release carries only
+  docker-compose.yml, so merge the files into it. A development build needs no
+  grant: it runs with these settings when the declaration is there, and fails
+  like a publish when the file uses them without it. In production the user
+  consents at install and at update, and can revoke it in the app's project
+  settings. Without the grant the agent removes these settings from the file
+  before it starts the app, and writes to
+  the app's log what it removed, so the app has to start without them. A
+  `${VAR}` in these settings is allowed and counts as privileged, such as a
+  serial port users choose with a parameter:
+  `devices: ["${SERIAL_PORT}:/dev/ttyS0"]`. Apps published before the
+  declaration existed keep their settings until a user revokes the grant.
+  Request the minimum:
+  `devices: [/dev/ttyUSB0]`, not `privileged: true`. A `devices:` entry names
+  hardware that must exist, or the container does not start;
+  `device_cgroup_rules` with a `/dev` volume works on every device.
 - **No `profiles:`.** A service with profiles is left out of the release.
 - **The same start rule.** Within 30 seconds every container must be running or
   have exited with code 0, and at least one must be running. Give long-running

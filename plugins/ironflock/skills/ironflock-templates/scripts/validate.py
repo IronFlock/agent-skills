@@ -12,8 +12,9 @@ Every template file present is checked against its JSON Schema (the copies in
 ../schemas, identical to https://ironflock.com/schemas/<name>/v1.yml), then
 against the rules the platform only enforces at install or render time:
 fleetdb's data-template checks, cross-file references (board data bindings must
-name real tables and columns), and each board widget's config against that
-widget's published definition schema.
+name real tables and columns), each board widget's config against that
+widget's published definition schema, and the app's docker-compose.yml against
+the privileged access data-template.yml declares.
 
 Prints one line per finding as `LEVEL file:line path: message` and exits 1 if
 there is any ERROR. Warnings point at things that are legal but probably wrong.
@@ -63,6 +64,8 @@ from jsonschema.validators import validator_for  # noqa: E402
 HERE = Path(__file__).resolve().parent
 SCHEMAS = HERE.parent / "schemas"
 sys.path.insert(0, str(HERE))
+
+import compose_privileges  # noqa: E402
 
 TEMPLATES = ["data-template", "board-template", "env-template", "port-template", "ai-template"]
 
@@ -377,6 +380,51 @@ def file_namespaces(files: Any) -> dict[str, dict]:
 
 
 # --------------------------------------------------------------------------
+# privileged access: data-template.yml's `privileged` against docker-compose.yml.
+# The platform refuses to publish a compose app that uses privileged settings
+# without the declaration, or declares it without using any. It also refuses a
+# compose file that includes or extends another file, declared or not: a
+# release carries only docker-compose.yml.
+# --------------------------------------------------------------------------
+
+COMPOSE_FILES = ("docker-compose.yml", "docker-compose.yaml")  # in the app's root, as the platform reads it
+OTHER_FILE_FEATURES = {"include", "extends"}  # privileged settings that read another compose file
+
+
+def check_privileged(app_dir: Path, data_doc: Doc | None, report: Report) -> None:
+    file = next((app_dir / name for name in COMPOSE_FILES if (app_dir / name).is_file()), None)
+    if file is None:
+        return  # a single-image app: privileged is optional and asks for the device's full access
+    compose = load(file, report)
+    if compose is None or not isinstance(compose.data, dict):
+        return
+    declared = data_doc is not None and isinstance(data_doc.data, dict) and "privileged" in data_doc.data
+    features = compose_privileges.classify_with_paths(compose.data)
+    for path, f in features:
+        what = (f'service "{f["service"]}": ' if f["service"] else "") + f"{f['feature']} {f['value']}"
+        if f["feature"] in OTHER_FILE_FEATURES:
+            report.error(
+                compose,
+                path,
+                f"{what} reads another compose file, but a release carries only {file.name}; "
+                f"merge that file into {file.name}, or the publish fails",
+            )
+        elif not declared:
+            report.error(
+                compose,
+                path,
+                f"{what} is a privileged setting; declare privileged.reason in "
+                ".ironflock/data-template.yml, or the publish fails",
+            )
+    if declared and not features:
+        report.error(
+            data_doc,
+            ["privileged"],
+            f"{file.name} requests no privileged settings; remove privileged, or the publish fails",
+        )
+
+
+# --------------------------------------------------------------------------
 # env / port / ai
 # --------------------------------------------------------------------------
 
@@ -492,6 +540,7 @@ def run(folder: Path, offline: bool) -> Report:
         docs[name] = doc
 
     data = check_data(docs["data-template"], report) if "data-template" in docs else DataModel()
+    check_privileged(folder.parent, docs.get("data-template"), report)
     if "env-template" in docs:
         check_env(docs["env-template"], report)
     if "port-template" in docs:
