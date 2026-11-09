@@ -756,7 +756,7 @@ the same save as the rest of the row (widget-form 1.0.38 and later):
   are written only with a new file.
 - In an edit form (pattern 6), bind `preFilledValue` to the record's key column:
   the form shows that file, and a save without a new file keeps it.
-- Uploading needs DATABACKEND UPDATE, like every form write. It does not work on an
+- Uploading needs the Use right on the app, like every form write. It does not work on an
   appliance opened through the cloud; there the form says to open the board on
   the appliance itself.
 
