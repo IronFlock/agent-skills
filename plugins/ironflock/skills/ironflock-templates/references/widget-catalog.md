@@ -121,19 +121,21 @@ A doughnut/pie chart widget for visualizing proportional data as circular segmen
 
 A data table widget for displaying structured information in rows and columns. Use this widget to present lists, records, or any tabular data with customizable column types and formatting.
 
-**Data shape:** Rows and columns. Each columns[] entry binds one column of the source data and declares how to render it — string, number with precision, timestamp with format, boolean, state with a colour map, image, or a clickable button with a link. The row count is whatever the query returns.
+**Data shape:** Rows and columns. Each columns[] entry binds one column of the source data and declares how to render it — string, number with precision, timestamp with format, boolean, state with a colour map, image, or a clickable button with a link. The row count is whatever the query returns. An 'edit' column shows one icon button per row: its values are the record key, and a click writes that key into the page URL under styling.parameterKey, so a widget-form opening on that parameter, or any widget filtering on it, shows the clicked record.
 
 **Use when:**
-- The user needs to read individual records — event logs, device inventories, order lists, alarm histories.
+- The user needs to read individual records — event logs, device inventories, order lists, alarm histories — sorted by any columns (columns[].sortDirection).
 - More than two or three fields per row matter, so no chart can carry them all.
 - Exact values matter more than trends or comparisons.
 - Each row should offer a link or action of its own (a column of type 'button').
+- Each row needs an edit or open action that hands the record to another widget on the page — a column of type 'edit' with styling.parameterKey, next to a widget-form opening on that parameter or a detail widget bound with a Parameter filter on that key.
 
 **Not for:**
 - Spotting a trend, comparing magnitudes, or seeing a distribution — use widget-linechart; a table makes the reader do the work a chart does for them.
 - One number that matters more than the rest — use widget-value, or widget-gauge to read it against a range.
 - Shares of a total — use widget-doughnut when the parts are a fixed set that arrive as columns of one row (or as one value each); when the parts are rows of the result (one row per cause or program), use widget-linechart with dataseries[].type: 'bar'.
 - Text written by hand rather than queried — use widget-markdown.
+- Entering or changing a record's fields — use widget-form; an 'edit' column only selects the record for a form on the same page.
 
 ### widget-heatmap
 
@@ -314,42 +316,42 @@ An iframe embed widget for displaying external web content within the dashboard.
 
 ### widget-form
 
-A form widget for collecting user input and storing it in database tables. Use this widget to create data entry interfaces for manual input, configuration settings, user feedback, or any scenario requiring structured data collection.
+A form that stores what people enter as a row in a table, shown in the tile or in a dialog opened by a button. Fields: text, number, dropdown, checkbox, textarea, date and time, colour, masked secret and file upload, each written to one column.
 
-**Data shape:** Writes rather than reads. Each formFields[] entry maps one input control to a database column through targetColumn, and submitting stores a row. Field types cover text, number, dropdown, checkbox, textarea, datetime, secret and file, with validation, required flags, defaults and conditional visibility. A file field uploads one file into a FleetFiles namespace of the app and stores the file's key in its string column. A secret field is a masked, write-only input.
+**Data shape:** Writes rather than reads: each formFields[] entry maps one input to a table column (targetColumn), and a save stores one row. Entries of type section head groups of fields, and width puts fields side by side.
 
 **Use when:**
-- A person needs to enter or correct data that is then persisted — manual readings, maintenance notes, quality checks, configuration values, feedback.
-- Input must be structured and validated, with required fields, defaults, or fields that appear only when another field has a given value (conditionalDisplay).
-- Records should also be deletable or flagged as deleted from the dashboard (deleteButton, deleteFlagColumn).
-- A record comes with a document, image or data file, such as a new SOP revision as a PDF: a field of type 'file' stores the file with the row (fileNamespace, acceptedFileTypes).
-- A password or API token is entered: a 'secret' field masks it and never shows the saved value. Target a 'secret: true' column, which FleetDB encrypts.
+- Data a person enters or corrects — manual readings, maintenance notes, quality checks, configuration values — with validation, defaults or fields shown only for some answers (conditionalDisplay).
+- Settings that apply as soon as they change, with no Submit button: autoSubmit on a form shown in the tile.
+- A record with a file such as a PDF (type 'file'), or a password or token (type 'secret', into a 'secret: true' column).
+- Editing the record a table's 'edit' column picked: openParameter 'edit', and preFilledValue bound to the latest row filtered by it.
+- A long form as a compact sheet: fields side by side (width), headed groups (type section), fieldLayout.density compact.
+- Records deleted or flagged as deleted from the board (deleteButton, deleteFlagColumn).
 
 **Not for:**
-- Narrowing what other widgets display — that is filtering, not data entry. Use widget-filter-dropdown or widget-filter-calendar.
-- Sending a command to a device rather than storing a value — use widget-switch, or widget-scada for an industrial symbol with actions.
-- Showing stored records back to the user — use widget-table.
-- A single button that only navigates somewhere — use widget-navbutton.
+- Narrowing what other widgets show — use widget-filter-dropdown or widget-filter-calendar.
+- Sending a command to a device — use widget-switch, or widget-scada for an industrial symbol.
+- A single on/off setting stored per record — use widget-switch with targetColumn.
+- Showing stored records — use widget-table.
+- A button that only navigates — use widget-navbutton.
 
 ### widget-switch
 
-A toggle switch widget for displaying and controlling binary device states. Use this widget to show ON/OFF status indicators that can also trigger device actions when clicked.
+Toggle switches that show an on/off state and change it on click: a switch calls a device action, stores its position in a table (targetColumn), or sets a URL parameter that other widgets filter on (parameterKey). Several switches fit in one tile, drawn small, normal or big.
 
-**Data shape:** One value per switch, interpreted as ON or OFF through stateMap, plus an optional device or app action and topic fired on click. Both displays and controls. A switch with a parameterKey needs no data instead: it writes parameterValue (default 'true') into the URL parameter named by parameterKey while ON and removes it while OFF, and its position follows that URL parameter.
+**Data shape:** One value per switch, read as ON or OFF through stateMap. A click fires the switch's device action (actionApp, actionTopic), or with targetColumn writes a row: true or false plus extraColumns such as a record id, with value bound to the same column. A switch with parameterKey needs no data: while ON the URL parameter holds parameterValue (default 'true'), while OFF it is removed.
 
 **Use when:**
-- A binary device state should be shown and changed from the dashboard — a pump, a light, a valve, an enable flag.
-- An operator needs a control, not only a readout.
-- Several related toggles belong together in one control panel.
-- A single on/off view filter — 'only alarms', 'only line A' — should narrow other widgets: set parameterKey and parameterValue, and give each widget to be narrowed a filterAnd condition with useFilter: true and the parameterKey as its value. While the switch is OFF those widgets show unfiltered data.
+- A binary device state an operator should see and change — a pump, a light, a valve, an enable flag.
+- An on/off setting stored per record, such as a feature turned on for one model: targetColumn, with the record id in extraColumns.
+- An on/off view filter such as 'only alarms': parameterKey and parameterValue, and each widget to narrow gets a filterAnd condition with useFilter: true and the parameterKey as value. While OFF they show everything.
 
 **Not for:**
-- Choosing one of several filter values, or a filter whose OFF state is another value rather than 'everything' — use widget-filter-dropdown.
-- A status the user must not be able to change — use widget-signal, which is display-only.
-- More than two states — use widget-signal for the indicator, or widget-scada for an industrial symbol.
-- Values that are entered and stored rather than commanded — use widget-form.
+- Choosing among several filter values, or a filter whose OFF state is another value — use widget-filter-dropdown.
+- A status users must not change, or more than two states — use widget-signal.
+- Text, numbers or choices that are entered and stored, or several settings saved together — use widget-form.
 - The history of the switching — use widget-statehistory.
-- A tank, valve or pump that should be drawn as itself and animated — use widget-scada.
+- A tank, valve or pump drawn as itself and animated — use widget-scada.
 
 ### widget-filter-dropdown
 
