@@ -73,8 +73,9 @@ style:
   against. Without a pin, the platform uses the newest version at install time.
 - **`chartconfig`**: only properties from the widget's definition schema. Unknown
   keys are silently ignored, so an invented key does nothing.
-- **`custom_style`**: `text_color`, `tile_background_color`, `tile_border_color`
-  and `tile_border_radius` (e.g. `8px`).
+- **`custom_style`**: `text_color`, `tile_background_color`, `tile_border_color`,
+  `tile_border_radius` (e.g. `8px`), `tile_style` (the tile's frame, see Style) and
+  `tile_style_strength` for that frame.
 
 Start the file with the schema line shown above, like the other templates. The
 editor rewrites the file when someone saves the board: it sorts widgets by
@@ -847,14 +848,61 @@ style:
     theme: {theme_name: light}   # --- light dark chalk essos halloween infographic macarons
                                  # purple-passion roma shine vintage walden westeros wonderland
     background_color: '#fefefe'
+    background_gradient_color: '#dfe6f5'   # optional: gradient from background_color to it
+    background_gradient_angle: 135         # degrees, 180 is top to bottom
     text_color: '#334d5c'
     tile_background_color: '#ffffff80'
     tile_border_color: '#fefefe'
     tile_border_radius: 8px
+    tile_style: outline          # frame of the tiles, see below
+    tile_style_strength: 50      # strength of its shadow, edge or glow, 0-100
     grid_gap: 8                  # pixels between tiles
     columns: 96
     rows: 64
 ```
+
+`tile_style` is what bounds the tiles:
+
+- `outline` (the default): a 1 px line in `tile_border_color`.
+- `shadow`: a faint hairline and a soft shadow below the tile, the card look of
+  current interfaces. Cards look best on a page that differs from them: an opaque
+  `tile_background_color` and a `background_color` a shade darker (lighter, on a
+  dark board), with a `tile_border_radius` of 12px or more and a `grid_gap` of 12
+  to 16.
+- `flat`: neither line nor shadow. A tile shows by its background alone.
+- `light-edge`: a line that is bright at the top and fades down the sides, as if
+  lit from above. Made for dark boards, where a shadow does not show.
+- `gradient-border`: a line in `tile_border_color` that is bright at the top
+  left and fades out diagonally.
+- `glow`: a line and a halo in `tile_border_color`. For dark boards; use it
+  sparingly, it suits single widgets (an alarm in red) better than a whole board.
+- `glass`: the tile blurs the board behind it and gets a bright edge and a soft
+  shadow. It only shows on a board with something behind the tiles, a
+  `background_gradient_color` or a `background_image`, and with a see-through
+  `tile_background_color` (about 25% alpha, e.g. `'#ffffff40'` or `'#1e202940'`).
+  The blur costs rendering time on every tile: leave it out for boards that run
+  on weak panel PCs.
+
+`tile_style_strength` sets how strong the shadow, the edge, the glow or the blur
+is, from 0 (faint) to 100 (strong); the default is 50. `shadow` and `light-edge` do not
+use `tile_border_color`; `gradient-border` and `glow` are drawn in it, so give it an
+accent colour that shows on the background. `shadow`, `glow` and `glass` reach
+beyond the tile: use them with grid snap on.
+
+`background_image` is the address of an image that covers the board, above the
+colour and the gradient. A template can only name an image that is already
+online (an `https://` address); uploading one is done in the board's style
+settings, and such an upload is served to signed-in members only. Keep
+`background_color` close to the image's overall tone: the text colour and the
+shadows are chosen against it.
+
+A widget can take another frame with `custom_style.tile_style`, and give it a
+strength of its own with `custom_style.tile_style_strength` (without one the
+board's applies). Without a `tile_style` of its own, a
+widget whose `custom_style` has its own `tile_border_color` stays an outline tile
+on any board, and one with a transparent `tile_background_color` has no frame. So
+the borderless buttons from "Let navigation blend in" look the same under every
+`tile_style`.
 
 `overflow: true` makes the board scroll (cells are then `cell_size` pixels) instead
 of scaling to the screen.
