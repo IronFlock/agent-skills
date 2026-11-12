@@ -457,6 +457,20 @@ $defs:
       tile_border_radius:
         type: string
         description: CSS length, e.g. 8px.
+      tile_style:
+        enum: [outline, shadow, flat, light-edge, gradient-border, glow, glass]
+        description: >-
+          Frame of this widget's tile, in place of style.tile_style. Without
+          it, a widget with a tile_border_color of its own is drawn as an
+          outline tile and one with a transparent tile_background_color has
+          no frame.
+      tile_style_strength:
+        type: number
+        minimum: 0
+        maximum: 100
+        description: >-
+          Strength of this widget's own tile_style, from 0 to 100. Without it
+          the board's style.tile_style_strength applies.
 
   page:
     type: object
@@ -566,6 +580,25 @@ $defs:
       background_color:
         type: string
         description: "CSS colour. Default #fefefe."
+      background_gradient_color:
+        type: string
+        description: >-
+          CSS colour. The board background then runs as a gradient from
+          background_color to it.
+      background_gradient_angle:
+        type: number
+        minimum: 0
+        maximum: 360
+        description: Direction of the gradient in degrees, as in CSS (180 is top to bottom). Default 135.
+      background_image:
+        type: string
+        pattern: "^(https?://|/(?!/))\\S+$"
+        description: >-
+          Address of an image that covers the board, above colour and gradient:
+          an http(s) address, or a path on the platform as an upload in the
+          board's style settings stores it. An uploaded image is served to
+          signed-in members only; a visitor of a share link who is not signed
+          in sees the colour or gradient.
       text_color:
         type: string
         description: "CSS colour. Default #334d5c."
@@ -578,6 +611,26 @@ $defs:
       tile_border_radius:
         type: string
         description: CSS length, e.g. 8px.
+      tile_style:
+        enum: [outline, shadow, flat, light-edge, gradient-border, glow, glass]
+        description: >-
+          Frame of the widget tiles. outline (default): a line in
+          tile_border_color. shadow: a faint hairline and a soft shadow. flat:
+          neither line nor shadow, a tile shows by its background alone.
+          light-edge: a line that is bright at the top, as if lit from above.
+          gradient-border: a line in tile_border_color that fades out
+          diagonally. glow: a line and a halo in tile_border_color. glass: the
+          tile blurs the board behind it, with a bright edge and a shadow; give
+          the board a background_gradient_color or a background_image and the
+          tiles a see-through tile_background_color (about 25% alpha).
+      tile_style_strength:
+        type: number
+        minimum: 0
+        maximum: 100
+        description: >-
+          Strength of the shadow, edge, glow or blur of tile_style, from 0
+          (faint) to 100 (strong). Default 50. Has no effect on outline and
+          flat.
       grid_gap:
         type: number
         minimum: 0
