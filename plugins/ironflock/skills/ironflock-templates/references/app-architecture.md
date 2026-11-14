@@ -181,11 +181,13 @@ it right before anything else, and keep it in CLAUDE.md as a table:
 |---|---|---|
 | see the entities | widget-table as the overview on the type's page, widget-sidenav as the way to each one | the entity table itself, with `{latest: true}` and the filter on `deleted` |
 | create one | widget-form with `formButton: $bool:true`: a floating action button over the list that opens the form in a dialog | the entity table; the fields are the key and what a new entity needs |
-| change one | widget-form on the entity's detail page (`/cameras/*`), prefilled from the record, the key a `hiddenField` filled from the route | the same table |
-| delete one | that form's `deleteButton`, with `deleteFlagColumn` on `deleted` and `deleteNavigationRoute` back to the list | the same table |
+| change one | an edit form prefilled from the record, the key a `hiddenField`: on the entity's detail page (`/cameras/*`, filled from the route), or as a dialog that an edit icon in the overview table opens (`openParameter`) | the same table |
+| delete one | a delete form: a widget-form whose Submit says "Delete", with a hidden key field and a hidden checkbox on `deleted` (default true); a red button on the detail page with `submitNavigationRoute` back to the list, or a dialog that a delete icon in the overview table opens | the same table |
 
-Give the "New" form the same `deleteFlagColumn` as the edit form, so every row
-carries the flag. The lists, and a detail page's view of one entity, are bound
+A form has no delete button or delete setting of its own (widget-form 2.0
+dropped them): deleting is always a separate delete form, board-template.md,
+pattern 6. Rows written without the flag carry NULL, which the lists' filter
+counts as not deleted. The lists, and a detail page's view of one entity, are bound
 to the raw entity table with the two filters and never to a transform: a
 transform refreshes on its schedule tick, so the list would stop following a
 save or a delete live (see
@@ -201,7 +203,7 @@ window, filtered by the entity's key.
 | Readings over time | a table with `tsp` | `publish_to_table`, `publish_rows_to_table` | charts with time windows and aggregation |
 | The current state of a device, machine or order | an entity table (`maintainLatestFlagFor`) | a row with the key, `tsp` and the changed columns | the `{latest: true}` filter |
 | Limits, setpoints, recipes people set for the app | a table the board's widget-form writes | the form | every device, as in [Following what the board writes](#following-what-the-board-writes) |
-| Records people create, edit and delete | an entity table with a `deleted` column | the form, with `deleteFlagColumn` | the `{latest: true}` filter plus a filter on `deleted`, live; see [Entity tables](#entity-tables-current-state-updates-and-deletes) |
+| Records people create, edit and delete | an entity table with a `deleted` column | the forms; a delete form writes `deleted: true` | the `{latest: true}` filter plus a filter on `deleted`, live; see [Entity tables](#entity-tables-current-state-updates-and-deletes) |
 | Errors and notices for operators | the `error-logs` table | `report_error(error, user_message=...)` | widget-toast |
 | Images, documents, recordings | the app's file storage (`flock.files`) | `files.put` | the file's URL in a column, shown by a widget |
 | Passwords, API keys | a `secret: true` column | any table write | `reveal_secrets`, `verify_secret`, in the app's own containers only |
@@ -262,8 +264,7 @@ the connection, so a program that runs until it is stopped never returns from
 - **Update an entity with a partial row**: its key, a `tsp` and the columns that
   change. A column the row leaves out keeps its value; `None` clears it.
 - **There is no delete.** Retire an entity by writing `deleted: True` and filter
-  it out where it is read (board forms write the flag through
-  `deleteFlagColumn`). Old rows age out with the table's `dropAfter`. The next
+  it out where it is read (on the board, a delete form writes the flag). Old rows age out with the table's `dropAfter`. The next
   section has the rules.
 - **The SDK hides the connection.** The program calls everything on its
   `IronFlock` object and never deals with sessions: the SDK reconnects, restores
@@ -297,10 +298,13 @@ current state at read time:
   it. The old version disappears from the widget the moment the new one arrives.
   Nothing has to be refreshed, recomputed or scheduled.
 - **A delete is a column.** Give the table a boolean `deleted` column. Deleting
-  writes a row with `deleted: true` (the board's form does this through
-  `deleteFlagColumn`), and saving the record again writes `deleted: false`,
-  which restores it. Readers filter on the column (the OR group in
+  writes a row with `deleted: true` (on the board a delete form does this: a
+  widget-form with a hidden checkbox on the column, default true). An edit form
+  with a hidden checkbox defaulting to false restores a record when it is saved. Readers filter on the column (the OR group in
   board-template.md, "Filters", which also lets users show deleted records).
+  Every widget that lists the table's entities filters on it: tables,
+  sidenavs, navbar items, dropdown options, map markers, any list. Only a list
+  the user explicitly asks to include deleted entities leaves it out.
   The latest filter picks the newest row per entity first and applies the
   other conditions afterwards, so an entity whose newest row is deleted drops
   out of the widget as soon as that row arrives, and an older, undeleted row

@@ -322,17 +322,34 @@ def grade_records(app: Path, errors, warnings):
     ]
     forms = [
         w.get("layout_id") for w in widgets
-        if w.get("package_name") == "widget-form"
-        and str(((w.get("chartconfig") or {}).get("deleteFlagColumn") or {}).get("tablename")) == name
-        and ((w.get("chartconfig") or {}).get("deleteFlagColumn") or {}).get("column") in flags
+        if any(t == name and c in flags for t, c in delete_targets(w))
     ]
     return [
         check("validate.py reports no errors", not errors, f"{len(errors)} error(s)" + (f": {errors[0][:160]}" if errors else "")),
         check("a notes table is an entity table with a boolean soft-delete column", table, f"{name}: key {table.get('maintainLatestFlagFor')}, flags {sorted(flags)}" if table else "no such table"),
         check("no transform deduplicates or cleans the notes table", table and not over_it, f"transforms over it: {over_it}"),
         check("a list binds the table itself with the latest filter and a filter on the flag", lists, f"{lists}"),
-        check("a form deletes through deleteFlagColumn on that column", forms, f"forms {forms}"),
+        check("a delete form writes true into that column from a hidden checkbox", forms, f"forms {forms}"),
     ]
+
+
+def is_true(value):
+    """A board-template boolean: true, 'true' or '$bool:true'."""
+    return str(value).lower() in ("true", "$bool:true")
+
+
+def delete_targets(widget):
+    """The (table, column) pairs a widget-form deletes with: a hidden checkbox
+    field whose default is true, the way a delete form writes the flag."""
+    if widget.get("package_name") != "widget-form":
+        return set()
+    return {
+        (str(f["targetColumn"].get("tablename")), f["targetColumn"].get("column"))
+        for f in (widget.get("chartconfig") or {}).get("formFields") or []
+        if isinstance(f, dict) and isinstance(f.get("targetColumn"), dict)
+        and str(f.get("type")).removeprefix("$str:") == "checkbox"
+        and is_true(f.get("hiddenField")) and is_true(f.get("defaultValueBoolean"))
+    }
 
 
 def flag_columns(table):
@@ -404,12 +421,9 @@ def grade_entities(app: Path, errors, warnings):
     forms = [w for w in widgets if w.get("package_name") == "widget-form"]
     creates = [
         w.get("layout_id") for w in forms
-        if str((w.get("chartconfig") or {}).get("formButton")).lower() in ("true", "$bool:true") and form_tables(w) & managed_names
+        if is_true((w.get("chartconfig") or {}).get("formButton")) and form_tables(w) & managed_names
     ]
-    deletes = [
-        w.get("layout_id") for w in forms
-        if str(((w.get("chartconfig") or {}).get("deleteFlagColumn") or {}).get("tablename")) in managed_names
-    ]
+    deletes = [w.get("layout_id") for w in forms if any(t in managed_names for t, _ in delete_targets(w))]
     return [
         check("validate.py reports no errors", not errors, f"{len(errors)} error(s)" + (f": {errors[0][:160]}" if errors else "")),
         check("the first reply asks how much the user codes", *asked(r"experience|proficien|comfortable|familiar|developer|programm|coding|write code|code yourself|technical")),
@@ -421,7 +435,7 @@ def grade_entities(app: Path, errors, warnings):
         check("every managed entity has a list bound to its table with the latest filter and a filter on the flag", found and not unlisted, f"lists {dict(lists)}, unlisted {unlisted}"),
         check("no list is bound to a transform over an entity table", not via_transform, f"via transforms: {via_transform}"),
         check("a form that opens in a dialog (formButton) creates a managed entity", creates, f"forms {creates}"),
-        check("a form deletes a managed entity through deleteFlagColumn", deletes, f"forms {deletes}"),
+        check("a delete form (hidden checkbox, default true) deletes a managed entity", deletes, f"forms {deletes}"),
     ]
 
 

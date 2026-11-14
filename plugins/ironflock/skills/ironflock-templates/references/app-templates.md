@@ -64,9 +64,11 @@ read them.
   replaces an entity's row the moment a new one arrives, so the board shows the
   current version of every entity without any view in between.
 - **Records users can delete get a boolean `deleted` column**, and nothing else.
-  A delete is a row with `deleted: true` (the board's form writes it through
-  `deleteFlagColumn`), and readers filter on the column. With the latest filter
-  this hides the entity as soon as the deleting row arrives, live. See
+  A delete is a row with `deleted: true` (on the board, a delete form writes it from a
+  hidden checkbox), and readers filter on the column: every widget that lists
+  the table's entities (tables, sidenavs, dropdown options, map markers) hides
+  the deleted ones unless the user explicitly asks to see them. With the latest
+  filter this hides the entity as soon as the deleting row arrives, live. See
   app-architecture.md, "Entity tables".
 - Transforms are SQL views over the app's own tables. Boards can bind to them, but
   board-side aggregation only works on plain tables. Do the aggregation in the

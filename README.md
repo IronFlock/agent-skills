@@ -240,7 +240,7 @@ the same day with the interview and the entity model: a vague request the agent
 has to ask about first. It grades the first reply for the questions about the
 user's coding experience, the app's goal and its entities, and the app for one
 entity table per entity, lists bound to those tables with both filters, a "New"
-form that opens in a dialog and a delete through `deleteFlagColumn`; it has not
+form that opens in a dialog and a delete form (a hidden checkbox on the flag); it has not
 been run yet either.
 
 **Evaluate the widget skill** the same way with `evals/widgets/`:
