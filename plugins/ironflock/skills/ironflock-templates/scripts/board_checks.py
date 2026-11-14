@@ -435,6 +435,8 @@ def check_widget(board: Board, i: int, w: dict, offline: bool, cache: dict, plac
             walker.check_refs_only(config, cpath)
     if package == "widget-form" and isinstance(config, dict):
         check_form_targets(board, config, cpath)
+    if package == "widget-table" and isinstance(config, dict):
+        check_single_record_table(board, config, cpath)
     if package == "widget-markdown" and isinstance(config, dict):
         rendered = cache.get((package, version if isinstance(version, str) else None), (None,))[0]
         check_markdown(board, config, cpath, rendered or (version if isinstance(version, str) else None))
@@ -855,6 +857,62 @@ def check_markdown(board: Board, config: dict, path: list, version: str | None) 
         ]
     for finding in markdown_markup.check(constant(body), data, version):
         (board.error if finding.level == "error" else board.warn)(path + list(finding.path), finding.message)
+
+
+def check_single_record_table(board: Board, config: dict, path: list) -> None:
+    """A widget-table whose every column yields at most one row shows one record,
+    which reads like a spreadsheet cell under a header. One record belongs in a
+    widget-markdown card (board-template.md, One record as a card)."""
+    columns = config.get("columns")
+    if not isinstance(columns, list):
+        return
+    reasons = []
+    for column in columns:
+        values = column.get("values") if isinstance(column, dict) else None
+        if values is None:
+            continue
+        if isinstance(values, list):
+            if len(values) > 1:
+                return
+            reasons.append("one row of constants")
+            continue
+        ref = values.get("tableRef") if isinstance(values, dict) else None
+        reason = one_row_reason(board, ref) if isinstance(ref, dict) else None
+        if reason is None:
+            return
+        reasons.append(reason)
+    if reasons:
+        board.warn(
+            path + ["columns"],
+            f"this table shows a single record ({reasons[0]}); show one record as a widget-markdown card "
+            "with a data entry per field, not as a table of one row",
+        )
+
+
+def one_row_reason(board: Board, ref: dict) -> str | None:
+    """Why a tableRef returns at most one row, or None when it can return more."""
+    qp = ref.get("queryParams") if isinstance(ref.get("queryParams"), dict) else {}
+    if qp.get("series"):
+        return None  # aggregated: one row per bucket or category
+    limit = constant(qp.get("limit"))
+    if not isinstance(limit, bool) and isinstance(limit, (int, float)) and limit == 1:
+        return "limit 1"
+    table = ref.get("tablename")
+    if ref.get("provider_app") or not isinstance(table, str) or table not in board.data.tables:
+        return None  # another app's table or a transform: its entity key is unknown here
+    filters = qp.get("filterAnd") if isinstance(qp.get("filterAnd"), list) else []
+    if not any(isinstance(f, dict) and f.get("latest") for f in filters):
+        return None
+    keys = board.data.entity_keys.get(table)
+    if not keys:
+        return f"the latest filter on '{table}', which has no entity key, keeps its single newest row"
+    pinned = {
+        f.get("column") for f in filters
+        if isinstance(f, dict) and f.get("operator") == "=" and not f.get("latest") and not f.get("useFilter")
+    }  # a useFilter condition is dropped while its parameter is unset, so it pins nothing
+    if all(k in pinned for k in keys):
+        return f"the newest row of one {', '.join(keys)}"
+    return None
 
 
 # The columns a file field writes beside the key, with the dataTypes that can hold them.

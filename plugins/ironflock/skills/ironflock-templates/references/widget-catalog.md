@@ -125,7 +125,7 @@ A data table widget for displaying structured information in rows and columns. U
 
 **Use when:**
 - The user needs to read individual records — event logs, device inventories, order lists, alarm histories — sorted by any columns (columns[].sortDirection).
-- More than two or three fields per row matter, so no chart can carry them all.
+- Several rows, each with more than two or three fields that matter, so no chart can carry them all.
 - Exact values matter more than trends or comparisons.
 - Each row should offer a link or action of its own (a column of type 'button').
 - Each row needs an edit or open action that hands the record to another widget on the page — a column of type 'edit' with styling.parameterKey, next to a widget-form opening on that parameter or a detail widget bound with a Parameter filter on that key.
@@ -135,6 +135,7 @@ A data table widget for displaying structured information in rows and columns. U
 - One number that matters more than the rest — use widget-value, or widget-gauge to read it against a range.
 - Shares of a total — use widget-doughnut when the parts are a fixed set that arrive as columns of one row (or as one value each); when the parts are rows of the result (one row per cause or program), use widget-linechart with dataseries[].type: 'bar'.
 - Text written by hand rather than queried — use widget-markdown.
+- One record — a single row such as an asset's current settings or the record a detail page shows (a tableRef with limit 1, or filtered to one key) — use widget-markdown with HTML laid out for that record, one data[] entry per field; a table of one row reads like a spreadsheet cell.
 - Entering or changing a record's fields — use widget-form; an 'edit' column only selects the record for a form on the same page.
 
 ### widget-heatmap
@@ -254,11 +255,12 @@ A markdown rendering widget for displaying formatted text with dynamic variable 
 - The text needs structure or markup — headings, lists, links, tables, code blocks.
 - A narrative should incorporate live numbers, e.g. 'Line 3 produced {{units}} units today'.
 - Hand-written HTML should follow the data — a banner whose colour comes from a column (style="background: {{stateColor}}"), a link or image whose address does.
+- The fields of ONE record — an asset's current settings, a machine's nameplate, the record a detail page shows — laid out as a card in HTML (a heading with its name, labels and values in two columns, units next to the values, a state as a badge from a colour column), each field one data[] entry bound with a valueRef filtered to that record. Never a widget-table of one row.
 
 **Not for:**
 - A single styled string with no markup — use widget-label; a Markdown renderer is overkill.
 - Fixed title / subtitle / body sections with per-section typography — use widget-textbox.
-- Tabular data coming from a query rather than written by hand — use widget-table.
+- Several rows of queried records — use widget-table. One queried record is a card in this widget (see useWhen).
 - Numbers that should be read as figures rather than embedded in a sentence — use widget-value.
 
 ### widget-image

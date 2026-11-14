@@ -1,0 +1,133 @@
+# yaml-language-server: $schema=https://ironflock.com/schemas/board-template/v1.yml
+# A widget-table whose every column yields at most one row shows a single record,
+# which belongs in a widget-markdown card. Widgets 0-3 each reach one row a
+# different way: limit 1, the newest row of one entity key, the latest filter on
+# a table without an entity key, one row of constants. Widgets 4-6 can show more
+# than one row: every machine's newest row, a key filter from a filter widget
+# (dropped while its parameter is unset), and one column with many rows.
+#
+# expect: WARN  widgets[0].chartconfig.columns :: this table shows a single record (limit 1)
+# expect: WARN  widgets[1].chartconfig.columns :: this table shows a single record (the newest row of one machine_id)
+# expect: WARN  widgets[2].chartconfig.columns :: the latest filter on 'measurements', which has no entity key
+# expect: WARN  widgets[3].chartconfig.columns :: this table shows a single record (one row of constants)
+#
+# expect-none: widgets[4].chartconfig.columns
+# expect-none: widgets[5].chartconfig.columns
+# expect-none: widgets[6].chartconfig.columns
+name: single-record
+widgets:
+    - layout_id: limit-one
+      package_name: widget-table
+      chartconfig:
+          columns:
+              - header: $str:Temperature
+                type: $str:number
+                values:
+                    tableRef:
+                        tablename: measurements
+                        format: {value: temperature}
+                        queryParams: {limit: 1}
+    - layout_id: one-machine
+      package_name: widget-table
+      chartconfig:
+          columns:
+              - header: $str:State
+                type: $str:state
+                values:
+                    tableRef:
+                        tablename: machine_status
+                        format: {value: state}
+                        queryParams:
+                            limit: 50
+                            filterAnd:
+                                - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
+                                - {column: machine_id, operator: '=', value: press-1, dataType: string}
+              - header: $str:Target speed
+                type: $str:number
+                values:
+                    tableRef:
+                        tablename: machine_status
+                        format: {value: target_rpm}
+                        queryParams:
+                            limit: 50
+                            filterAnd:
+                                - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
+                                - {column: machine_id, operator: '=', value: press-1, dataType: string}
+    - layout_id: newest-sample
+      package_name: widget-table
+      chartconfig:
+          columns:
+              - header: $str:Power
+                type: $str:number
+                values:
+                    tableRef:
+                        tablename: measurements
+                        format: {value: power_kw}
+                        queryParams:
+                            limit: 50
+                            filterAnd:
+                                - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
+    - layout_id: constants
+      package_name: widget-table
+      chartconfig:
+          columns:
+              - header: $str:Recipe
+                type: $str:string
+                values:
+                    - {value: $str:R-12}
+    - layout_id: every-machine
+      package_name: widget-table
+      chartconfig:
+          columns:
+              - header: $str:State
+                type: $str:state
+                values:
+                    tableRef:
+                        tablename: machine_status
+                        format: {value: state}
+                        queryParams:
+                            limit: 50
+                            filterAnd:
+                                - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
+    - layout_id: picked-machine
+      package_name: widget-table
+      chartconfig:
+          columns:
+              - header: $str:State
+                type: $str:state
+                values:
+                    tableRef:
+                        tablename: machine_status
+                        format: {value: state}
+                        queryParams:
+                            limit: 50
+                            filterAnd:
+                                - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
+                                - {column: machine_id, operator: '=', value: machine, dataType: string, useFilter: true}
+    - layout_id: mixed
+      package_name: widget-table
+      chartconfig:
+          columns:
+              - header: $str:Temperature
+                type: $str:number
+                values:
+                    tableRef:
+                        tablename: measurements
+                        format: {value: temperature}
+                        queryParams: {limit: 1}
+              - header: $str:Vibration
+                type: $str:number
+                values:
+                    tableRef:
+                        tablename: measurements
+                        format: {value: vibration}
+                        queryParams: {limit: 50}
+layout:
+    gridLayout:
+        - {id: limit-one, x: 0, y: 0, w: 32, h: 32}
+        - {id: one-machine, x: 32, y: 0, w: 32, h: 32}
+        - {id: newest-sample, x: 64, y: 0, w: 32, h: 32}
+        - {id: constants, x: 0, y: 32, w: 24, h: 32}
+        - {id: every-machine, x: 24, y: 32, w: 24, h: 32}
+        - {id: picked-machine, x: 48, y: 32, w: 24, h: 32}
+        - {id: mixed, x: 72, y: 32, w: 24, h: 32}
