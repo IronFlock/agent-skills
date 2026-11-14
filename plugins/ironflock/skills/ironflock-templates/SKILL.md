@@ -210,6 +210,17 @@ complete reference.
   pick the newest row per entity or to hide deleted rows. A transform refreshes
   on its schedule, so it would only make the board late. app-architecture.md,
   "Entity tables", has the rules.
+- **A master list reads the asset table, never a view.** The widget that lists
+  the assets of a type is that type's master list: the widget-sidenav or
+  data-driven widget-navbar that leads to each asset, and the overview
+  widget-table. Bind it to the entity table itself, with `{latest: true}` and
+  the filter on `deleted`, so that an asset created with the "New" form shows
+  up in the list, and a deleted one leaves it, in under a second. A list bound
+  to a transform changes only on the transform's schedule, and users would
+  create or delete an asset without seeing it happen. This holds even when a
+  view with more columns exists: bind other widgets to the view, never the
+  list. The one exception is a sub-asset list below a `*` page, whose routes
+  need a transform (board-template.md, "Boards that manage assets").
 - **Deleted entities stay out of every list.** When an entity table has a delete
   flag (its `deleted` column, the column a delete form writes),
   every widget that lists the table's entities filters on that flag: the
