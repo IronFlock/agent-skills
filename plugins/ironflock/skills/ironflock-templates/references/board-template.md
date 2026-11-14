@@ -762,7 +762,13 @@ find their way around without having to think about it:
    page (`/machines/`). The type's page itself shows an overview of all its assets,
    such as a widget-table of them or the fleet's KPIs, and never stays empty. The
    sidenav and the table are bound to the entity table itself, with
-   `{latest: true}` and the filter on `deleted` (pattern 6).
+   `{latest: true}` and the filter on `deleted` (pattern 6), never to a
+   transform. They are the type's master list: an asset created with the
+   "New" form appears in it, and a deleted one disappears, in under a second.
+   A transform reaches the board only on its schedule tick, so a list bound to
+   one leaves users looking at an asset they just deleted, or missing the one
+   they just created. Bind the list to the table even when a view with more
+   columns exists.
 3. **"New" is a floating action button on top of the list.** A widget-form with
    `formButton: $bool:true` opens the create form in a dialog, and it shows a round
    floating action button unless `formButtonStyle.fab` is false. Lay it over the
@@ -789,7 +795,9 @@ find their way around without having to think about it:
    (the stations of a line) get their own data-driven widget-sidenav inside the
    asset's detail area, with their own "New" button on top, and their own detail
    pages and tabs (`/lines/*/stations/*`). Their routes come from a transform
-   (pattern 3).
+   (pattern 3). This is the one master list that cannot read the asset table,
+   because a binding cannot build the absolute route. It shows new and deleted
+   sub-assets only on the transform's schedule tick, so keep that schedule short.
 7. **Hide a list when it costs more than it gives.** When nested sidenavs leave too
    little room, or users should focus on one asset, an asset's pages may leave the
    list out and use the full width. Then put a prominent back button in the
