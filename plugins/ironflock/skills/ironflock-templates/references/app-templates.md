@@ -70,7 +70,7 @@ read them.
   the deleted ones unless the user explicitly asks to see them. With the latest
   filter this hides the entity as soon as the deleting row arrives, live. See
   app-architecture.md, "Entity tables".
-- Transforms are SQL views over the app's own tables. Boards can bind to them, but
+- Transforms are SQL views over the app's own tables and transforms. Boards can bind to them, but
   board-side aggregation only works on plain tables. Do the aggregation in the
   transform's SQL instead.
 - **Never write a transform to pick the newest row per entity or to hide deleted
@@ -81,9 +81,16 @@ read them.
   `SELECT DISTINCT ON (<key>) ... ORDER BY <key>, tsp DESC` and filter `deleted`
   there.
 - **A transform's `sql` can be any single SQL `SELECT` statement**, with PostgreSQL
-  and TimescaleDB semantics. That includes CTEs (`WITH ... SELECT`). When a
-  computation needs intermediate steps, put them in CTEs of one transform rather
-  than chaining several transforms.
+  and TimescaleDB semantics. That includes CTEs (`WITH ... SELECT`). When one
+  computation needs intermediate steps, put them in CTEs of one transform.
+- **A transform can read another transform**, by its `tablename`, like a table.
+  Stack them when several transforms share an intermediate result, for example
+  an hourly aggregate that feeds both a daily KPI and a shift report: the shared
+  transform computes it once, and the ones on top read its result instead of
+  repeating the aggregation in CTEs. The order of transforms in the file does not
+  matter. Each transform refreshes on its own `schedule` and reads the one below
+  as of that one's last refresh, so delays add up along a stack: give the lower
+  transforms a schedule at least as frequent as the ones on top.
 - **A transform reaches open boards only on its `schedule` tick**, not when a table
   underneath changes. With `* * * * *` a new record shows up in a transform-driven
   menu or list up to a minute late. So bind menus, lists and states to tables
