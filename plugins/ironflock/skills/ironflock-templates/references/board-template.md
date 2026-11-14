@@ -22,7 +22,8 @@ are defined by its published definition schema (`scripts/widget.py <package>`).
    uploading files with a form, embedding a web UI the app serves
 7. [Layout](#layout)
 8. [Style](#style): the keys, and the presets
-9. [Markdown and HTML](#markdown-and-html): placeholders, HTML blocks
+9. [Markdown and HTML](#markdown-and-html): placeholders, HTML blocks, one record
+   as a card
 10. [SCADA pages](#scada-pages)
 11. [Left to the board editor](#left-to-the-board-editor)
 12. [Checklist](#checklist)
@@ -404,8 +405,15 @@ Answer these in the header, one line each:
 - **One widget per data shape.** Choose the widget from the data, with the
   catalog: one figure → widget-value; a figure against limits → widget-gauge; a
   state → widget-signal; change over time → widget-linechart; states over time →
-  widget-statehistory; several fields per entity → widget-table; a text →
+  widget-statehistory; several fields of many entities → widget-table; several
+  fields of one record (an asset's current settings, the selected machine) →
+  widget-markdown laid out in HTML (One record as a card); a text →
   widget-label. Never show the same value twice on one page.
+- **One record is not a table.** Never use a widget-table for a result of one
+  row, such as a tableRef with `limit: 1` or a filter on the record's key. A single
+  row under a header line reads like a spreadsheet cell. Show the record as a
+  widget-markdown card instead, even when the user asked for "a table" of it.
+  validate.py warns about a widget-table whose every column yields one row.
 - **Repeat the same shape for the same thing.** One gauge per machine, all the
   same size, in one row, in the same order as the machine list and the table.
 
@@ -1041,6 +1049,42 @@ the markup (`style="color:#333"`) stays the same on every theme. That suits text
 a background the markup sets itself, such as a status badge, but on another theme it
 can be hard to read.
 
+### One record as a card
+
+The fields of one record, such as the current settings of the machine a detail
+page shows, go into a widget-markdown, never into a widget-table with one row.
+Bind each field with its own `data` entry, a valueRef with the filter the table
+would have had, and write HTML that suits what the record is: a settings card, a
+nameplate, a status panel. The name goes in a heading, units next to their values,
+related fields in groups, and fields the reader does not need are left out.
+
+```yaml
+markdown: |
+    <style>.rec dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;margin:0}.rec dt{opacity:.7}.rec dd{margin:0;font-weight:600}.rec .badge{display:inline-block;padding:2px 10px;border-radius:999px;color:#fff;background:{{stateColor}}}</style>
+    <div class="rec">
+    <h3>{{name}} <span class="badge">{{state}}</span></h3>
+    <dl><dt>Setpoint</dt><dd>{{setpoint}} °C</dd><dt>Speed</dt><dd>{{speed}} rpm</dd><dt>Recipe</dt><dd>{{recipe}}</dd></dl>
+    </div>
+data:
+    - label: $str:name
+      value:
+          valueRef:
+              tablename: machines              # maintainLatestFlagFor: [machine_id]
+              column: name
+              queryParams:
+                  limit: 1
+                  filterAnd:
+                      - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
+                      - {column: machine_id, operator: '=', value: '2', dataType: string, useRoute: true}
+    # state, stateColor, setpoint, speed and recipe the same way, each on its own column
+```
+
+- **No text colours of its own.** Labels are set apart by `opacity`, so the card
+  reads on light and dark boards. The badge sets its own background from a colour
+  column, so its white text stays readable.
+- **No blank lines inside the HTML**, so the Markdown rules above cannot turn a line
+  into a code block.
+
 ## SCADA pages
 
 widget-scada draws one industrial symbol (a tank, pump, valve, pipe and so on) per
@@ -1090,5 +1134,6 @@ Some values only exist inside a running platform, and a template cannot know the
    thing on every widget, and nothing else is coloured.
 7. In widget-markdown, every `{{placeholder}}` has a `data` entry, values in CSS are
    plain CSS values, and the markup has no scripts or event handlers. HTML has no
-   blank line followed by a line indented by four spaces or more.
+   blank line followed by a line indented by four spaces or more. No widget-table
+   shows a single record: one record is a widget-markdown card.
 8. `scripts/validate.py <app-dir>` (run it as SKILL.md shows) reports no errors.

@@ -253,6 +253,7 @@ class DataModel:
     transforms: set[str] = field(default_factory=set)
     transform_sql: dict[str, str] = field(default_factory=dict)  # name -> its SQL
     consumes: set[str] = field(default_factory=set)
+    entity_keys: dict[str, list[str]] = field(default_factory=dict)  # table -> maintainLatestFlagFor
     # FleetFiles namespaces (files.namespaces): name -> {"contentTypes", "maxObjectBytes"}.
     # None without a data template.
     namespaces: dict[str, dict] | None = None
@@ -308,6 +309,9 @@ def check_data(doc: Doc, report: Report) -> DataModel:
                 report.error(doc, kpath, f"entity key '{key}' is not a column of '{name}'")
             elif key in secrets:
                 report.error(doc, kpath, f"secret column '{key}' cannot be an entity key")
+        keys = [k for k in table.get("maintainLatestFlagFor") or [] if isinstance(k, str)]
+        if isinstance(name, str) and keys:
+            model.entity_keys[name] = keys
         ds = table.get("downsample")
         if isinstance(ds, dict) and isinstance(ds.get("bucket"), str):
             m = re.match(r"^(\d+) (second|minute|hour|day)s?$", ds["bucket"])

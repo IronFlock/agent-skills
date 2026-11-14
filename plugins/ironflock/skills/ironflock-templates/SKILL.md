@@ -90,7 +90,9 @@ in it is described.
    "Boards that manage assets" there: its list (a widget-sidenav as the way to
    each one, a widget-table as the overview) bound to the entity table itself,
    a "New" form that opens in a dialog on top of the list, and a detail page
-   with the edit form and delete. When the user wants to see the board before
+   with the edit form and delete. One record shown rather than edited (an
+   asset's current settings) is a widget-markdown card laid out in HTML, never
+   a widget-table with one row. When the user wants to see the board before
    it exists and your environment has a design canvas (in Claude Code, the
    Artifact tool's Design type), sketch the pages as wireframes there first, as
    that section describes. Otherwise write the band plan in text and go on.
