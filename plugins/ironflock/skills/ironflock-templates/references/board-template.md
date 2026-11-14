@@ -23,7 +23,7 @@ are defined by its published definition schema (`scripts/widget.py <package>`).
 7. [Layout](#layout)
 8. [Style](#style): the keys, and the presets
 9. [Markdown and HTML](#markdown-and-html): placeholders, HTML blocks, one record
-   as a card
+   as a card, how a value is shown, figures as cards
 10. [SCADA pages](#scada-pages)
 11. [Left to the board editor](#left-to-the-board-editor)
 12. [Checklist](#checklist)
@@ -391,8 +391,8 @@ Answer these in the header, one line each:
 
 - **States first, then the headline figure, then trends, then detail.** Readers
   scan from the top left. The top band holds the states (widget-signal, or a
-  widget-table with a state column) and the headline figure (widget-value, or
-  widget-gauge when the figure only means something against limits). Trends
+  widget-table with a state column) and the headline figure (a widget-markdown
+  card, or widget-gauge when the figure only means something against limits). Trends
   (widget-linechart, widget-statehistory) go below. Everything that has to be
   read rather than seen (tables, forms, texts) goes on a page of its own.
 - **Size follows importance.** What people look for first is the biggest tile on
@@ -403,7 +403,8 @@ Answer these in the header, one line each:
   a desk carries up to about twelve. Beyond that, split the page by question and
   link the pages (Pages and navigation). The grid is still filled completely.
 - **One widget per data shape.** Choose the widget from the data, with the
-  catalog: one figure → widget-value; a figure against limits → widget-gauge; a
+  catalog: one figure, or figures that belong together → a widget-markdown card
+  (Figures as cards); a figure against limits → widget-gauge; a
   state → widget-signal; change over time → widget-linechart; states over time →
   widget-statehistory; several fields of many entities → widget-table; several
   fields of one record (an asset's current settings, the selected machine) →
@@ -414,6 +415,12 @@ Answer these in the header, one line each:
   row under a header line reads like a spreadsheet cell. Show the record as a
   widget-markdown card instead, even when the user asked for "a table" of it.
   validate.py warns about a widget-table whose every column yields one row.
+- **Figures are cards.** A KPI, one machine's current readings or a shift's output
+  next to its target go into a widget-markdown card laid out for what they mean,
+  not into widget-value tiles. widget-value is left for two cases: a figure that
+  is the average of its latest readings (`advanced.averageLatest`), and one
+  readout per distinct value of a column for however many there are
+  (`multiChart` with `pivot`).
 - **Repeat the same shape for the same thing.** One gauge per machine, all the
   same size, in one row, in the same order as the machine list and the table.
 
@@ -1084,6 +1091,83 @@ data:
   column, so its white text stays readable.
 - **No blank lines inside the HTML**, so the Markdown rules above cannot turn a line
   into a code block.
+- **Numbers get a format.** Give `setpoint` and `speed` `valueType: $str:number`
+  and their `precision` (How a value is shown).
+
+### How a value is shown
+
+From widget-markdown 1.1.0 on, each `data` entry says how its value is shown.
+validate.py rejects these keys on an older version.
+
+- **`valueType`**: `$str:text` (the default) shows the value as given.
+  `$str:number` rounds it to `precision` decimals (`$num:1` shows 23.456789 as
+  23.5; the default is 0). `$str:timestamp` shows epoch milliseconds or ISO 8601
+  as a date and time in the viewer's time zone and locale. A value that does not
+  fit is shown as given. Give every measured number `$str:number`: as text, a raw
+  reading shows all its decimals.
+- **`tsp` and `maxLatency`**: bind `tsp` to the `tsp` column of the value's row
+  (the same table and filter as the value) and set `maxLatency` in seconds, a
+  few times the interval the device sends at. An older reading is left out: it
+  shows as nothing, and a style or attribute that uses it is left out too, also
+  while no new data arrives.
+- **Text that follows the tile.** The widget is a size container, so CSS in a
+  `<style>` element can use container units: `font-size:38cqh` makes a figure a
+  third of the tile's height on every screen. Size the headline figure that way;
+  labels can stay in `em`. The widget pads the tile by `2cqh`, so a card that
+  fills it is `96cqh` high.
+
+### Figures as cards
+
+A figure goes into a widget-markdown card with its context: what it counts, the
+unit, the period, the target or the time of the reading. Several figures that
+belong together share one card.
+
+```yaml
+markdown: |
+    <style>.kpi{display:flex;flex-direction:column;justify-content:center;height:96cqh}.kpi .v{font-size:38cqh;font-weight:700;line-height:1}.kpi .u{font-size:14cqh;opacity:.7}.kpi .c{opacity:.7}</style>
+    <div class="kpi">
+    <div class="c">Power draw, press-1</div>
+    <div><span class="v">{{power}}</span> <span class="u">kW</span></div>
+    <div class="c">measured {{measured}}</div>
+    </div>
+data:
+    - label: $str:power
+      valueType: $str:number
+      precision: $num:1
+      maxLatency: $num:60
+      value:
+          valueRef:
+              tablename: measurements
+              column: power_kw
+              queryParams:
+                  limit: 1
+                  filterAnd:
+                      - {column: machine_id, operator: '=', value: press-1, dataType: string}
+      tsp:
+          valueRef:
+              tablename: measurements
+              column: tsp
+              queryParams:
+                  limit: 1
+                  filterAnd:
+                      - {column: machine_id, operator: '=', value: press-1, dataType: string}
+    - label: $str:measured
+      valueType: $str:timestamp
+      value:
+          valueRef:
+              tablename: measurements
+              column: tsp
+              queryParams:
+                  limit: 1
+                  filterAnd:
+                      - {column: machine_id, operator: '=', value: press-1, dataType: string}
+```
+
+- **widget-value only for averages and generated readouts.** Use it when the
+  figure must be the average of its latest readings (`advanced.averageLatest`),
+  or when one readout per machine is generated from a column for however many
+  machines there are (`multiChart` with `pivot`): a card has a fixed set of
+  entries.
 
 ## SCADA pages
 
@@ -1135,5 +1219,8 @@ Some values only exist inside a running platform, and a template cannot know the
 7. In widget-markdown, every `{{placeholder}}` has a `data` entry, values in CSS are
    plain CSS values, and the markup has no scripts or event handlers. HTML has no
    blank line followed by a line indented by four spaces or more. No widget-table
-   shows a single record: one record is a widget-markdown card.
+   shows a single record: one record is a widget-markdown card. Figures are
+   widget-markdown cards with `valueType: $str:number` and a `precision`, live
+   readings with `tsp` and `maxLatency`; widget-value only averages or generates
+   one readout per value of a column.
 8. `scripts/validate.py <app-dir>` (run it as SKILL.md shows) reports no errors.

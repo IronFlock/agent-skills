@@ -189,15 +189,24 @@ widgets:
           markdown: |
               ## Machines
               Pick a machine on the left to see its temperature, vibration and power.
+    # One figure in its context: a widget-markdown card, the number rounded,
+    # sized to the tile, and left out once the reading is older than a minute.
     - layout_id: machine-power
-      package_name: widget-value
-      version: 1.1.33
+      package_name: widget-markdown
+      version: 1.1.0
       chartconfig:
-          title: $str:Power draw
-          dataseries:
-              - label: $str:Power
-                unit: $str:kW
+          markdown: |
+              <style>.kpi{display:flex;align-items:baseline;gap:4cqw;height:96cqh}.kpi .v{font-size:60cqh;font-weight:700;line-height:1}.kpi .u{font-size:22cqh;opacity:.7}.kpi .c{opacity:.7}</style>
+              <div class="kpi">
+              <div class="c">Power draw</div>
+              <div><span class="v">{{power}}</span> <span class="u">kW</span></div>
+              <div class="c">measured {{measured}}</div>
+              </div>
+          data:
+              - label: $str:power
+                valueType: $str:number
                 precision: $num:1
+                maxLatency: $num:60
                 value:
                     valueRef:
                         tablename: measurements
@@ -205,11 +214,25 @@ widgets:
                         queryParams:
                             limit: 1
                             filterAnd:
-                                - column: machine_id
-                                  operator: '='
-                                  value: '2'
-                                  dataType: string
-                                  useRoute: true
+                                - {column: machine_id, operator: '=', value: '2', dataType: string, useRoute: true}
+                tsp:
+                    valueRef:
+                        tablename: measurements
+                        column: tsp
+                        queryParams:
+                            limit: 1
+                            filterAnd:
+                                - {column: machine_id, operator: '=', value: '2', dataType: string, useRoute: true}
+              - label: $str:measured
+                valueType: $str:timestamp
+                value:
+                    valueRef:
+                        tablename: measurements
+                        column: tsp
+                        queryParams:
+                            limit: 1
+                            filterAnd:
+                                - {column: machine_id, operator: '=', value: '2', dataType: string, useRoute: true}
     - layout_id: machine-trend
       package_name: widget-linechart
       version: 1.7.9

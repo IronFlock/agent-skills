@@ -48,17 +48,16 @@ A simple numeric value display widget for showing key metrics with labels and un
 **Data shape:** One number per entry: dataseries[].data[].value, with an optional timestamp for freshness checks (advanced.maxLatency) and averaging over the latest N readings. Label, unit and decimal precision are set per entry. A pivot column produces one readout per distinct value. The subtitle can be bound as well, and shown as a local date and time when it holds a timestamp (subTitleType).
 
 **Use when:**
-- A single current figure is the whole point — a KPI tile showing a latest reading or an already-computed count/total that exists as a value in the data.
-- The number has a unit and a sensible precision and should be read exactly.
-- One tile per machine or site should be generated from a single column (data[].pivot).
-- Stale data should be visibly flagged rather than shown as current (advanced.maxLatency).
+- A figure should be the average of its latest N readings rather than the newest one (advanced.averageLatest).
+- One readout per machine or site should be generated from a single column, for however many there are (multiChart with data[].pivot).
 
 **Not for:**
 - Counting or aggregating rows — the widget performs NO aggregation (no count/sum/avg); it displays a value that already exists in the data or is embedded as a static number.
 - A number that only means something against a minimum and maximum — use widget-gauge.
 - How the number is changing — use widget-linechart.
 - Its share of a total — use widget-doughnut when the parts are a fixed set that arrive as columns of one row (or as one value each); when the parts are rows of the result (one row per cause or program), use widget-linechart with dataseries[].type: 'bar'.
-- Several fields per entity that belong side by side — use widget-table.
+- A figure, or several figures that belong together, shown in their context — a KPI card, the current readings of one machine, one shift's output and scrap — use widget-markdown, laid out in HTML, with valueType 'number' and precision for the decimals, a bound tsp with maxLatency to hide stale readings, and text sized to the tile with container units (cqh, cqw).
+- Several fields of many entities side by side — use widget-table.
 - Text rather than a figure — use widget-label.
 
 ### widget-gauge
@@ -256,12 +255,13 @@ A markdown rendering widget for displaying formatted text with dynamic variable 
 - A narrative should incorporate live numbers, e.g. 'Line 3 produced {{units}} units today'.
 - Hand-written HTML should follow the data — a banner whose colour comes from a column (style="background: {{stateColor}}"), a link or image whose address does.
 - The fields of ONE record — an asset's current settings, a machine's nameplate, the record a detail page shows — laid out as a card in HTML (a heading with its name, labels and values in two columns, units next to the values, a state as a badge from a colour column), each field one data[] entry bound with a valueRef filtered to that record. Never a widget-table of one row.
+- A figure, or several figures that belong together, shown in their context — a KPI card, the current readings of one machine, one shift's output and scrap. data[].valueType 'number' with data[].precision rounds a reading, 'timestamp' shows a time as a local date and time, and a bound data[].tsp with data[].maxLatency leaves out a stale reading. Text follows the tile's size with container units in a <style> element (font-size: 30cqh).
 
 **Not for:**
 - A single styled string with no markup — use widget-label; a Markdown renderer is overkill.
 - Fixed title / subtitle / body sections with per-section typography — use widget-textbox.
 - Several rows of queried records — use widget-table. One queried record is a card in this widget (see useWhen).
-- Numbers that should be read as figures rather than embedded in a sentence — use widget-value.
+- A figure averaged over its latest readings, or one readout per distinct value of a column for however many there are — use widget-value (advanced.averageLatest, multiChart with data[].pivot).
 
 ### widget-image
 
@@ -307,6 +307,7 @@ An iframe embed widget for displaying external web content within the dashboard.
 - An existing web page, third-party dashboard, documentation site or internal tool should appear inside the dashboard instead of being rebuilt.
 - The content is served by another system and is already visual — a Grafana board, a camera web UI, a report page.
 - Several such pages should sit side by side in a responsive grid (multiEmbed: true).
+- Previewing a device's or kiosk's screen UI at its real resolution inside a smaller tile, portrait screens included: set viewportWidth and viewportHeight to the screen's size in CSS pixels, and the page lays out as on that screen and is scaled down to fit.
 
 **Not for:**
 - Data held in the platform's own tables — build the visualization natively so it themes, filters and refreshes with the rest of the dashboard (widget-linechart, widget-table, widget-value and so on).
