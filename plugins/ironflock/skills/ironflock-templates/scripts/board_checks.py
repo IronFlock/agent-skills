@@ -1006,7 +1006,7 @@ def resolve(page: dict, segments: list[str]) -> bool:
 def collect_routes(config: Any, path: list, out: list) -> None:
     if isinstance(config, dict) and not is_ref(config):
         for key, value in config.items():
-            if key in ("route", "deleteNavigationRoute") and isinstance(value, str):
+            if key in ("route", "submitNavigationRoute", "deleteNavigationRoute") and isinstance(value, str):
                 out.append((path + [key], value))
             elif key == "navItems" and isinstance(value, list):
                 for k, item in enumerate(value):

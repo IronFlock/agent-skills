@@ -329,7 +329,7 @@ A form that stores what people enter as a row in a table, shown in the tile or i
 - A record with a file such as a PDF (type 'file'), or a password or token (type 'secret', into a 'secret: true' column).
 - Editing the record a table's 'edit' column picked: openParameter 'edit', and preFilledValue bound to the latest row filtered by it.
 - A long form as a compact sheet: fields side by side (width), headed groups (type section), fieldLayout.density compact.
-- Records deleted or flagged as deleted from the board (deleteButton, deleteFlagColumn).
+- Deleting a record (soft delete), with a confirmation dialog: a separate form with Submit labelled 'Delete' (buttonLabels) that writes the record's key and deleted = true from hidden fields.
 
 **Not for:**
 - Narrowing what other widgets show — use widget-filter-dropdown or widget-filter-calendar.

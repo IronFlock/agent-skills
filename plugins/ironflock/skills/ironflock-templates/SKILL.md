@@ -210,6 +210,13 @@ complete reference.
   pick the newest row per entity or to hide deleted rows. A transform refreshes
   on its schedule, so it would only make the board late. app-architecture.md,
   "Entity tables", has the rules.
+- **Deleted entities stay out of every list.** When an entity table has a delete
+  flag (its `deleted` column, the column a delete form writes),
+  every widget that lists the table's entities filters on that flag: the
+  widget-table, the widget-sidenav, a navbar's items, the options of a dropdown,
+  the markers on a map, any list. Show deleted entities only where the user
+  explicitly asks for them (a "Show deleted" switch, a recycle bin, an audit
+  view).
 - **Reach a device's web UI through its tunnel.** Declare the port in
   port-template.yml, write the URL from `getRemoteAccessUrlForPort` into a table,
   and bind widget-embed to it. Never hard-code a device's address, port or URL.

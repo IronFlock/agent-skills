@@ -277,6 +277,15 @@ filterAnd:
   condition hides it afterwards. An older, undeleted row never comes back. Bind
   lists, menus and tables of records to the table this way, not to a transform.
 
+- **Every list of a table with a delete flag filters on it.** When a table has a
+  delete flag (a boolean `deleted` column, the column a delete form writes,
+  pattern 6), every widget that lists its entities hides the
+  flagged ones: tables, sidenavs, navbar items, the options of a dropdown or of
+  a form's dropdown field, markers on a map, any list. This holds for every list
+  on the board, not only the one next to the edit form. Leave the filter out, or
+  make it switchable as above, only where the user explicitly asks to see
+  deleted entities.
+
 ### Aggregation
 
 `series` makes the database compute one value per group instead of returning raw
@@ -640,21 +649,91 @@ link such as "Home", "Back to the list" or "Manage documents".
    section's item stays highlighted on both.
 
 6. **Records that users create, edit and delete** (master data, settings). A
-   data-driven widget-sidenav lists the records (pattern 2 or 3) and opens one edit
+   data-driven widget-sidenav lists the records (pattern 2 or 3) and opens one
    page per record (`/settings/machines/*`). A "New" form
    (`formButton: $bool:true`) sits as a floating action button on top of that
    sidenav, and the list page itself shows an overview of all records, such as a
-   table (see [Boards that manage assets](#boards-that-manage-assets)). The edit
-   page holds a widget-form:
-   - Its fields are prefilled from the record: `preFilledValue` is a valueRef with
-     a `useRoute` filter on the record's key, and the key itself is a
-     `hiddenField`, so a save updates that record.
-   - `deleteButton: $bool:true` with `deleteFlagColumn` set to the table's
-     soft-delete column. The form writes that column on every submit: `false` on
-     Save and `true` on Delete, so saving a deleted record restores it. Give the
-     "New" form the same `deleteFlagColumn`, so every row has the flag set.
-   - `deleteNavigationRoute` leads back to the list, which the form opens after a
-     delete.
+   table (see [Boards that manage assets](#boards-that-manage-assets)).
+
+   Editing and deleting take two widget-forms. The **edit form** is prefilled
+   from the record (`preFilledValue` valueRefs with `{latest: true}`), and the
+   key itself is a `hiddenField`, so a save updates that record. The **delete
+   form** is a separate widget-form: from widget-form 2.0 on, a form has no
+   delete button or delete setting of its own (1.x had `deleteButton`,
+   `deleteFlagColumn` and `deleteNavigationRoute`; never use them). A delete form
+   is a form whose Submit says "Delete" and that writes exactly two hidden
+   fields: the record's key and `deleted: true`.
+
+   There are two equally good ways to offer them. Pick the one that suits the
+   board, or offer both:
+
+   - **Icons in the table that lists the records.** The overview table gets a
+     column of `type: $str:edit` with `styling.parameterKey: $str:edit` (a pen)
+     and one with `styling.parameterKey: $str:delete` and `styling.iconName:
+     $str:delete`, both bound to the key. A click writes the key into that URL
+     parameter. The edit form and the delete form each have `formButton:
+     $bool:true` and `openParameter: $str:edit` or `$str:delete`: on a board
+     they show no button, and their dialog is open while the URL carries the
+     parameter. Their valueRefs filter the key with `value: edit` (or `delete`)
+     and `useFilter: true`, and they need no `submitNavigationRoute`: the dialog
+     closes after a save or Cancel and drops the parameter. Their tiles stay
+     empty on a board: about 6 × 6 cells over a corner of the table (both may
+     share it), `z: 1`, with a transparent tile border and background.
+   - **On the record's page.** The edit form is shown in the tile
+     (`formButton: $bool:false`), its valueRefs filtered with `useRoute` on the
+     key. The delete form is a red button next to it that opens a confirmation
+     dialog and leads back to the list after the save. Give its tile about the
+     size of the button (some 12 × 5 cells), next to the edit form, not over it.
+
+   The delete form on the record's page:
+
+   ```yaml
+   - layout_id: delete-machine
+     package_name: widget-form
+     version: 2.0.0                       # 2.0.0 or later
+     chartconfig:
+         title: $str:Delete this machine?
+         formButton: $bool:true
+         formButtonStyle:                  # a red "Delete" button, not a round one
+             fab: $bool:false
+             label: $str:Delete
+             iconName: $str:delete
+             bgColor: $str:#d32f2f
+         accentColor: $str:#d32f2f         # the dialog's Delete button
+         buttonLabels:
+             submitLabel: $str:Delete
+             cancelLabel: $str:Keep
+         submitNavigationRoute: $str:/settings/machines/
+         formFields:                       # exactly these two, both hidden
+             - label: $str:Machine
+               type: $str:textfield
+               hiddenField: $bool:true
+               targetColumn: {tablename: machines, column: machine_id, dataType: string}
+               preFilledValue:
+                   valueRef:
+                       tablename: machines
+                       column: machine_id
+                       queryParams:
+                           limit: 1
+                           filterAnd:
+                               - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
+                               - {column: machine_id, operator: '=', value: '2', dataType: string, useRoute: true}
+             - label: $str:Deleted
+               type: $str:checkbox
+               hiddenField: $bool:true
+               defaultValueBoolean: $bool:true
+               targetColumn: {tablename: machines, column: deleted, dataType: boolean}
+   ```
+
+   In the table variant, the same delete form has `openParameter: $str:delete`
+   in place of `formButtonStyle` and `submitNavigationRoute`, and its key field
+   filters with `{column: machine_id, operator: '=', value: delete, dataType:
+   string, useFilter: true}` in place of the `useRoute` condition.
+
+   Rows written without the flag carry NULL, which the list filter below treats
+   as not deleted, so the "New" and edit forms need no field for it. To let
+   saving restore a deleted record, give the edit form a hidden checkbox on
+   `deleted` with `defaultValueBoolean: $bool:false`.
 
    Bind the sidenav, the overview table and every other widget that shows the
    records to the table itself, with `{latest: true}` and a filter on the
@@ -692,10 +771,11 @@ find their way around without having to think about it:
    `z: 1` and a transparent tile border and background. Put it on every page that
    has the sidenav, at the same position. Its fields are the asset's key
    (required, with `validation` when it has a format) and what a new asset
-   needs, and it has the same `deleteFlagColumn` as the edit form.
-4. **Clicking an asset opens its detail page** (`/machines/*`). The detail page
-   lets users change the asset's settings and delete the asset, with a widget-form
-   prefilled from the record (pattern 6).
+   needs.
+4. **Clicking an asset opens its detail page** (`/machines/*`). Users edit and
+   delete the asset either there, with an edit form and a red Delete button, or
+   from edit and delete icons in the overview table that open the forms as
+   dialogs; both are fine (pattern 6).
 5. **Other aspects of an asset get their own pages, behind tabs.** The selected
    asset's history, KPIs or alarms live on pages below its detail page
    (`/machines/*/history`, `/machines/*/kpis`). A widget-navbar above the detail
@@ -1204,8 +1284,10 @@ Some values only exist inside a running platform, and a template cannot know the
 3. Bindings sit at the right kind of property (valueRef on single values, tableRef
    on lists), each tableRef has a `limit` and a `format` shaped like its items, and
    aggregations have a complete window. Entity tables are bound with
-   `{latest: true}`, records with a filter on their `deleted` column, and no
-   transform deduplicates or cleans them.
+   `{latest: true}`, and every list of a table with a delete flag (tables,
+   sidenavs, navbar items, dropdown options, map markers) filters on that flag
+   unless the user explicitly asked to see deleted entities. No transform
+   deduplicates or cleans them.
 4. Every page fills the grid. Every page can be reached from the home page by
    clicking and leads back to it, no menu item links to `/`, no item's route is a
    prefix of another item's in the same menu, and every route leads to a page.

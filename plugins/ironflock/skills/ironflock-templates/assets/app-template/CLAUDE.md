@@ -52,8 +52,9 @@ app is installed on. `.ironflock/` connects it to the platform.
   ("Boards that manage assets").
 - The board reads an entity table's current state with the `{latest: true}`
   filter on the table itself, live: a new row replaces the entity's row in every
-  widget. Records users delete get a boolean `deleted` column that the widgets
-  filter on. Never add a transform (a view) to pick the newest row per entity or
+  widget. Records users delete get a boolean `deleted` column, and every widget
+  that lists them (tables, sidenavs, dropdown options, map markers) filters on
+  it unless the user explicitly asks to see deleted records. Never add a transform (a view) to pick the newest row per entity or
   to hide deleted rows; a transform refreshes on a schedule and would only show
   the same rows late.
 - Append what must not be lost (state changes, records) with `append_to_table`:
