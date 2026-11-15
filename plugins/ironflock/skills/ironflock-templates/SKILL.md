@@ -79,8 +79,9 @@ in it is described.
    starter's.
 4. **Entities first, then the tables.** The entities from the interview are the
    app's model ("The entities" in app-architecture.md): one entity table per
-   entity, keyed by what identifies it, and tables of readings and events that
-   carry those keys. For each entity, decide who writes it (the devices, the
+   entity, keyed by an id the app generates for each asset users create (its
+   name is a column, never the key), or by the key the hardware reports for
+   what devices find, and tables of readings and events that carry those keys. For each entity, decide who writes it (the devices, the
    board's forms, a service) and what users do with it on the board: see it in
    a list, create it, change it, delete it. A board can only show what a table
    in `data-template.yml` holds, so design or extend the tables before the
@@ -224,6 +225,15 @@ complete reference.
   gets a list, a "New" form in a dialog, and a detail page with edit and delete
   on the board, all bound to the entity table itself. app-architecture.md, "The
   entities", has the rules.
+- **Assets are identified by a generated id, never by their name.** The entity
+  table of an app's assets is keyed by an id column (`camera_id`), and the
+  name is an ordinary column users can change. The app generates the id when
+  the asset is created (the "New" form in a hidden key field, code with a
+  UUID); users never type it. Child tables, readings, filters and routes all
+  use the id (`/camera/<camera_id>`, never `/camera/<name>`), and lists, menus
+  and titles show the name. Only what devices find keeps the key the hardware
+  reports (`device_id`, a serial number). app-architecture.md, "The entities",
+  has the rules.
 - **An entity table shows its current state live, without a view.** A table with
   `maintainLatestFlagFor` is a history: a change is a new row, a delete is a new
   row with `deleted: true`. A widget bound to that table with the
@@ -246,7 +256,7 @@ complete reference.
   view with more columns exists: bind other widgets to the view, never the
   list. Nested lists are no exception: the table carries the keys of every
   entity above it, and the menu builds each route from them
-  (`route: $str:/device/{{device}}/stream/{{stream}}` with `variables`,
+  (`route: $str:/stream/{{stream}}/zone/{{zone}}` with `variables`,
   board-template.md, pattern 3).
 - **Refresh the transforms your code changes.** A widget that needs a
   transform (a join, an aggregate, an overview of each asset's state and
@@ -287,12 +297,17 @@ complete reference.
   data reference. Pasted numbers go stale the moment the board is installed.
 - **The route tree follows the entity tree and the intended UX.** Decide the
   pages before the widgets. Every entity users open has a type segment and a
-  key segment (`/device/<device>`), a child's pages continue below its parent's
-  key (`/device/<device>/stream/<stream>`), never two keys in a row, and each
+  key segment (`/stream/<stream>`), the key segment holds the entity's id,
+  never its name, a child's pages continue below its parent's
+  key (`/stream/<stream>/zone/<zone>`), never two keys in a row, and each
   entity has one page that every link to it opens. Home answers the app's
   goal, an entity's events, settings and expert details are pages below it, an
   entity that belongs to no other is a root (`/model/<model>`), and a nested
-  type users go to directly also gets a list at the top (`/stream`).
+  type users go to directly also gets a list at the top (`/zone`). The
+  project's devices (the IronFlock IPCs, a `devices` or `gateways` table) are
+  the exception: a technical detail, so they get their own branch
+  (`/device/<device>`), and what belongs to a device starts its own branch
+  (`/stream/<stream>`, never `/device/<device>/stream/<stream>`).
   board-template.md, "The route tree", has the rules and an example.
 - **Make every page users see reachable by clicking, and the way there obvious.**
   People only click through a board; nobody types a route. Every page with widgets
