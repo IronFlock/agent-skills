@@ -1,0 +1,42 @@
+# yaml-language-server: $schema=https://ironflock.com/schemas/board-template/v1.yml
+# Highlighting from widget-sidenav and widget-navbar 1.0.26 on: routes are compared
+# segment by segment, and only the most specific matching items are highlighted.
+# A Home item is highlighted on the home page only, and of /reports and
+# /reports/daily only Daily is highlighted on /reports/daily, so neither is a trap.
+# Two items with the same route (/reports and /reports/) are still highlighted
+# together. navigation.yml checks the same menu on 1.0.19, where both are traps.
+# expect-none: widgets[0].chartconfig.navItems[0].route
+# expect-none: widgets[0].chartconfig.navItems[1].route
+# expect-none: widgets[0].chartconfig.navItems[2].route
+# expect: WARN  widgets[0].chartconfig.navItems[3].route :: same route as 'Reports'
+name: highlighting-board
+widgets:
+    - layout_id: nav
+      package_name: widget-sidenav
+      version: 1.0.27
+      chartconfig:
+          title: $str:Plant
+          route: $str:/
+          navItems:
+              - {label: $str:Home, iconName: $str:home, route: $str:/}
+              - {label: $str:Reports, iconName: $str:description, route: $str:/reports}
+              - {label: $str:Daily, iconName: $str:today, route: $str:/reports/daily}
+              - {label: $str:All reports, iconName: $str:list, route: $str:/reports/}
+    - layout_id: page
+      package_name: widget-label
+      version: 1.0.10
+      chartconfig: {text: $str:Page}
+layout:
+    gridLayout:
+        - {id: nav, x: 0, y: 0, w: 16, h: 64, fixedWidth: true}
+        - {id: page, x: 16, y: 0, w: 80, h: 64}
+    subRoutes:
+        reports:
+            gridLayout:
+                - {id: nav, x: 0, y: 0, w: 16, h: 64, fixedWidth: true}
+                - {id: page, x: 16, y: 0, w: 80, h: 64}
+            subRoutes:
+                daily:
+                    gridLayout:
+                        - {id: nav, x: 0, y: 0, w: 16, h: 64, fixedWidth: true}
+                        - {id: page, x: 16, y: 0, w: 80, h: 64}

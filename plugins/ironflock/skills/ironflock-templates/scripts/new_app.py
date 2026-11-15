@@ -9,7 +9,8 @@ Copies assets/app-template: an edge program (main.py) that reads a machine
 (simulated) on every device, keeps the device's state and readings in the app's
 tables, applies the settings users save on the board, and serves a live view
 that the board embeds through the device's remote-access tunnel; its Dockerfile;
-and the .ironflock templates of all of it. The copy passes validate.py as is.
+the .ironflock templates of all of it; and design/, the app's architecture and
+design documents, written for the example. The copy passes validate.py as is.
 references/app-architecture.md explains how the parts fit together.
 
 The name is the app's name in IronFlock. It goes into the board template, and
@@ -66,8 +67,9 @@ def main() -> int:
         "\nNext:\n"
         "  1. Replace the simulated read_machine() in main.py with the real data source,\n"
         "     and adapt the tables, the board and the live view to what the app does.\n"
-        "  2. Replace the TODO: texts in README.md (the app's description for its users)\n"
-        "     and CLAUDE.md.\n"
+        "  2. Replace the TODO: texts in README.md (the app's description for its users),\n"
+        "     CLAUDE.md and the design/ documents (purpose, architecture, entities, board,\n"
+        "     decisions), and keep design/ current with every change.\n"
         f"  3. python3 {SKILL / 'scripts' / 'validate.py'} {dest}\n"
         "  4. Push to the app's repository in IronFlock and run it on a device from the IDE."
     )

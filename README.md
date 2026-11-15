@@ -135,7 +135,7 @@ plugins/ironflock/
     │   │   ├── example-board.yml        a complete, valid three-page board
     │   │   ├── widget-catalog.md        which widget for which data (generated)
     │   │   └── app-templates.md         data, env, port and ai templates
-    │   ├── assets/app-template/         the starter app
+    │   ├── assets/app-template/         the starter app, with its design/ folder
     │   ├── schemas/<name>/v1.yml        JSON Schemas (vendored, see below)
     │   └── scripts/
     │       ├── validate.py              validates a whole .ironflock folder
@@ -189,7 +189,9 @@ an app from it that does too and keeps no trace of the starter's name. The
 starter pins its widget versions, `ironflock` and `aiohttp`; when you move a
 pin, run the tests, build the image (`docker build` in the starter's folder),
 and run the program on a device. Its README.md is written for the people who
-install an app, its CLAUDE.md for the agents that change it.
+install an app, its CLAUDE.md for the agents that change it, and its `design/`
+folder (purpose, architecture, entities, board, decisions) for both developers
+and agents; keep `design/` true to the starter when you change it.
 
 **Test the widget scripts** after changing `check_widget.py`, `new_widget.py` or the
 template: `python3 tests/widget_checks.py`. It scaffolds a widget, requires the

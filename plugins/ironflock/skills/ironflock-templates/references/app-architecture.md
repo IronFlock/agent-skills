@@ -11,17 +11,18 @@ starter app in `assets/app-template/` follows all of them; scaffold it with
 1. [The parts of an app](#the-parts-of-an-app)
 2. [Rules](#rules)
 3. [Understanding the app first](#understanding-the-app-first)
-4. [The entities](#the-entities)
-5. [Where each kind of data goes](#where-each-kind-of-data-goes)
-6. [Reading and writing state with the SDK](#reading-and-writing-state-with-the-sdk)
-7. [Entity tables: current state, updates and deletes](#entity-tables-current-state-updates-and-deletes)
-8. [Following what the board writes](#following-what-the-board-writes)
-9. [Commands, device functions and topics](#commands-device-functions-and-topics)
-10. [The container on the device](#the-container-on-the-device)
-11. [Docker Compose](#docker-compose)
-12. [Web UIs on the device](#web-uis-on-the-device)
-13. [Several devices](#several-devices)
-14. [Checklist](#checklist)
+4. [The design folder](#the-design-folder)
+5. [The entities](#the-entities)
+6. [Where each kind of data goes](#where-each-kind-of-data-goes)
+7. [Reading and writing state with the SDK](#reading-and-writing-state-with-the-sdk)
+8. [Entity tables: current state, updates and deletes](#entity-tables-current-state-updates-and-deletes)
+9. [Following what the board writes](#following-what-the-board-writes)
+10. [Commands, device functions and topics](#commands-device-functions-and-topics)
+11. [The container on the device](#the-container-on-the-device)
+12. [Docker Compose](#docker-compose)
+13. [Web UIs on the device](#web-uis-on-the-device)
+14. [Several devices](#several-devices)
+15. [Checklist](#checklist)
 
 ## The parts of an app
 
@@ -120,12 +121,50 @@ only what the request leaves open, and wait:
   - whether a device serves a web page of its own, and who may open it;
   - what exists already: code, tables, a board, data that must survive.
 
-Write the answers down where the next person finds them: the goal and the
-value in README.md ("What it does"), the entities with their keys in CLAUDE.md
-and in the `description` of data-template.yml. When the request already answers
+Write the answers down where the next person finds them: the users, the goal,
+the value and what is left out in `design/README.md` (next section), what the
+app does for its users in README.md ("What it does"), the entities with their
+keys in `design/entities.md` and in the `description` of data-template.yml.
+When the request already answers
 the questions, state your understanding in a few lines (users, goal, entities
 with their keys) and go on without waiting; the user corrects it at the
 cheapest moment. A small change to an existing app needs no interview.
+
+## The design folder
+
+Every app keeps its architecture and design in a `design/` folder in its
+repository, next to `.ironflock/`. It is where the next developer, and the next
+coding agent, learn how the app is built and why, without reconstructing it from
+the code. The starter app (`scripts/new_app.py`) comes with one, filled in for
+its example, and every new app keeps these documents:
+
+| Document | What it holds |
+|---|---|
+| `design/README.md` | The index, and the app's purpose: its users, the goal, the value, what this version leaves out |
+| `design/architecture.md` | The parts (containers, the board, web UIs), what runs where, every table with its kind and its one writer, the data flows between devices and board, parameters, ports and tunnels, device functions and topics, the failure behaviour |
+| `design/entities.md` | The entity model (below): each entity, its key, its table, who writes it, what users do with it on the board, and the relations |
+| `design/board.md` | The board's design: the brief, the route tree with what each page shows and offers, the band plan of each page, the look and the state colours |
+| `design/decisions.md` | The decisions, newest first, dated: what was decided between which alternatives, why, and what was left out |
+
+Further documents join when the app needs them (a protocol, a data source's
+quirks, a sizing estimate); `design/README.md` lists every one.
+
+**Keep it current.** The design folder describes the app as it is:
+
+- Read it before changing an app that has one.
+- A change that makes a document wrong updates that document in the same
+  change: a new table, column or transform, a new entity or relation, a new page
+  or route, a parameter, port, device function or topic, another look. A change
+  that alters no document (a bug fix, a widget's colour) leaves them alone.
+- A choice between alternatives with a reason worth keeping gets a dated entry
+  in `decisions.md`. Entries stay as written; the other documents are rewritten
+  to say what holds now, never patched with "update:" notes.
+- A new app gets the folder from the start, filled from the interview before
+  the first template. An existing app without one gets it when it is refactored
+  (the interview case), written from its code and templates; a small change to
+  such an app does not create it.
+- The folder is for developers. README.md stays the description for the people
+  who install the app, and CLAUDE.md points to `design/` instead of repeating it.
 
 ## The entities
 
@@ -134,7 +173,7 @@ streams, sources and AI models; a vehicle app with cars, drivers, routes and
 drives; a maintenance app with machines, tasks and reports. That list, with
 each entity's identifying key and the relations between them, is the app's
 model. Every table, page and form, and most of the code, follow from it, so get
-it right before anything else, and keep it in CLAUDE.md as a table:
+it right before anything else, and keep it in `design/entities.md` as a table:
 
 | Entity | Key | Written by | On the board |
 |---|---|---|---|
@@ -154,12 +193,15 @@ it right before anything else, and keep it in CLAUDE.md as a table:
   There is no generated id. A "New" form asks for the key as a required field
   (with `validation` when it has a format), and a device writes the key it
   reads from the hardware.
-- **Relations are key columns.** A child carries its parent's key (`streams`
-  has `camera_id`), an assignment is a column on the entity that gets assigned
-  to (`streams.model_id`), and a many-to-many is an entity of its own, keyed by
-  both. A binding cannot join, so the board shows a relation by filtering the
-  child's table on the parent's key from the route (pattern 2 in
-  board-template.md), and a transform joins only for what a filter cannot show.
+- **Relations are key columns.** A child carries the keys of its parent and of
+  every entity above it (`streams` has `camera_id`; a zone drawn on a stream
+  has `camera_id` and `stream_id` besides its own `zone_id`), an assignment is
+  a column on the entity that gets assigned to (`streams.model_id`), and a
+  many-to-many is an entity of its own, keyed by both. A binding cannot join,
+  so the board shows a relation by filtering the child's table on a key from
+  the route (pattern 2 in board-template.md), and builds the route to a child
+  from the keys in its row (pattern 3). A transform joins only for what a
+  filter cannot show.
 - **Readings and events carry the entity's key.** `detections` has `stream_id`
   and `tsp`, `drives` has `car_id` and `driver_id`. These tables have no
   `maintainLatestFlagFor`, because every row counts.
@@ -174,8 +216,13 @@ it right before anything else, and keep it in CLAUDE.md as a table:
   by `device_key` and written by the device about itself (see
   [Several devices](#several-devices)).
 
-**From the entities to the board.** Every entity users manage gets the shape of
-"Boards that manage assets" in board-template.md:
+**From the entities to the board.** The relations decide the board's pages
+before any widget: a child's pages sit below its parent's key
+(`/device/<device>/stream/<stream>`), an entity that belongs to no other is a
+root (`/model/<model>`), and each entity has one page. "The route tree" in
+board-template.md derives the pages from the model and the board's brief.
+Every entity users manage gets the shape of "Boards that manage assets" in
+board-template.md:
 
 | Users want to | Widget | Bound to |
 |---|---|---|
@@ -189,8 +236,8 @@ dropped them): deleting is always a separate delete form, board-template.md,
 pattern 6. Rows written without the flag carry NULL, which the lists' filter
 counts as not deleted. The lists, and a detail page's view of one entity, are bound
 to the raw entity table with the two filters and never to a transform: a
-transform refreshes on its schedule tick, so the list would stop following a
-save or a delete live (see
+transform changes only on its schedule tick or when the app's code refreshes
+it, so the list would stop following a save or a delete live (see
 [Entity tables](#entity-tables-current-state-updates-and-deletes)). An entity
 the devices write is listed the same way, without the forms. Readings and
 events are not listed as entities but shown as charts and tables over a time
@@ -244,13 +291,13 @@ the connection, so a program that runs until it is stopped never returns from
 
 | Operation | Python | What it does |
 |---|---|---|
-| Create, update | `publish_to_table(table, row)` | Writes a row; fire and forget |
-| Create, update, with the outcome | `append_to_table(table, row)` | Writes a row; a refused row raises |
-| Many rows at once | `publish_rows_to_table`, `append_rows_to_table` | One message, all or nothing |
+| Create, update | `append_to_table(table, row)`, or its alias `publish_to_table` | Writes a row and returns once it is stored; a refused row raises |
+| Many rows at once | `append_rows_to_table`, `publish_rows_to_table` | One message, all or nothing |
 | Read | `getHistory(table, {"limit": n, ...})` | The newest matching rows, oldest first |
 | Read the current state | `getHistory(table, {"limit": n, "filterAnd": [{"latest": True}]})` | The newest row per entity |
 | Read aggregated | `get_series_history(table, params)` | One row per time bucket |
 | Follow | `subscribe_to_table(table, handler)` | Every new row, as the platform stores it, also across reconnects |
+| Bring a transform up to date | `refresh_transform(transform)` | Refreshes it now and pushes its rows to the open boards |
 | Report an error | `report_error(error, user_message=...)` | A row in `error-logs`, shown by widget-toast |
 | Delete | a row with `deleted: True` | Rows are history; see below |
 
@@ -271,13 +318,35 @@ the connection, so a program that runs until it is stopped never returns from
   subscriptions and device functions, and delivers to a table subscription the
   rows stored while the connection was down (`ironflock` 1.10.0 and later).
   Never reach into `flock.connection`.
-- **Append what must not be lost.** `append_to_table` waits up to a minute
-  (`reconnect_window`) for a restarting platform, the router and the data
-  backend alike, and raises `RuntimeError` when it does not come back.
-  `publish_to_table` waits only for the connection: a row published while the
-  data backend restarts is acknowledged and lost. Append state changes and
-  records; publish high-rate readings. Catch `RuntimeError` in a loop that must
-  keep running, and buffer the rows if none may be lost.
+- **A write rides out a restart, or raises.** `append_to_table` and
+  `publish_to_table` are the same call (`ironflock` 1.10.0 and later): it waits
+  up to a minute (`reconnect_window`) for a restarting platform, the router and
+  the data backend alike, returns once the row is stored, and raises
+  `RuntimeError` when the platform does not come back or refuses the row. Catch
+  `RuntimeError` in a loop that must keep running, and buffer the rows if none
+  may be lost. Send high-rate readings in batches with `append_rows_to_table`.
+- **Refresh the transforms your writes change.** A transform reaches the board
+  on its `schedule` tick. When the code writes rows that a transform reads, and
+  a widget shows that transform (an aggregate, a join, an overview of each
+  stream's state and counts), call `refresh_transform("<transform>")` right
+  after the writes (`ironflock` 1.11.0 and later; `refreshTransform` in
+  JavaScript, `RefreshTransform(ctx, name)` in Go). It runs the transform's
+  refresh now and pushes its rows (up to 3000) to every open board, so the
+  widgets bound to it show the change at once instead of at the next tick.
+  - Call it once after a batch of writes, not once per row. A write has been
+    stored when it returns, so the refresh includes it.
+  - Refresh a stack of transforms from the bottom up: each one reads the one
+    below as of that one's last refresh.
+  - Rows the board's forms write reach a transform at once when a container
+    follows the table (`subscribe_to_table`) and refreshes it after applying
+    the change. Several devices may do so at the same time: calls that overlap
+    share one refresh, and a refresh with nothing new to read is skipped.
+  - Only the app's own containers can call it. It raises `RuntimeError` when
+    the data backend refuses; `URI_REFRESH_IN_PROGRESS` means a scheduled
+    refresh holds the view, so call again shortly.
+  - It makes a transform as current as the code's writes, not live: a list of
+    entities still binds to the entity table itself (next section), which
+    follows every write, the board's own included, with no code in between.
 - **A table's columns are its contract.** A key the code writes that no column
   declares is dropped, and a column nobody writes stays empty; neither raises.
   Keep data-template.yml and the code in step.
@@ -311,9 +380,11 @@ current state at read time:
   never takes its place.
 - **Never build a transform for this.** A view that deduplicates an entity table
   by key or hides its deleted rows reproduces what the two filters do, but a
-  transform reaches the board only on its `schedule` tick, so every change
-  shows up seconds or minutes late. Transforms are for what a binding cannot
-  compute: joins, arithmetic, aggregations over current rows. When such a
+  transform reaches the board only on its `schedule` tick or when the app's
+  code calls `refresh_transform`, so a change the board's forms make shows up
+  late, while the filters follow every change by themselves. Transforms are
+  for what a binding cannot compute: joins, arithmetic, aggregations over
+  current rows. When such a
   transform needs the current state of entities, select it in its SQL with
   `DISTINCT ON (<key>) ... ORDER BY <key>, tsp DESC` and filter `deleted` there.
 - **Code reads it the same way.** `getHistory(table, {"limit": 500, "filterAnd":
@@ -554,11 +625,12 @@ Rules for the page:
 
 ## Checklist
 
-1. The entity model is written down in CLAUDE.md: each entity has its own
-   entity table, keyed by what identifies it, relations and readings carry
+1. The entity model is written down in `design/entities.md`: each entity has
+   its own entity table, keyed by what identifies it, relations and readings carry
    those keys, and every entity users manage has a list, a "New" form in a
    dialog, and a detail page with edit and delete on the board, bound to the
-   table itself.
+   table itself. The board's routes follow the entity tree (board-template.md,
+   "The route tree").
 2. All state is in tables, each with one writer named in its description, and
    every column the code writes is declared in data-template.yml.
 3. Every row has a `tsp`; state rows are written on change and hold only the key
@@ -579,4 +651,7 @@ Rules for the page:
 9. A Compose app follows the rules above: no `env_file:`, no `profiles:`, no
    `${VAR}` host ports, named volumes for files, and only the ports users need
    published.
-10. `scripts/validate.py <app-dir>` reports no errors.
+10. `design/` describes the app as it is now: its purpose, architecture, entity
+    model, board and decisions match the code and the templates, and the
+    starter's `TODO:` comments are gone.
+11. `scripts/validate.py <app-dir>` reports no errors.

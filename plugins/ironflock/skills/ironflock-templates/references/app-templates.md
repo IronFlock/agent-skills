@@ -90,14 +90,20 @@ read them.
   repeating the aggregation in CTEs. The order of transforms in the file does not
   matter. Each transform refreshes on its own `schedule` and reads the one below
   as of that one's last refresh, so delays add up along a stack: give the lower
-  transforms a schedule at least as frequent as the ones on top.
-- **A transform reaches open boards only on its `schedule` tick**, not when a table
-  underneath changes. With `* * * * *` a new record shows up in a transform-driven
-  menu or list up to a minute late. So bind menus, lists and states to tables
-  wherever filters can express what they show (current state and deleted records
-  are filters, see above), and give the transforms that remain behind menus,
-  lists and live states a seconds tick: a sixth, leading field is seconds
-  (`*/5 * * * * *`).
+  transforms a schedule at least as frequent as the ones on top, and when the
+  code refreshes a stack (`refresh_transform`), refresh it from the bottom up.
+- **A transform reaches open boards on its `schedule` tick, or when the app's
+  code refreshes it.** By itself it does not notice a change in the tables
+  underneath: with `* * * * *` a new record shows up up to a minute late. Code
+  that writes the tables a transform reads calls `refresh_transform("<transform>")`
+  right after the batch (app-architecture.md, "Reading and writing state with
+  the SDK"), and the boards bound to the transform show the change at once. Still
+  bind menus, lists and states to tables wherever filters can express what they
+  show (current state and deleted records are filters, see above): a table
+  follows every write, the board's own forms included, with no code in between.
+  Refresh the transforms that remain behind menus, lists and live states from
+  the code that writes, and give them a seconds tick for writes no code sees
+  (a sixth, leading field is seconds: `*/5 * * * * *`).
 - **Mark app-internal tables and transforms `private: true`.** Decide this for
   every table. Users of the app should see only data that means something to them:
   values they analyze, chart, alarm on or build dashboards with. Internal details
