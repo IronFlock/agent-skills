@@ -33,8 +33,8 @@ in it is described.
 
 ## Workflow
 
-1. **Read before writing.** Look at the existing `.ironflock/` files and at the app's
-   code. The code shows what the app actually publishes (`publish_to_table` calls)
+1. **Read before writing.** Look at the app's `design/` folder, when it has one,
+   at the existing `.ironflock/` files and at the app's code. The code shows what the app actually publishes (`publish_to_table` calls)
    and which functions it registers (`register_device_function` calls). The templates
    have to agree with it. If templates already exist, run the validator (step 7)
    once before changing anything, so you can tell findings that were already there
@@ -51,7 +51,8 @@ in it is described.
    open, all in one message, and wait for the answers. When the request already
    answers everything, write your understanding down in a few lines (users,
    goal, entities with their keys) and go on; the user corrects it at the
-   cheapest moment. A small change to an existing app needs no interview.
+   cheapest moment. The answers go into the app's `design/` folder (step 3). A
+   small change to an existing app needs no interview.
 3. **Start a new app from the starter.** For a new app in an empty folder (or one
    holding only `.git`), scaffold it:
 
@@ -65,11 +66,17 @@ in it is described.
    serves a live view that the board embeds. Keep its structure and replace its
    example: the data source in `read_machine()`, the tables, the board, the live
    view, and the `TODO:` texts in `README.md` (the app's description for its
-   users) and `CLAUDE.md`. Delete what the app does not need, such as the live
-   view and the port-template when it serves no web page. Never scaffold over an
-   existing app, including the demo app IronFlock puts into a new app's
-   repository: use the starter's files as the reference for changing the app's
-   own, and ask before replacing demo code.
+   users), `CLAUDE.md` and the `design/` folder. `design/` holds the app's
+   architecture and design documents: its purpose and users, the architecture,
+   the entity model, the board's design and the decisions ("The design folder"
+   in app-architecture.md). Rewrite each one for this app before the first
+   template, and keep them current from then on. Delete what the app does not
+   need, such as the live view and the port-template when it serves no web
+   page. Never scaffold over an existing app, including the demo app IronFlock
+   puts into a new app's repository: use the starter's files as the reference
+   for changing the app's own, and ask before replacing demo code. Such an app
+   is new all the same, so give it a `design/` folder shaped like the
+   starter's.
 4. **Entities first, then the tables.** The entities from the interview are the
    app's model ("The entities" in app-architecture.md): one entity table per
    entity, keyed by what identifies it, and tables of readings and events that
@@ -78,16 +85,23 @@ in it is described.
    a list, create it, change it, delete it. A board can only show what a table
    in `data-template.yml` holds, so design or extend the tables before the
    board. If the code doesn't publish the data yet, say so and change the code
-   too. For each table, decide whether users of the app should work with it
+   too. Write the model into `design/entities.md` and the tables with their
+   writers into `design/architecture.md`. For each table, decide whether users of the app should work with it
    directly. Mark tables that only hold the app's internal details
    `private: true` (app-templates.md explains when).
 5. **Design the board before you write it.** Read "Designing a board" in
    [references/board-template.md](references/board-template.md). Decide who looks
    at the board and where, what question each page answers, what people look for
    first, and which look (a preset in its Style section) suits that viewing
-   situation, `office` when nothing says otherwise. Write those decisions into
-   the board's comment header. Every entity users manage gets the shape of
-   "Boards that manage assets" there: its list (a widget-sidenav as the way to
+   situation, `office` when nothing says otherwise. Then lay out the route tree
+   ("The route tree" there), before any page gets a widget: the pages follow
+   the entity tree (a type segment and a key segment per entity, a child's
+   pages below its parent's key, one page per entity, its events, settings and
+   expert details as pages below it), and the brief decides what home answers
+   and what each page shows. Write those decisions, the route tree one line per
+   page, into `design/board.md`, and their short form into the board's comment
+   header. Every entity users manage gets the
+   shape of "Boards that manage assets" there: its list (a widget-sidenav as the way to
    each one, a widget-table as the overview) bound to the entity table itself,
    a "New" form that opens in a dialog on top of the list, and a detail page
    with the edit form and delete. One record shown rather than edited (an
@@ -119,8 +133,8 @@ in it is described.
    and fix it unless it is deliberate. The validator has its own test suite, so a
    clean run is enough; there is no need to seed mistakes to test it.
 8. **Report** what you created, the entities and their tables, which look you
-   chose and why, which tables and widgets connect, and anything the app's code
-   still has to do. Tell the user
+   chose and why, which tables and widgets connect, which design documents you
+   wrote or changed, and anything the app's code still has to do. Tell the user
    they can open the board in IronFlock's board editor to adjust it visually. The
    editor reads and writes the same `board-template.yml`. For a new app, add how
    to get it running: push it to the app's repository in IronFlock and run it on
@@ -192,6 +206,15 @@ complete reference.
   device was offline. Neither side calls the other, nothing polls, and app code
   never touches the SDK's connection or sessions. app-architecture.md has the rules
   and the code patterns.
+- **The design folder is the app's memory.** Every app keeps its architecture
+  and design in `design/`: purpose and users, architecture, entity model,
+  board, decisions. A new app gets it from the start. Read it before changing
+  an app, and update the documents a change makes wrong in the same change (a
+  table, an entity, a page or route, a parameter, port or device function);
+  a choice between alternatives gets a dated entry in `decisions.md`. The
+  documents say what holds now; README.md stays the description for the
+  people who install the app. app-architecture.md, "The design folder", has
+  the rules.
 - **The entities are the app's backbone.** An app is shaped by what it deals
   with: a camera app by IPCs, cameras, streams, sources and AI models, a vehicle
   app by cars, drivers, routes and drives. Get that list, each entity's
@@ -207,20 +230,35 @@ complete reference.
   `{latest: true}` filter and a filter on `deleted` shows exactly the current,
   undeleted entities, and follows every change in under a second: a new row
   replaces the entity's row, a deleting row removes it. Never add a transform to
-  pick the newest row per entity or to hide deleted rows. A transform refreshes
-  on its schedule, so it would only make the board late. app-architecture.md,
-  "Entity tables", has the rules.
+  pick the newest row per entity or to hide deleted rows. A transform reaches
+  the board on its schedule tick or when the app's code refreshes it, so it
+  would only make the board late. app-architecture.md, "Entity tables", has the
+  rules.
 - **A master list reads the asset table, never a view.** The widget that lists
   the assets of a type is that type's master list: the widget-sidenav or
   data-driven widget-navbar that leads to each asset, and the overview
   widget-table. Bind it to the entity table itself, with `{latest: true}` and
   the filter on `deleted`, so that an asset created with the "New" form shows
   up in the list, and a deleted one leaves it, in under a second. A list bound
-  to a transform changes only on the transform's schedule, and users would
-  create or delete an asset without seeing it happen. This holds even when a
+  to a transform changes only on the transform's schedule or when the app's
+  code refreshes it, while the board's forms write the table directly, so users
+  would create or delete an asset without seeing it happen. This holds even when a
   view with more columns exists: bind other widgets to the view, never the
-  list. The one exception is a sub-asset list below a `*` page, whose routes
-  need a transform (board-template.md, "Boards that manage assets").
+  list. Nested lists are no exception: the table carries the keys of every
+  entity above it, and the menu builds each route from them
+  (`route: $str:/device/{{device}}/stream/{{stream}}` with `variables`,
+  board-template.md, pattern 3).
+- **Refresh the transforms your code changes.** A widget that needs a
+  transform (a join, an aggregate, an overview of each asset's state and
+  counts) gets its rows on the transform's schedule tick. When the app's code
+  writes rows that such a transform reads, it calls
+  `refresh_transform("<transform>")` once after the batch (`ironflock` 1.11.0
+  and later; `refreshTransform` in JavaScript, `RefreshTransform` in Go): the
+  data backend refreshes the view and pushes its rows to every open board, so
+  those widgets update at once. For a table the board's forms write, the
+  container that follows the table refreshes after applying the change.
+  app-architecture.md, "Reading and writing state with the SDK", has the
+  details.
 - **Deleted entities stay out of every list.** When an entity table has a delete
   flag (its `deleted` column, the column a delete form writes),
   every widget that lists the table's entities filters on that flag: the
@@ -237,13 +275,24 @@ complete reference.
   board", has the rules and the key each widget takes its colours from.
 - **Bind, don't paste.** If a value lives in a table, bind the widget to it with a
   data reference. Pasted numbers go stale the moment the board is installed.
+- **The route tree follows the entity tree and the intended UX.** Decide the
+  pages before the widgets. Every entity users open has a type segment and a
+  key segment (`/device/<device>`), a child's pages continue below its parent's
+  key (`/device/<device>/stream/<stream>`), never two keys in a row, and each
+  entity has one page that every link to it opens. Home answers the app's
+  goal, an entity's events, settings and expert details are pages below it, an
+  entity that belongs to no other is a root (`/model/<model>`), and a nested
+  type users go to directly also gets a list at the top (`/stream`).
+  board-template.md, "The route tree", has the rules and an example.
 - **Make every page users see reachable by clicking, and the way there obvious.**
   People only click through a board; nobody types a route. Every page with widgets
   must be reachable from the home page and lead back to it. A page that only holds
   the pages below it (`/devices` above `/devices/*`, with `gridLayout: []`) need
-  not be reachable itself, as long as those pages are. Home is a menu's title,
-  never a menu item: an item is highlighted whenever the current route starts with
-  its route, so an item for `/` is highlighted on every page. board-template.md's
+  not be reachable itself, as long as those pages are. Pin widget-navbar and
+  widget-sidenav 1.0.26 or later: they highlight only the most specific matching
+  item, so a Home item, and an overview next to its sections, are highlighted on
+  their own pages only (older versions light up an item for `/` on every page).
+  board-template.md's
   "Pages and navigation" section has the rules and the patterns (sections, list and
   detail pages, records with edit pages), and the validator walks every link to
   check.

@@ -15,8 +15,8 @@ are defined by its published definition schema (`scripts/widget.py <package>`).
 2. [Literal values](#literal-values)
 3. [Binding data](#binding-data): valueRef, tableRef, queryParams, filters, aggregation
 4. [What a binding can and cannot read](#what-a-binding-can-and-cannot-read)
-5. [Designing a board](#designing-a-board): the brief, what goes where, one
-   meaning per colour, the look, a sketch on a design canvas
+5. [Designing a board](#designing-a-board): the brief, the route tree, what goes
+   where, one meaning per colour, the look, a sketch on a design canvas
 6. [Pages and navigation](#pages-and-navigation): reachability, highlighting, link
    resolution, navigation patterns, boards that manage assets, filter widgets,
    uploading files with a form, embedding a web UI the app serves
@@ -40,7 +40,7 @@ name: machine-monitor                # the app name
 widgets:
     - layout_id: temperature         # this widget's id on the board
       package_name: widget-value     # widget type
-      version: 1.1.33                # pin the version whose schema you used
+      version: 1.1.39                # pin the version whose schema you used
       chartconfig:                   # the widget's settings
           title: $str:Temperature
           dataseries:
@@ -246,7 +246,8 @@ filterAnd:
   under a second, and a new row replaces the entity's previous row in the widget.
   So a table bound with this filter shows the current version of every entity,
   although the table keeps them all. No transform is needed for that, and one
-  would only show the same rows on its schedule tick.
+  would only show the same rows later: on its schedule tick, or when the app's
+  code refreshes it.
 
 - **From the URL path:** `useRoute: true`, where `value` is the index of the route
   segment. On `/machines/press-1`, segment `'1'` is `machines` and `'2'` is
@@ -353,8 +354,11 @@ There's no arithmetic, ratio, join or derived column in a binding, and no widget
 computes those either. When a widget needs one, add a transform to
 data-template.yml that computes it in SQL and bind to the transform. The same goes
 for "latest value per machine, summed", or anything else that combines rows in a
-way the aggregation table above cannot express. A transform refreshes on its
-schedule and never live, so use one only for what no filter can do. The current
+way the aggregation table above cannot express. A transform reaches the board
+on its schedule tick, or at once when the app's code calls `refresh_transform`
+after writing the tables it reads (app-architecture.md, "Reading and writing
+state with the SDK"). A filter on the table needs neither, so use a transform
+only for what no filter can do. The current
 row of each entity and the hiding of deleted records are filters (see above),
 never a transform.
 
@@ -362,12 +366,17 @@ never a transform.
 
 A board is glanced at, not studied. Before you place a widget, decide what the
 board is for, and write that decision where the next person who edits the board
-finds it: in the comment header at the top of board-template.yml, under the
-schema line, next to the tables and pages the header already names.
+finds it. The full design goes into the app's `design/board.md` (app-architecture.md,
+"The design folder"): the brief, the route tree with what each page shows and
+offers, the band plan of each page, the look. The comment header at the top of
+board-template.yml, under the schema line, carries the short version (the
+brief and the route tree, one line each) and points to `design/board.md`, so
+someone who opens only the template in the board editor finds it too. Keep the
+two in step.
 
 ### The brief
 
-Answer these in the header, one line each:
+Answer these in `design/board.md`, and in the header one line each:
 
 - **Who looks at the board, where, and from how far.** Operators glancing at a
   wall screen in the hall from ten metres, a supervisor at a laptop, a technician
@@ -388,6 +397,7 @@ Answer these in the header, one line each:
 ```yaml
 # yaml-language-server: $schema=https://ironflock.com/schemas/board-template/v1.yml
 # Board of machine-monitor, bound to measurements and machine_status.
+# Design: design/board.md (keep both in step).
 # Viewers: operators on the wall screen in the hall, from the line (control-room
 # preset: dark, few big tiles); the shift supervisor opens it on a laptop too.
 # /           is every machine running? the states first, then the temperature
@@ -395,6 +405,106 @@ Answer these in the header, one line each:
 # /machines   the list; /machines/* one machine's readings and its target speed
 # States: RUNNING green, IDLE grey, FAULT red, the same on every widget.
 ```
+
+### The route tree
+
+Decide the board's pages before you place the first widget. The entity model
+(app-architecture.md, "The entities") gives the tree its shape: which entities
+users open, and which one belongs to which. The brief decides the rest: what
+the home page answers, what each page shows, who needs which page, and where
+the actions go. Write the tree into `design/board.md`, one line per route with
+the page's name, what it shows and its main action, and its short form into
+the header. Then build the pages one by one, each answering its line.
+
+1. **Home answers the app's goal.** `/` is not a list of entities. It is the
+   summary the brief asks for (what runs, what needs attention, the latest
+   events), and its tiles lead to the entities' pages.
+2. **An entity users open gets a type segment and a key segment.** `/device`
+   lists the devices, `/device/<device>` is one device. Name the type segment
+   after the entity, in the same form on every level (`/device` and
+   `/device/<device>/stream`, or `/devices` and `/devices/<device>/streams`,
+   never a mix).
+3. **A child's routes continue below its parent's key**, along the relations
+   of the entity model. A stream runs on a device, and a zone is drawn on a
+   stream, so a zone is `/device/<device>/stream/<stream>/zone/<zone>`. Each
+   entity's table carries the keys of all entities above it (`zones` has
+   `device_key`, `stream_id` and `zone_id`), so every row holds its full route.
+   A URL then reads as a path of typed keys, and each prefix of it is a page of
+   its own: the type segment below a key (`/device/<device>/stream`) is that
+   parent's list of those children, with its "New" button. The key of the n-th
+   level is always segment 2n, the number its `useRoute` filters take (device
+   `'2'`, stream `'4'`, zone `'6'`). Never put two keys in a row
+   (`/streams/*/*`): nobody can tell which segment is which, and the first key
+   gets a page that is not the page of the entity it names.
+4. **Each entity has one page, where it sits in the tree.** Every link to a
+   stream, from home, from a list or from an event, opens
+   `/device/<device>/stream/<stream>`. No second route shows the same entity's
+   page.
+5. **An entity that belongs to no other entity is a root**, even when many
+   others use it. A model that streams run gets its own branch (`/model`,
+   `/model/<model>`). The relation shows on both sides: the stream's page names
+   its model, and the model's page shows where it is used, such as whether it
+   is ready on each device.
+6. **A nested type that users go to directly also gets a list at the top.**
+   When users think of "the streams" rather than of "this device's streams",
+   add `/stream`, with all streams on all devices and "Add stream" (with the
+   device as a field of the form). Its items open the streams' pages below
+   their devices. It has no pages of its own below it.
+7. **An entity's aspects are pages below its key, named for what they hold.**
+   The entity's page shows what everyone needs to see of it: its live state,
+   its children, its recent events, and the action on the whole entity
+   ("Remove device"). The aspects go below it: `.../events` (its readings and
+   events over a time range), `.../settings` (its forms and "Delete"),
+   `.../details` (technical details for experts). What the brief says only some
+   users need goes one level down, never onto the entity's page. An aspect page
+   exists only where it applies: `/model/<model>/settings` only for the models
+   users can change.
+8. **Readings and events have no pages of their own.** They show on the page of
+   the entity that produces them (`.../events`) and, when users compare them
+   across all entities, on one view at the top (`/detections`).
+9. **Not every entity needs a route.** An entity that users see only as part of
+   its parent (the cameras a device detects, a stream's state) is shown on the
+   parent's page.
+10. **The routes at the top are the main menu**, in the order users need them,
+    not in the order of the tree: Streams before Devices when people come for
+    the streams.
+
+The route tree of a video analytics app (devices run streams, a stream has
+zones, a stream uses a model, detections are its events), as it stands in the
+header:
+
+```yaml
+# /                                  Now: summary strip, snapshot wall, streams needing attention, latest events
+# /stream                            Streams: all streams on all devices, "Add stream"
+# /device                            Devices: the list of devices
+# /device/<device>                   Device: detected cameras, this device's streams, "Remove device"
+# /device/<device>/stream            this device's streams, "Add stream"
+# /device/<device>/details           technical details (experts)
+# /device/<device>/stream/<stream>   Stream: live view, zones table, recent events
+#   .../zone                         Zones and lines: click to draw, "New line or zone"
+#   .../zone/<zone>                  Zone: draw the zone, edit form, "Delete"
+#   .../events                       the stream's events: date filter, events table, crossings charts
+#   .../settings                     Stream settings: basic and advanced forms, "Delete stream"
+# /detections                        Detections: crossings and occupancy on all devices, events
+# /model                             Models: standard and custom models, "Register a custom model"
+# /model/<model>                     Model: details, readiness per device
+# /model/<model>/settings            custom model settings (custom models only)
+# Route segments: device '2', stream '4', zone '6'.
+```
+
+In `layout`, each type segment is a named page, and each `<key>` is a `*` page
+below it (`device` → `'*'` → `stream` → `'*'` → `zone` → `'*'`). Two things
+follow from how links resolve (Pages and navigation):
+
+- **An entity's aspects are its tabs.** A widget-navbar with absolute routes
+  that copy the keys from the current URL (`/device/*/stream/*/events`), titled
+  with the entity's name and linking to its page (pattern 4).
+- **A menu builds each item's route from the keys in its row** (pattern 3):
+  `route: $str:/device/{{device}}/stream/{{stream}}` with `variables` bound to
+  `device_key` and `stream_id`. This works at any depth, for a device's
+  streams, a stream's zones and the list at the top of a nested type
+  (`/stream`) alike, so every menu stays bound to its entity table and follows
+  new and deleted entities live.
 
 ### What goes where
 
@@ -538,8 +648,8 @@ screen has no address bar. So:
   page with widgets is one users see, so it must be reachable. If a link opens an
   empty page after all, the validator warns, because users see a blank screen.
   A data-driven menu on another page reaches `/devices/*` only with absolute item
-  routes computed in a transform (`'/devices/' || device_key AS route`, as in
-  pattern 3): a relative route from `/` opens `/<device_key>`.
+  routes built from the key (`route: $str:/devices/{{device}}`, pattern 3): a
+  relative route from `/` opens `/<device_key>`.
 - **Only navigation widgets move between pages:** widget-navbar, widget-sidenav and
   widget-navbutton. A widget-table `button` or `image` cell opens its link in a new
   browser tab, so it cannot move inside the board. Use those cells for external
@@ -549,28 +659,47 @@ screen has no address bar. So:
 
 ### How menu items are highlighted
 
-widget-navbar and widget-sidenav highlight an item when **the current route starts
-with the item's route**. A relative item (no leading `/`) is highlighted when the
-current route ends with it. Three rules follow:
+widget-navbar and widget-sidenav (version 1.0.26 and later) compare an item's
+route with the current route **segment by segment**, after filling in its
+`{{variables}}` and `*` segments, and of all items that match they highlight
+only **the most specific**:
 
-1. **Never give an item the home route.** Every route starts with `/`, so an item
-   with the route `/` (or an empty route) is highlighted on every page, next to
-   the item the user actually chose. Link home from the menu's **title** instead
-   (`title: $str:Machine Monitor`, `route: $str:/`). The title is never
-   highlighted.
-2. **Never put an item whose route is a prefix of another item's route into the
-   same menu**, such as `/line/*` next to `/line/*/andon`, or `/reports` next to
-   `/reports/daily`: on the deeper page both are highlighted. The comparison is by
-   characters, so `/line` even matches `/lines`.
-3. **An item stays highlighted on the pages below its route.** `/machines/` is
-   highlighted on `/machines/press-1` too. Use that: give each section one item,
-   and connect the pages inside a section with their own links (see the patterns
-   below).
-4. **Data-driven menus inherit rule 2 from the data.** A menu built from a table
-   with routes like `/line/<id>` lights up `LINE-1` on `LINE-10`'s pages, because
-   `/line/LINE-10` starts with `/line/LINE-1`. The validator cannot see ids, so
-   say in the key column's description (and the form that creates the record)
-   that ids need the same number of digits: `LINE-01` … `LINE-24`.
+- **An absolute item matches its page and every page below it.** `/machines/`
+  matches `/machines/press-1` too. An item for the home page (`/`) matches only
+  the home page.
+- **A relative item** (no leading `/`) matches a page whose route ends with it.
+- **The most specific match wins.** An item that names the current page beats
+  one that names a section it is in, and a deeper section beats a shallower one.
+  On `/reports/daily`, only `/reports/daily` is highlighted, not `/reports`.
+  Segments are compared whole, so `/line` does not match `/lines`, and
+  `/line/LINE-1` does not match `/line/LINE-10`.
+- **Query parameters count.** An item route with `?state=open` matches only
+  while the URL carries that parameter with that value, and beats the same route
+  without it.
+- **Two items with the same route are always highlighted together.** The
+  validator warns about them.
+
+What follows for menus:
+
+1. **A Home item works.** It is highlighted on the home page only. The menu's
+   **title** links home as well (`title: $str:Machine Monitor`,
+   `route: $str:/`); the title is never highlighted.
+2. **An overview can sit next to its sections.** A tab bar may hold "Overview"
+   (`/line/*`) next to "Andon" (`/line/*/andon`): each is highlighted on its own
+   page.
+3. **A section's item stays highlighted on the pages below it**, as long as no
+   more specific item of the same menu matches there. Use that: give each
+   section one item, and connect the pages inside a section with their own links
+   (see the patterns below).
+
+**Versions before 1.0.26** compare by characters and highlight every item whose
+route starts the current route. On them, an item for `/` is highlighted on every
+page, `/reports` together with `/reports/daily`, `/line` on `/lines`, and the
+data-driven item `/line/LINE-1` on `LINE-10`'s pages. Pin 1.0.26 or later for
+the board's menus. Where a board keeps an older version, link home only from the
+title, keep a route that starts another item's route out of the same menu, and
+give data-driven ids the same number of digits (`LINE-01` … `LINE-24`). The
+validator checks the first two against the pinned version.
 
 widget-navbutton is never highlighted. That makes it the right widget for a single
 link such as "Home", "Back to the list" or "Manage documents".
@@ -618,30 +747,48 @@ link such as "Home", "Back to the list" or "Manage documents".
    trailing slash and no `*`: `/machines/`. On the `*` page, filter every widget
    with `{column: machine_id, operator: '=', value: '2', dataType: string, useRoute: true}`.
 
-3. **Detail pages below a `*` page** (`/line/*/andon/*`). A relative route cannot
-   reach them (see above), and a binding cannot join strings. Compute the absolute
-   route in a transform, and bind the item's `route` to it:
+3. **Detail pages below a `*` page** (`/line/*/andon/*`), from a menu anywhere. A
+   relative route cannot reach them (see above). Build the absolute route in the
+   item's `format`: a constant route with a `{{label}}` placeholder per key, and
+   a `variables` list that binds each placeholder to the key column of the row.
+   The widget puts each row's values in (URL-encoded), so the menu stays bound
+   to the entity table and is live:
 
    ```yaml
-   # data-template.yml: a column of the transform the menu reads
-   sql: SELECT ..., '/line/' || line_id || '/andon/' || request_no AS route FROM ...
+   navItems:
+       tableRef:
+           tablename: andon_requests          # carries line_id and request_no
+           format:
+               label: request_no
+               route: $str:/line/{{line}}/andon/{{request}}
+               variables:
+                   - {label: $str:line, value: line_id}
+                   - {label: $str:request, value: request_no}
+           queryParams:
+               limit: 50
+               filterAnd:
+                   - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
+                   - {column: line_id, operator: '=', value: '2', dataType: string, useRoute: true}
    ```
 
-   ```yaml
-   format:
-       label: request_no
-       route: route          # /line/<line>/andon/<request>
-   ```
-
-   Filter the menu by the route segment as usual; transforms accept `filterAnd`.
-   The validator reads the transform's SQL to see which page such a route opens,
-   so write it as `'/literal/' || column || ...` or `concat('/literal/', column, ...)`.
+   On a page below `/line/*`, the line's key is in the URL as well, so
+   `route: $str:/line/*/andon/{{request}}` with only the `request` variable
+   leads to the same pages. A menu that lists entities of several parents (all
+   andon requests of all lines) needs every key in the route as a variable. The
+   table has to carry the keys of all entities above it in the route
+   (app-architecture.md, "The entities"). Add a missing key column to the table
+   rather than computing the route in a transform: a transform follows new and
+   deleted entities only on its schedule tick or when the app's code refreshes
+   it, never by itself.
 
 4. **An entity with an overview and sections** (`/line/*`, with `/line/*/andon`,
-   `/line/*/reports` and so on below it). The overview cannot be an item next to
-   its sections (rule 2). Make the menu's title the link to the overview (`title`
-   bound to the entity's name, `route: $str:/line/*`), and put a widget-navbutton
-   next to the menu as the way home (`title: $str:Home`, `iconName: $str:home`,
+   `/line/*/reports` and so on below it). A widget-navbar is the entity's tab
+   bar. Its title is bound to the entity's name and links to the overview
+   (`route: $str:/line/*`), and its items open the sections
+   (`/line/*/andon`). An "Overview" item for `/line/*` may sit next to them
+   (rule 2; before version 1.0.26 leave it out, the title is the way there).
+   When the tab bar is the only menu on these pages, put a widget-navbutton next
+   to it as the way home (`title: $str:Home`, `iconName: $str:home`,
    `route: $str:/`).
 
 5. **Pages within a section** (`/line/*/sop` and `/line/*/sop/manage`). Connect
@@ -690,7 +837,7 @@ link such as "Home", "Back to the list" or "Manage documents".
    ```yaml
    - layout_id: delete-machine
      package_name: widget-form
-     version: 2.0.0                       # 2.0.0 or later
+     version: 2.0.1                       # 2.0.0 or later
      chartconfig:
          title: $str:Delete this machine?
          formButton: $bool:true
@@ -752,9 +899,11 @@ the lists and the forms. Build these boards the same way every time, so users
 find their way around without having to think about it:
 
 1. **The asset types are the main menu.** A widget-navbar (or widget-sidenav) has
-   one fixed item per asset type (`/machines/`, `/lines/`, `/recipes/`), its title
-   links home, and it is on every page (pattern 1). Each item opens the page of
-   that asset type.
+   one fixed item per route at the top of the route tree (see
+   [The route tree](#the-route-tree)): the asset types that belong to no other
+   (`/machines/`, `/lines/`, `/recipes/`), and the views across all assets. Its
+   title links home, and it is on every page (pattern 1). Each item opens the
+   page of that asset type.
 2. **An asset type's page lists its assets in a widget-sidenav.** For assets that
    users create and change, the list is a data-driven widget-sidenav with one item
    per asset (pattern 2). It is on the asset type's page and on every page of an
@@ -765,9 +914,10 @@ find their way around without having to think about it:
    `{latest: true}` and the filter on `deleted` (pattern 6), never to a
    transform. They are the type's master list: an asset created with the
    "New" form appears in it, and a deleted one disappears, in under a second.
-   A transform reaches the board only on its schedule tick, so a list bound to
-   one leaves users looking at an asset they just deleted, or missing the one
-   they just created. Bind the list to the table even when a view with more
+   A transform reaches the board only on its schedule tick or when the app's
+   code refreshes it, while the "New" and delete forms write the table
+   directly, so a list bound to one leaves users looking at an asset they just
+   deleted, or missing the one they just created. Bind the list to the table even when a view with more
    columns exists.
 3. **"New" is a floating action button on top of the list.** A widget-form with
    `formButton: $bool:true` opens the create form in a dialog, and it shows a round
@@ -787,17 +937,17 @@ find their way around without having to think about it:
    (`/machines/*/history`, `/machines/*/kpis`). A widget-navbar above the detail
    area works as the tab bar, with absolute item routes (`/machines/*/history`).
    The sidenav stays on these pages, and its item for the asset stays highlighted
-   on all of them (rule 3). The detail page cannot be an item next to the other
-   tabs, because its route is a prefix of theirs (rule 2). Make it the tab bar's
-   title instead: bound to the asset's name, with `route: $str:/machines/*`
-   (pattern 4).
+   on all of them (rule 3). The tab bar's title is bound to the asset's name and
+   leads to its detail page (`route: $str:/machines/*`), and an "Overview" tab
+   for the same route may sit next to the others (pattern 4).
 6. **Sub-assets repeat the same structure one level down.** An asset's sub-assets
    (the stations of a line) get their own data-driven widget-sidenav inside the
    asset's detail area, with their own "New" button on top, and their own detail
-   pages and tabs (`/lines/*/stations/*`). Their routes come from a transform
-   (pattern 3). This is the one master list that cannot read the asset table,
-   because a binding cannot build the absolute route. It shows new and deleted
-   sub-assets only on the transform's schedule tick, so keep that schedule short.
+   pages and tabs (`/lines/*/stations/*`). The sub-asset table carries the
+   parent's key, so the sidenav builds each route from its row (pattern 3) and
+   reads the sub-asset table itself, live, like every other master list. The
+   same holds for the list at the top of a nested asset type (all stations of
+   all lines, see [The route tree](#the-route-tree)).
 7. **Hide a list when it costs more than it gives.** When nested sidenavs leave too
    little room, or users should focus on one asset, an asset's pages may leave the
    list out and use the full width. Then put a prominent back button in the
@@ -1296,13 +1446,19 @@ Some values only exist inside a running platform, and a template cannot know the
    sidenavs, navbar items, dropdown options, map markers) filters on that flag
    unless the user explicitly asked to see deleted entities. No transform
    deduplicates or cleans them.
-4. Every page fills the grid. Every page can be reached from the home page by
-   clicking and leads back to it, no menu item links to `/`, no item's route is a
-   prefix of another item's in the same menu, and every route leads to a page.
+4. The header holds the route tree, and `layout` follows it: every key segment
+   comes after a type segment, a child's pages sit below its parent's key, each
+   entity has one page, and its aspects (events, settings, details) are pages
+   below it. Every page fills the grid. Every page can be reached from the home
+   page by clicking and leads back to it, and every route leads to a page. Menus
+   pin widget-navbar and widget-sidenav 1.0.26 or later, and no two items of a
+   menu share a route; on an older version, no item links to `/` and no item's
+   route starts another item's in the same menu.
 5. Every widget with a Layout line has its `fixedHeight` or `fixedWidth` and
    enough cells for it, and navbuttons have no tile border, unless there is a
    reason to do otherwise.
-6. The header says who looks at the board and where, and which look was chosen.
+6. `design/board.md` holds the board's design and matches the board; the header
+   says who looks at the board and where, and which look was chosen.
    `style` sets the theme and all four colours (a preset, or the user's brand
    colours on the preset's text and tile colours). Every state colour means one
    thing on every widget, and nothing else is coloured.

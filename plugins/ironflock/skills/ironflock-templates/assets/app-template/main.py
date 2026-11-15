@@ -153,11 +153,10 @@ async def main() -> None:
         else:
             new_state = "TOO_HOT" if reading["temperature"] > settings["max_temperature"] else "OK"
         await show(reading, new_state)
-        # Readings are published: a publish waits for the connection, up to the SDK's
-        # reconnect window, but not for the data backend, so a reading published while
-        # the data backend restarts is lost, which is fine at this rate. State changes
-        # are appended: an append waits for the data backend too, so a short outage
-        # loses none. A longer outage raises, and the next round tries again.
+        # publish_to_table and append_to_table are the same call: each waits for the
+        # connection and for a restarting data backend, up to the SDK's reconnect
+        # window, and returns once the row is stored, so a short outage loses no row.
+        # A longer outage raises, and the next round tries again.
         try:
             if reading:
                 await flock.publish_to_table("measurements", {"tsp": now(), **reading})

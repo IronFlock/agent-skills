@@ -1047,10 +1047,27 @@ MENU_WIDGETS = {"widget-navbar", "widget-sidenav"}
 VALUE = "\x00"
 
 HOME_ITEM = (
-    "this item links to the home page, so it is highlighted on every page: a menu item is "
-    "highlighted whenever the current route starts with its route, and every route starts "
-    "with '/'. Link home from the menu's title (route: $str:/) instead"
+    "this item links to the home page, so it is highlighted on every page: before version "
+    "1.0.26 a menu item is highlighted whenever the current route starts with its route, and "
+    "every route starts with '/'. Pin 1.0.26 or later, which highlights it on the home page "
+    "only, or link home from the menu's title (route: $str:/) instead"
 )
+
+#: From this version on, widget-sidenav and widget-navbar compare routes segment
+#: by segment and highlight only the most specific matching items: an item for
+#: '/' only on the home page, and of '/reports' and '/reports/daily' only the
+#: second on /reports/daily.
+SEGMENT_HIGHLIGHTING = (1, 0, 26)
+
+
+def highlights_by_segment(w: dict) -> bool:
+    """Whether this menu widget's version highlights by segment and specificity.
+    An unpinned or unreadable version counts as the latest."""
+    version = w.get("version")
+    if not isinstance(version, str) or not version.strip():
+        return True
+    parts = [int(m.group()) if (m := re.match(r"\d+", p)) else 0 for p in version.strip().split(".")[:3]]
+    return tuple(parts + [0] * (3 - len(parts))) >= SEGMENT_HIGHLIGHTING
 
 SQL_TOKEN = re.compile(r"'(?:[^']|'')*'|\"(?:[^\"]|\"\")*\"|\|\||::|[(),]|[A-Za-z_][A-Za-z0-9_$.]*|\S")
 
@@ -1267,14 +1284,34 @@ def shown_under(route: str, pages: list[tuple] | None) -> bool:
 
 
 def check_menu_highlighting(board: Board, i: int, w: dict, pages: list[tuple] | None = None) -> None:
-    """Items are highlighted while the current route starts with theirs, so an
-    item for '/' is always on, and an item whose route starts another item's is
-    on together with it - on the pages of the menu where both can match."""
+    """Before version 1.0.26, items are highlighted while the current route
+    starts with theirs, so an item for '/' is always on, and an item whose route
+    starts another item's is on together with it - on the pages of the menu
+    where both can match. From 1.0.26 on only the most specific matching items
+    are on, which leaves only items with the same route on together."""
     cfg = w.get("chartconfig")
     if not isinstance(cfg, dict):
         return
     base = ["widgets", i, "chartconfig"]
     items = cfg.get("navItems")
+    by_segment = highlights_by_segment(w)
+    if by_segment and isinstance(items, list):
+        seen: dict[str, str] = {}
+        for k, item in enumerate(items):
+            if not isinstance(item, dict) or not isinstance(item.get("route"), str) or item.get("variables"):
+                continue
+            path, _, query = str(decode(item["route"])[1]).strip().partition("?")
+            route = ("/" if path.startswith("/") else "") + "/".join(s for s in path.split("/") if s)
+            route += f"?{query}" if query else ""
+            label = item.get("label")
+            name = str(decode(label)[1]) if isinstance(label, str) else f"item {k}"
+            if route in seen:
+                board.warn(base + ["navItems", k, "route"], f"item '{name}' has the same route as '{seen[route]}' ({route}), so both are always highlighted together")
+            else:
+                seen[route] = name
+        return
+    if by_segment:
+        return
     if isinstance(items, dict) and isinstance(items.get("tableRef"), dict):
         fmt = items["tableRef"].get("format")
         raw = fmt.get("route") if isinstance(fmt, dict) else None
@@ -1306,9 +1343,10 @@ def check_menu_highlighting(board: Board, i: int, w: dict, pages: list[tuple] | 
                 ipath,
                 f"item '{name}' ({route}) is highlighted together with "
                 + ", ".join(f"'{d}'" for d in deeper)
-                + " on their pages, because an item is highlighted whenever the current route starts "
-                "with its route (compared by characters). Keep a route that starts another item's "
-                "route out of the same menu",
+                + " on their pages, because before version 1.0.26 an item is highlighted whenever "
+                "the current route starts with its route (compared by characters). Pin 1.0.26 or "
+                "later, which highlights only the most specific item, or keep a route that starts "
+                "another item's route out of the same menu",
             )
         if same:
             board.warn(ipath, f"item '{name}' has the same route as '{same[0]}' ({route}), so both are always highlighted together")

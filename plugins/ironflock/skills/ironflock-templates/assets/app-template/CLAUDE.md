@@ -2,41 +2,18 @@
 
 Guidance for coding agents working on this IronFlock app.
 
-TODO: describe in a paragraph what this app does and for whom, then keep the
-entity table below current: what the app deals with, how each kind of thing is
-identified, who writes it and what users do with it on the board.
+TODO: describe in a sentence what this app does and for whom.
 
-| Entity | Key | Written by | On the board |
-|---|---|---|---|
-| device, with the machine at it | `device_key` | the device, about itself | list, state, live view |
-| measurement | `device_key` + `tsp` | the device | trends |
-| settings | none: one row for all devices | the board's form | the Settings page |
+## Design
 
-## How it is built
-
-The program in `main.py` runs in a container (`Dockerfile`) on every device the
-app is installed on. `.ironflock/` connects it to the platform.
-
-- **The tables are the backend.** `.ironflock/data-template.yml` declares them,
-  and the program reads and writes them with the `ironflock` SDK. The container
-  keeps no state of its own: whatever the board, another device or a restarted
-  container needs is in a table.
-- **One writer per table**, named in the table's description: each device writes
-  its own rows of `devices` and `measurements`, the board's settings form writes
-  `settings`.
-- **The board is the user interface** (`.ironflock/board-template.yml`): widgets
-  bound to the tables, updated live. The board and the devices never call each
-  other, so either works while the other is offline.
-- **Settings reach the devices as rows.** `main.py` subscribes to `settings`,
-  reads its newest row once at start, and applies a row only if it is newer than
-  the one in force. The SDK (`ironflock` 1.10.0 or later) delivers the rows saved
-  while a device was offline as soon as it is back, so the code never deals with
-  connections or sessions.
-- **The live view** is a web page `main.py` serves on port 8080
-  (`web/index.html`, updated over a websocket). `.ironflock/port-template.yml`
-  offers the port as a remote-access tunnel, `main.py` writes the tunnel's URL
-  into `devices.ui_url`, and the board embeds that URL on each device's page.
-  The port is in `main.py` (`UI_PORT`) and in `port-template.yml`: change both.
+`design/` holds how this app is built and why: its purpose and users
+(`design/README.md`), the architecture (`architecture.md`), the entity model
+(`entities.md`), the board's design (`board.md`) and the decisions behind them
+(`decisions.md`). Read it before changing the app, and update it in the same
+change whenever the change makes a document wrong: a new table or column, a new
+entity or relation, a new page or route, a new parameter, port or device
+function, a different look. Record a choice between alternatives in
+`decisions.md`.
 
 ## Rules
 
@@ -57,10 +34,12 @@ app is installed on. `.ironflock/` connects it to the platform.
   it unless the user explicitly asks to see deleted records. Never add a transform (a view) to pick the newest row per entity or
   to hide deleted rows; a transform refreshes on a schedule and would only show
   the same rows late.
-- Append what must not be lost (state changes, records) with `append_to_table`:
-  it waits for a restarting data backend. Publish high-rate readings with
-  `publish_to_table`, which waits only for the connection: a row published while
-  the data backend restarts is lost.
+- `publish_to_table` and `append_to_table` are the same call: each waits for a
+  restarting data backend, up to the SDK's reconnect window, and returns once the
+  row is stored. Send many rows at once with `append_rows_to_table`.
+- After writing rows that a transform shown on the board reads, call
+  `refresh_transform("<transform>")` once for the batch, so the board shows the
+  change at once instead of at the transform's next scheduled refresh.
 - Catch the SDK's `RuntimeError` around table writes in the main loop: a write
   raises when the platform has been unreachable for a minute, and the loop must
   keep running.

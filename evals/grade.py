@@ -266,6 +266,17 @@ def grade_new_app(app: Path, errors, warnings):
     ]
     pushed = re.search(r"WebSocket|EventSource", pages)
     sigterm = re.search(r"SIGTERM", code) or re.search(r"init:\s*true|tini|dumb-init", setup)
+
+    # The design folder: every document of the starter's set, rewritten for
+    # this app (no TODO left, every table of the data template named).
+    design_docs = ("README.md", "architecture.md", "entities.md", "board.md", "decisions.md")
+    missing_docs = [d for d in design_docs if not (app / "design" / d).is_file()]
+    design_text = "\n".join(
+        p.read_text(errors="ignore") for p in (app / "design").glob("*.md")
+    ) if (app / "design").is_dir() else ""
+    unnamed_tables = [t for t in tables if t and not re.search(rf"\b{re.escape(str(t))}\b", design_text)]
+    design_ok = not missing_docs and "TODO" not in design_text and not unnamed_tables
+
     return [
         check("validate.py reports no errors", not errors, f"{len(errors)} error(s)" + (f": {errors[0][:160]}" if errors else "")),
         check("a Dockerfile or docker-compose.yml and edge code using the ironflock SDK", setup and re.search(r"ironflock", code), f"{len(files)} file(s)"),
@@ -281,6 +292,11 @@ def grade_new_app(app: Path, errors, warnings):
         check("a widget-embed on a per-tank page binds the URL from a table, filtered by the route", embeds, f"{len(embeds)} embed(s), {len(wildcard)} wildcard page(s)"),
         check("the web page is pushed to (websocket or server-sent events)", pushed, pushed.group(0) if pushed else "no push channel"),
         check("the program stops on SIGTERM", sigterm, sigterm.group(0) if sigterm else "not handled"),
+        check(
+            "design/ holds the app's architecture and design documents, written for this app",
+            design_ok,
+            f"missing {missing_docs}" if missing_docs else ("TODO left" if "TODO" in design_text else f"tables not named: {unnamed_tables}"),
+        ),
     ]
 
 
