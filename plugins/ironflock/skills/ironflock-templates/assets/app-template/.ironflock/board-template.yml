@@ -2,9 +2,11 @@
 # The board of App Starter, bound to the tables in data-template.yml.
 # Design: design/board.md (keep both in step). Pages:
 #   /             every device's temperature and state, and the 24-hour trend
-#   /devices      the device list; /devices/<device_key> embeds the device's live
+#   /devices      the device list; /devices/<device_id> embeds the device's live
 #                 view (devices.ui_url, served by main.py on port 8080 and opened
-#                 through the device's remote-access tunnel) above its readings
+#                 through the device's remote-access tunnel) above its readings,
+#                 with a "Delete" button for a device that is gone (devices
+#                 register themselves and cannot tell offline from gone)
 #   /settings     the form that writes the settings table, which every device applies
 # The toast shows the errors the app reports with report_error (source app).
 # Viewers: the people who run the devices, at a desk or laptop (office preset).
@@ -68,6 +70,10 @@ widgets:
                                   operator: '='
                                   value: ''
                                   dataType: boolean
+                                - combinator: OR
+                                  filters:
+                                      - {column: deleted, operator: 'IS NULL', dataType: boolean}
+                                      - {column: deleted, operator: '=', value: false, dataType: boolean}
               - header: $str:State
                 type: $str:state
                 values:
@@ -83,6 +89,10 @@ widgets:
                                   operator: '='
                                   value: ''
                                   dataType: boolean
+                                - combinator: OR
+                                  filters:
+                                      - {column: deleted, operator: 'IS NULL', dataType: boolean}
+                                      - {column: deleted, operator: '=', value: false, dataType: boolean}
                 styling:
                     stateMap: "$str:'OK', '#16a34a', 'TOO_HOT', '#dc2626', 'NO_READING', '#64748b'"
               - header: $str:Updated
@@ -100,6 +110,10 @@ widgets:
                                   operator: '='
                                   value: ''
                                   dataType: boolean
+                                - combinator: OR
+                                  filters:
+                                      - {column: deleted, operator: 'IS NULL', dataType: boolean}
+                                      - {column: deleted, operator: '=', value: false, dataType: boolean}
     - layout_id: temperature-trend
       package_name: widget-linechart
       version: 1.7.15
@@ -167,7 +181,7 @@ widgets:
                   format:
                       label: device_name
                       iconName: $str:developer_board
-                      route: device_key
+                      route: device_id
                   queryParams:
                       limit: 100
                       filterAnd:
@@ -176,6 +190,10 @@ widgets:
                             operator: '='
                             value: ''
                             dataType: boolean
+                          - combinator: OR
+                            filters:
+                                - {column: deleted, operator: 'IS NULL', dataType: boolean}
+                                - {column: deleted, operator: '=', value: false, dataType: boolean}
     - layout_id: devices-hint
       package_name: widget-markdown
       version: 1.1.0
@@ -187,6 +205,10 @@ widgets:
               The live view is a web page the device serves itself. It opens here through
               the device's remote-access tunnel, which the app's production install
               switches on.
+
+              Every device that runs the app adds itself to this list. A device that is
+              gone for good, such as one that was replaced, stays here until you delete
+              it on its page.
     - layout_id: live-view
       package_name: widget-embed
       version: 1.1.0
@@ -204,7 +226,7 @@ widgets:
                             operator: '='
                             value: ''
                             dataType: boolean
-                          - column: device_key
+                          - column: device_id
                             operator: '='
                             value: '2'
                             dataType: numeric
@@ -262,6 +284,42 @@ widgets:
                                   value: '2'
                                   dataType: numeric
                                   useRoute: true
+    - layout_id: delete-device
+      package_name: widget-form
+      version: 2.0.1
+      chartconfig:
+          title: $str:Delete this device?
+          subTitle: $str:Delete a device that is gone for good. It reappears when it starts the app again.
+          formButton: $bool:true
+          formButtonStyle:
+              fab: $bool:false
+              label: $str:Delete
+              iconName: $str:delete
+              bgColor: $str:#d32f2f
+          accentColor: $str:#d32f2f
+          buttonLabels:
+              submitLabel: $str:Delete
+              cancelLabel: $str:Keep
+          submitNavigationRoute: $str:/devices/
+          formFields:
+              - label: $str:Device
+                type: $str:numberfield
+                hiddenField: $bool:true
+                targetColumn: {tablename: devices, column: device_id, dataType: numeric}
+                preFilledValue:
+                    valueRef:
+                        tablename: devices
+                        column: device_id
+                        queryParams:
+                            limit: 1
+                            filterAnd:
+                                - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
+                                - {column: device_id, operator: '=', value: '2', dataType: numeric, useRoute: true}
+              - label: $str:Deleted
+                type: $str:checkbox
+                hiddenField: $bool:true
+                defaultValueBoolean: $bool:true
+                targetColumn: {tablename: devices, column: deleted, dataType: boolean}
     - layout_id: settings-form
       package_name: widget-form
       version: 2.0.1
@@ -331,7 +389,8 @@ layout:
                     gridLayout:
                         - {id: nav, x: 0, y: 0, w: 16, h: 64, fixedWidth: true}
                         - {id: device-list, x: 16, y: 0, w: 16, h: 64, fixedWidth: true}
-                        - {id: live-view, x: 32, y: 0, w: 64, h: 40}
+                        - {id: live-view, x: 32, y: 0, w: 64, h: 35}
+                        - {id: delete-device, x: 84, y: 35, w: 12, h: 5}
                         - {id: device-trend, x: 32, y: 40, w: 64, h: 24}
                         - {id: errors, x: 56, y: 52, w: 40, h: 12, z: 1}
         settings:

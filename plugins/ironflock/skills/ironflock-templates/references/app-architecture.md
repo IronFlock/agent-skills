@@ -22,7 +22,8 @@ starter app in `assets/app-template/` follows all of them; scaffold it with
 12. [Docker Compose](#docker-compose)
 13. [Web UIs on the device](#web-uis-on-the-device)
 14. [Several devices](#several-devices)
-15. [Checklist](#checklist)
+15. [Devices that register themselves](#devices-that-register-themselves)
+16. [Checklist](#checklist)
 
 ## The parts of an app
 
@@ -177,7 +178,7 @@ it right before anything else, and keep it in `design/entities.md` as a table:
 
 | Entity | Key | Written by | On the board |
 |---|---|---|---|
-| IPC | `device_key` | the device, about itself | list, state |
+| IPC | `device_id`, the device's own key | the device, about itself | list, state, delete |
 | camera | `camera_id`, the name users give it | the board's forms | list, new, edit, delete |
 | camera state | `camera_id` | the device | the state next to each camera |
 | model | `model_id` | the board's forms | list, new, edit, delete |
@@ -189,7 +190,10 @@ it right before anything else, and keep it in `design/entities.md` as a table:
 - **One entity table per entity**, named after it in the plural (`cameras`,
   `streams`), with `maintainLatestFlagFor` on the column(s) that identify it.
   The key is something users or devices know: a name, a code, a serial number,
-  a plate, an address, or `device_key` for an entity that is the device itself.
+  a plate, an address, or the device's own key in a `device_id` column for an
+  entity that is the device itself (never the system column `device_key`, which
+  a board-written row cannot set; see
+  [Devices that register themselves](#devices-that-register-themselves)).
   There is no generated id. A "New" form asks for the key as a required field
   (with `validation` when it has a format), and a device writes the key it
   reads from the hardware.
@@ -213,8 +217,10 @@ it right before anything else, and keep it in `design/entities.md` as a table:
   (`cameras`) and a state table the device writes (`camera_status`, keyed by
   `camera_id`), shown side by side.
 - **The entity at each device** (the machine the device is attached to) is keyed
-  by `device_key` and written by the device about itself (see
-  [Several devices](#several-devices)).
+  by `device_id` and written by the device about itself (see
+  [Several devices](#several-devices)). Its one exception to the single writer
+  is the board's delete form, which writes the `deleted` flag (see
+  [Devices that register themselves](#devices-that-register-themselves)).
 
 **From the entities to the board.** The relations decide the board's pages
 before any widget: a child's pages sit below its parent's key
@@ -239,7 +245,10 @@ to the raw entity table with the two filters and never to a transform: a
 transform changes only on its schedule tick or when the app's code refreshes
 it, so the list would stop following a save or a delete live (see
 [Entity tables](#entity-tables-current-state-updates-and-deletes)). An entity
-the devices write is listed the same way, without the forms. Readings and
+the devices write is listed the same way, without the "New" and edit forms but
+with the delete form: a device or gateway that registered itself can only be
+removed by users (see
+[Devices that register themselves](#devices-that-register-themselves)). Readings and
 events are not listed as entities but shown as charts and tables over a time
 window, filtered by the entity's key.
 
@@ -579,8 +588,9 @@ remote-access tunnel of its port:
    port-template.yml with `protocol: http`. A production install switches the
    tunnel on, and serves it as HTTPS with websockets.
 2. **Write its URL into a table.** `getRemoteAccessUrlForPort(port)` gives the
-   tunnel's URL. Write it into the device's row of an entity table keyed by
-   `device_key`, at start. A development run writes the URL of its own tunnel
+   tunnel's URL. Write it into the device's row of the device table (keyed by
+   `device_id`, see [Devices that register themselves](#devices-that-register-themselves)),
+   at start. A development run writes the URL of its own tunnel
    (its label ends in `-dev`) into the development tables, and only users with
    the Develop privilege on the device can open it. `ironflock` 1.11.0 and
    earlier give a development run the production install's URL instead.
@@ -609,19 +619,63 @@ Rules for the page:
 ## Several devices
 
 - **Every row carries its device**: `device_key` is set on every row a device
-  writes. Key per-device entity tables by `device_key`, store the name with
-  `path: kwargs.DEVICE_NAME`, and pivot charts by the name.
+  writes. Readings store the name with `path: kwargs.DEVICE_NAME` and pivot
+  charts by it. The device table itself is keyed by a `device_id` column the
+  device writes with its own key, because users delete its entries from the
+  board (see the next section).
 - **A device list and a page per device**: a data-driven menu over the device
-  table with `route: device_key`, and on the `*` page a filter
-  `{column: device_key, operator: '=', value: '2', dataType: numeric, useRoute: true}`
-  (board-template.md, pattern 2). The starter's board does this.
+  table with `route: device_id`, and on the `*` page a filter
+  `{column: device_id, operator: '=', value: '2', dataType: numeric, useRoute: true}`
+  (board-template.md, pattern 2); the device's readings filter `device_key`
+  the same way, since it holds the same number. The starter's board does this.
 - **Settings per device or per machine**: key the settings table by a column
   that names the target (the board's rows have no `device_key`), and fill it in
   the form from the page's route, as a hidden field. Each device applies the
   newest row for its own key.
-- **A device that leaves** keeps its rows. If users must be able to remove it
-  from the lists, give the device table a `deleted` column and the board a form
-  that sets it.
+- **A device that leaves** keeps its rows, and users remove it from the lists by
+  hand; see the next section.
+
+## Devices that register themselves
+
+Edge code usually announces the device it runs on, or the gateways, PLCs and
+sensors it finds, by writing a row about it at start: a `devices` or `gateways`
+table that fills itself. Such a device can never unregister itself. Silence
+looks the same whether it is switched off for the weekend, cut off from the
+network or scrapped, so neither the device nor the app can tell "offline" from
+"gone". Only the people who run the devices know, and the board lets them say so:
+
+- **Every self-registration table has a `deleted` column, and the board can
+  delete each entry.** The device list gets a delete icon in its overview table
+  or a "Delete" button on the device's page: the delete form of
+  board-template.md, pattern 6, writing the entry's key and `deleted: true`. The
+  lists filter on `deleted` as every entity list does. Not optional: without it,
+  every device that ever ran the app stays in the lists forever.
+- **Never expire, hide or delete an entry automatically.** No "offline for 7
+  days" rule, no code that writes `deleted`, no function a device calls to
+  unregister. Show when each entry last reported (its `tsp`, or a heartbeat
+  column it updates now and then) next to its state, so users can see which ones
+  have gone quiet and decide.
+- **Key the table by a column the device fills itself, never by `device_key`.**
+  The platform stamps `device_key` from the writer: a device's rows carry its
+  key, but a row the board writes has none, so a delete form on a table keyed by
+  `device_key` writes its row to no device and hides nothing. Declare a key
+  column (`device_id`, or `gateway_id` for what the device finds) and write it
+  on every row: the device's own `int(os.environ["DEVICE_KEY"])`, or the serial
+  number, MAC address or name the gateway reports. Route and filter by that
+  column. Readings keep their `device_key`, which holds the same number for the
+  device itself.
+- **The device writes its other columns as plain values.** A column with
+  `path: kwargs.DEVICE_NAME` takes its value from the writer too, so the board's
+  delete row would clear it. Let the device write `device_name` from its
+  environment like any other column; the delete row leaves it out, and the
+  entry keeps its name.
+- **Registration says `deleted: False`; nothing else the device writes does.**
+  A row that leaves a column out keeps its value, so the device's later state
+  rows keep a deletion in force: a device deleted while still running stays out
+  of the lists until it starts the app again. Its registration at start writes
+  `deleted: False`, so a device that is reinstalled, or comes back after all,
+  reappears by itself. Say so in the delete dialog ("It reappears when it starts
+  the app again").
 
 ## Checklist
 
@@ -630,7 +684,10 @@ Rules for the page:
    those keys, and every entity users manage has a list, a "New" form in a
    dialog, and a detail page with edit and delete on the board, bound to the
    table itself. The board's routes follow the entity tree (board-template.md,
-   "The route tree").
+   "The route tree"). Every table that devices or gateways register themselves
+   in has a `deleted` column and a delete form on the board, is keyed by a
+   column the device writes (not `device_key`), and its registration row writes
+   `deleted: False`; nothing deletes an entry automatically.
 2. All state is in tables, each with one writer named in its description, and
    every column the code writes is declared in data-template.yml.
 3. Every row has a `tsp`; state rows are written on change and hold only the key
