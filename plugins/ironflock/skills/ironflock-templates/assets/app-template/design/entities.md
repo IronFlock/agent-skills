@@ -19,8 +19,12 @@ form follows from this model.
 
 ## Rules the model follows
 
-- One entity table per entity, keyed by what identifies it
-  (`maintainLatestFlagFor`); no generated ids.
+- One entity table per entity (`maintainLatestFlagFor` on its key). An asset
+  users create is keyed by an id the app generates (the "New" form's hidden
+  key field, or a UUID in code), never by its name, which is an ordinary
+  column; routes, filters and child tables use the id, lists and titles show
+  the name. What devices find keeps the key the hardware reports
+  (`device_id`, a serial number).
 - A table that refers to an entity carries its key, and the keys of every
   entity above it, so the board can filter by any of them and build the route
   to it from the row.

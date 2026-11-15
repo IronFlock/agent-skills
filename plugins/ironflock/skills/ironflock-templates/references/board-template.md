@@ -419,38 +419,59 @@ the header. Then build the pages one by one, each answering its line.
 1. **Home answers the app's goal.** `/` is not a list of entities. It is the
    summary the brief asks for (what runs, what needs attention, the latest
    events), and its tiles lead to the entities' pages.
-2. **An entity users open gets a type segment and a key segment.** `/device`
-   lists the devices, `/device/<device>` is one device. Name the type segment
-   after the entity, in the same form on every level (`/device` and
-   `/device/<device>/stream`, or `/devices` and `/devices/<device>/streams`,
-   never a mix).
+2. **An entity users open gets a type segment and a key segment.** `/stream`
+   lists the streams, `/stream/<stream>` is one stream. Name the type segment
+   after the entity, in the same form on every level (`/stream` and
+   `/stream/<stream>/zone`, or `/streams` and `/streams/<stream>/zones`,
+   never a mix). The key segment is the entity's id (`stream_id`), never its
+   name: a name changes and need not be unique, so a route built from it
+   breaks when the asset is renamed (app-architecture.md, "The entities").
+   Menus, titles and breadcrumbs show the name.
 3. **A child's routes continue below its parent's key**, along the relations
-   of the entity model. A stream runs on a device, and a zone is drawn on a
-   stream, so a zone is `/device/<device>/stream/<stream>/zone/<zone>`. Each
-   entity's table carries the keys of all entities above it (`zones` has
-   `device_key`, `stream_id` and `zone_id`), so every row holds its full route.
-   A URL then reads as a path of typed keys, and each prefix of it is a page of
-   its own: the type segment below a key (`/device/<device>/stream`) is that
-   parent's list of those children, with its "New" button. The key of the n-th
-   level is always segment 2n, the number its `useRoute` filters take (device
-   `'2'`, stream `'4'`, zone `'6'`). Never put two keys in a row
-   (`/streams/*/*`): nobody can tell which segment is which, and the first key
-   gets a page that is not the page of the entity it names.
+   of the entity model (except below a device, rule 6). A zone is drawn on a
+   stream, so a zone is
+   `/stream/<stream>/zone/<zone>`. Each entity's table carries the keys of all
+   entities above it (`zones` has `stream_id` and `zone_id`), so every row holds
+   its full route. A URL then reads as a path of typed keys, and each prefix of
+   it is a page of its own: the type segment below a key (`/stream/<stream>/zone`)
+   is that parent's list of those children, with its "New" button. The key of
+   the n-th level is always segment 2n, the number its `useRoute` filters take
+   (stream `'2'`, zone `'4'`). Never put two keys in a row (`/streams/*/*`):
+   nobody can tell which segment is which, and the first key gets a page that
+   is not the page of the entity it names.
 4. **Each entity has one page, where it sits in the tree.** Every link to a
-   stream, from home, from a list or from an event, opens
-   `/device/<device>/stream/<stream>`. No second route shows the same entity's
-   page.
+   stream, from home, from a list, from an event or from its device's page,
+   opens `/stream/<stream>`. No second route shows the same entity's page.
 5. **An entity that belongs to no other entity is a root**, even when many
    others use it. A model that streams run gets its own branch (`/model`,
    `/model/<model>`). The relation shows on both sides: the stream's page names
    its model, and the model's page shows where it is used, such as whether it
    is ready on each device.
-6. **A nested type that users go to directly also gets a list at the top.**
-   When users think of "the streams" rather than of "this device's streams",
-   add `/stream`, with all streams on all devices and "Add stream" (with the
-   device as a field of the form). Its items open the streams' pages below
-   their devices. It has no pages of its own below it.
-7. **An entity's aspects are pages below its key, named for what they hold.**
+6. **The project's devices get a branch of their own, and what belongs to a
+   device starts its own branch.** Many apps have a table of the IronFlock
+   devices (the IPCs) in the project, usually `devices` or `gateways`, and
+   most of their other entities belong to a device: a stream runs on a device,
+   a connection is configured on a gateway. Yet the device is a technical
+   detail, not what users come for, so it does not head the tree. It gets its
+   own branch at the top (`/device`, `/device/<device>`) with its state, its
+   technical details and "Remove device", and each entity that belongs to a
+   device starts its own branch at the top instead of continuing below the
+   device's key: `/stream/<stream>/zone/<zone>`, never
+   `/device/<device>/stream/<stream>/zone/<zone>`. The relation shows on both
+   sides, as for a root: the table keeps the device's key as a column
+   (`streams.device_id`), the stream's page names its device and links to it,
+   and the device's page lists the streams that run on it, each opening
+   `/stream/<stream>`. The key segment must then identify the entity on its
+   own: a generated id or a serial number does, a bus address or a channel
+   number that repeats on every device does not, so the device writes a key
+   that includes its own (`<device_id>-<address>`). An app without such a
+   table, or whose entities do not belong to a device, skips this rule.
+7. **A nested type that users go to directly also gets a list at the top.**
+   When users think of "the zones" rather than of "this stream's zones", add
+   `/zone`, with all zones on all streams and "New zone" (with the stream as a
+   field of the form). Its items open the zones' pages below their streams. It
+   has no pages of its own below it.
+8. **An entity's aspects are pages below its key, named for what they hold.**
    The entity's page shows what everyone needs to see of it: its live state,
    its children, its recent events, and the action on the whole entity
    ("Remove device"). The aspects go below it: `.../events` (its readings and
@@ -459,28 +480,25 @@ the header. Then build the pages one by one, each answering its line.
    users need goes one level down, never onto the entity's page. An aspect page
    exists only where it applies: `/model/<model>/settings` only for the models
    users can change.
-8. **Readings and events have no pages of their own.** They show on the page of
+9. **Readings and events have no pages of their own.** They show on the page of
    the entity that produces them (`.../events`) and, when users compare them
    across all entities, on one view at the top (`/detections`).
-9. **Not every entity needs a route.** An entity that users see only as part of
-   its parent (the cameras a device detects, a stream's state) is shown on the
-   parent's page.
-10. **The routes at the top are the main menu**, in the order users need them,
+10. **Not every entity needs a route.** An entity that users see only as part of
+    its parent (the cameras a device detects, a stream's state) is shown on the
+    parent's page.
+11. **The routes at the top are the main menu**, in the order users need them,
     not in the order of the tree: Streams before Devices when people come for
     the streams.
 
 The route tree of a video analytics app (devices run streams, a stream has
 zones, a stream uses a model, detections are its events), as it stands in the
-header:
+header. The streams run on devices, but start their own branch (rule 6), and
+Devices comes last in the menu:
 
 ```yaml
 # /                                  Now: summary strip, snapshot wall, streams needing attention, latest events
-# /stream                            Streams: all streams on all devices, "Add stream"
-# /device                            Devices: the list of devices
-# /device/<device>                   Device: detected cameras, this device's streams, "Remove device"
-# /device/<device>/stream            this device's streams, "Add stream"
-# /device/<device>/details           technical details (experts)
-# /device/<device>/stream/<stream>   Stream: live view, zones table, recent events
+# /stream                            Streams: all streams on all devices, "Add stream" (device in the form)
+# /stream/<stream>                   Stream: live view, its device, zones table, recent events
 #   .../zone                         Zones and lines: click to draw, "New line or zone"
 #   .../zone/<zone>                  Zone: draw the zone, edit form, "Delete"
 #   .../events                       the stream's events: date filter, events table, crossings charts
@@ -489,21 +507,24 @@ header:
 # /model                             Models: standard and custom models, "Register a custom model"
 # /model/<model>                     Model: details, readiness per device
 # /model/<model>/settings            custom model settings (custom models only)
-# Route segments: device '2', stream '4', zone '6'.
+# /device                            Devices: the list of devices, when each last reported
+# /device/<device>                   Device: detected cameras, the streams it runs, "Remove device"
+# /device/<device>/details           technical details (experts)
+# Route segments: stream, model and device '2', zone '4'.
 ```
 
 In `layout`, each type segment is a named page, and each `<key>` is a `*` page
-below it (`device` → `'*'` → `stream` → `'*'` → `zone` → `'*'`). Two things
+below it (`stream` → `'*'` → `zone` → `'*'`). Two things
 follow from how links resolve (Pages and navigation):
 
 - **An entity's aspects are its tabs.** A widget-navbar with absolute routes
-  that copy the keys from the current URL (`/device/*/stream/*/events`), titled
+  that copy the keys from the current URL (`/stream/*/events`), titled
   with the entity's name and linking to its page (pattern 4).
 - **A menu builds each item's route from the keys in its row** (pattern 3):
-  `route: $str:/device/{{device}}/stream/{{stream}}` with `variables` bound to
-  `device_key` and `stream_id`. This works at any depth, for a device's
-  streams, a stream's zones and the list at the top of a nested type
-  (`/stream`) alike, so every menu stays bound to its entity table and follows
+  `route: $str:/stream/{{stream}}/zone/{{zone}}` with `variables` bound to
+  `stream_id` and `zone_id`. This works at any depth, for a stream's zones, a
+  device's streams (`/stream/{{stream}}`) and the list at the top of a nested
+  type (`/zone`) alike, so every menu stays bound to its entity table and follows
   new and deleted entities live.
 
 ### What goes where
@@ -732,11 +753,11 @@ link such as "Home", "Back to the list" or "Manage documents".
    ```yaml
    navItems:
        tableRef:
-           tablename: machine_status
+           tablename: machines
            format:
-               label: machine_id
+               label: name                               # what users see
                iconName: $str:precision_manufacturing    # Material icon name
-               route: machine_id                         # relative: /machines/<id>
+               route: machine_id                         # relative: /machines/<id>, the generated id
            queryParams:
                limit: 50
                filterAnd:
@@ -925,9 +946,27 @@ find their way around without having to think about it:
    top of the sidenav, in the sidenav's header next to its title: a small tile
    (about 6 × 6 cells for the default button) inside the sidenav's columns, with
    `z: 1` and a transparent tile border and background. Put it on every page that
-   has the sidenav, at the same position. Its fields are the asset's key
-   (required, with `validation` when it has a format) and what a new asset
-   needs.
+   has the sidenav, at the same position. Its fields are a hidden key field
+   with `generateId: $bool:true` (widget-form 2.2.0 or later), which saves a
+   new UUID as the asset's id (users never type or see it), the asset's name
+   (required) and what else a new asset needs. The edit and delete forms leave
+   `generateId` off and carry the id over from the record in their hidden key
+   field (`preFilledValue`), so a rename changes only the `name` column
+   (app-architecture.md, "The entities"):
+
+   ```yaml
+   formFields:
+       - label: $str:Machine ID
+         type: $str:textfield
+         hiddenField: $bool:true
+         generateId: $bool:true             # a new UUID on each "New"
+         targetColumn: {tablename: machines, column: machine_id, dataType: string}
+       - label: $str:Name
+         type: $str:textfield
+         required: $bool:true
+         targetColumn: {tablename: machines, column: name, dataType: string}
+   ```
+
 4. **Clicking an asset opens its detail page** (`/machines/*`). Users edit and
    delete the asset either there, with an edit form and a red Delete button, or
    from edit and delete icons in the overview table that open the forms as
