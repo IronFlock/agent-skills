@@ -82,11 +82,11 @@ A circular gauge widget for displaying single numeric values within a defined ra
 
 A signal indicator widget for displaying status using colored shapes. Use this widget to show binary or multi-state status indicators like online/offline, OK/warning/error, or any condition that maps to visual states.
 
-**Data shape:** One value per signal, each with a colorMap[] of comparison conditions deciding which colour its shape takes. Display-only. Several signals can be laid out horizontally or vertically as circles or squares.
+**Data shape:** One value per signal, each with an optional label (its name) and a colorMap[] of comparison conditions deciding which colour its shape takes and, optionally, which status text (statusLabel, e.g. 'OK', 'Alarm') appears under the name. Display-only. Several signals can be laid out horizontally or vertically as circles or squares, each with its label beside it.
 
 **Use when:**
 - A condition should be recognisable at a glance as a coloured dot — online or offline, OK / warning / error, connected, in alarm.
-- Several such indicators belong together as a status panel.
+- Several such indicators belong together as a status panel, each named by its label and spelling out its state in words (e.g. 'Station 3' with 'OK'), one lamp per machine or per connection.
 - The mapping from value to colour needs conditions rather than exact matches (thresholds, ranges).
 
 **Not for:**
