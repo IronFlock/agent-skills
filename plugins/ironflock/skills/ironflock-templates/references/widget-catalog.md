@@ -324,6 +324,7 @@ A form that stores what people enter as a row in a table, shown in the tile or i
 **Data shape:** Writes rather than reads: each formFields[] entry maps one input to a table column (targetColumn), and a save stores one row. Entries of type section head groups of fields, and width puts fields side by side.
 
 **Use when:**
+- Creating an asset (a machine, a camera) from a 'New' button: a hidden field with generateId on the entity table's key column, so the form makes the new ID, and a field for the name.
 - Data a person enters or corrects — manual readings, maintenance notes, quality checks, configuration values — with validation, defaults or fields shown only for some answers (conditionalDisplay).
 - Settings that apply as soon as they change, with no Submit button: autoSubmit on a form shown in the tile.
 - A record with a file such as a PDF (type 'file'), or a password or token (type 'secret', into a 'secret: true' column).
