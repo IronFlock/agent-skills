@@ -4,7 +4,9 @@ It runs in a container on every device the app is installed on and talks to the
 rest of the platform only through the IronFlock SDK, by way of the app's tables
 (.ironflock/data-template.yml):
 
-    devices       this device writes its own row: its state and its live view's URL
+    devices       this device registers itself at start and writes its own row: its
+                  state and its live view's URL. Only users delete a device, on the
+                  board: a device cannot tell being offline from being gone
     measurements  this device writes one row per reading of the machine
     settings      the board's Settings form writes it; every device applies the
                   newest row and each one saved after it
@@ -33,6 +35,9 @@ from ironflock import IronFlock
 UI_PORT = 8080  # the port in .ironflock/port-template.yml
 SAMPLE_INTERVAL = float(os.environ.get("SAMPLE_INTERVAL", "5"))  # env-template.yml, same default
 DEVICE_NAME = os.environ.get("DEVICE_NAME", "this device")
+# The key of the devices table. The platform's device_key column cannot serve:
+# it is stamped from the writer, and the board's delete row has no device.
+DEVICE_ID = int(os.environ["DEVICE_KEY"])
 PAGE = Path(__file__).parent / "web" / "index.html"
 
 flock: IronFlock  # created in __main__ below
@@ -123,12 +128,18 @@ async def show(reading: dict | None, state: str) -> None:
 
 
 async def announce() -> None:
-    """Write this device's row with the URL the board embeds as its live view.
+    """Register this device: its row with its name and the URL the board embeds as
+    its live view.
 
-    A development run writes the URL of its own tunnel, which ends in -dev and only
-    users with the Develop privilege on the device can open."""
+    deleted: False brings back a device a user deleted on the board, now that it
+    runs the app again. The state rows leave the column out, so they keep a
+    deletion in force. A development run writes the URL of its own tunnel, which
+    ends in -dev and only users with the Develop privilege on the device can open."""
     url = flock.getRemoteAccessUrlForPort(UI_PORT)
-    await flock.append_to_table("devices", {"tsp": now(), "ui_url": url})
+    await flock.append_to_table("devices", {
+        "tsp": now(), "device_id": DEVICE_ID, "device_name": DEVICE_NAME,
+        "deleted": False, "ui_url": url,
+    })
     lan = f"http://{os.environ.get('DEVICE_LAN_IP')}:{os.environ.get(f'DEVICE_PORT_FOR_{UI_PORT}')}"
     print(f"Live view: {url}, on the device's network: {lan}")
 
@@ -163,7 +174,7 @@ async def main() -> None:
             if new_state != state:
                 if new_state == "NO_READING":
                     await flock.report_error(problem, append=True, user_message=f"{DEVICE_NAME} cannot read the machine")
-                await flock.append_to_table("devices", {"tsp": now(), "state": new_state})
+                await flock.append_to_table("devices", {"tsp": now(), "device_id": DEVICE_ID, "state": new_state})
                 state = new_state
         except RuntimeError as error:
             print(f"Not recorded: {error}")

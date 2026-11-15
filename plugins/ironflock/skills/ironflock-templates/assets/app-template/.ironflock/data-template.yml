@@ -8,19 +8,31 @@ data:
     - tablename: devices
       description: >-
         One row per device that runs the app, with its current state and the address
-        of its live view. Written by each device about itself; the newest row per
-        device is its current state.
-      maintainLatestFlagFor: [device_key]
+        of its live view. Written by each device about itself, which registers at
+        start; the newest row per device is its current state. Users delete a device
+        that is gone with the board's delete form, the one row the board writes here.
+      maintainLatestFlagFor: [device_id]
       columns:
         - id: tsp
           name: Updated
           description: When the device last changed its state or its live view address.
           dataType: timestamp
+        - id: device_id
+          name: Device key
+          description: >-
+            The device's key in IronFlock, written by the device itself (device_key
+            cannot be, because the board's delete row has no device).
+          dataType: numeric
         - id: device_name
           name: Device
-          description: The device's name in IronFlock.
+          description: The device's name in IronFlock, written by the device itself.
           dataType: string
-          path: kwargs.DEVICE_NAME
+        - id: deleted
+          name: Deleted
+          description: >-
+            True once a user deleted the device on the board. The device writes false
+            when it registers at start, so a device that comes back reappears.
+          dataType: boolean
         - id: state
           name: State
           description: >-

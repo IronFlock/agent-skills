@@ -18,7 +18,7 @@ tables, so either works while the other is offline.
 
 | Table | Kind | Written by | Read by |
 |---|---|---|---|
-| `devices` | entity table, keyed by `device_key` | each device, about itself: its state when it changes, its live view's URL | the board: device list, states, live view |
+| `devices` | entity table, keyed by `device_id` | each device, about itself: its registration at start, its state when it changes, its live view's URL; the board's delete form, `deleted` only | the board: device list, states, live view |
 | `measurements` | readings, one row per reading | each device | the board: trends and current values |
 | `settings` | one row per save; the newest is in force | the board's settings form | every device, which applies it |
 
@@ -30,12 +30,18 @@ One writer per table. Every row has a `tsp`.
    appends a row to `measurements`. The board's charts follow the table live.
 2. **State:** a device writes a row to `devices` only when its state changes
    (OK, TOO_HOT, NO_READING). The board shows the newest row per device with the
-   `{latest: true}` filter.
-3. **Settings:** the board's form appends a row to `settings`. Every device
+   `{latest: true}` filter and the filter on `deleted`.
+3. **Registration and deletion:** at start a device writes its row with
+   `device_id`, its name, its live view's URL and `deleted: false`. A device
+   cannot unregister, since it cannot tell being offline from being gone, so
+   users delete a device that is gone with the "Delete" button on its page,
+   which writes `deleted: true`. The state rows leave `deleted` out and keep a
+   deletion in force; a device that starts the app again reappears.
+4. **Settings:** the board's form appends a row to `settings`. Every device
    follows the table with `subscribe_to_table`, reads its newest row once at
    start, and applies a row only when it is newer than the one in force. A device
    that was offline gets the rows saved meanwhile as soon as it is back.
-4. **Errors:** a device that cannot read its machine reports it with
+5. **Errors:** a device that cannot read its machine reports it with
    `report_error`; the board's toast shows it.
 
 ## Parameters, ports and tunnels

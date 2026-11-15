@@ -47,8 +47,11 @@ read them.
   explains why, and how a device follows a table the board writes.
 - **`device_key` and `authid` exist on every table automatically**, so don't declare
   them (the schema reserves those ids). `device_key` identifies the device that
-  published the row, which makes it the natural pivot for "one series per device" and
-  the usual entity key: `maintainLatestFlagFor: [device_key]`.
+  published the row, which makes it the natural pivot for "one series per device".
+  It is not a key for the device table: a row the board writes, such as the delete
+  row that removes a device, has no device. Key that table by a declared
+  `device_id` the device writes itself (app-architecture.md, "Devices that
+  register themselves").
 - **One table per entity, named after it in the plural and keyed by what
   identifies it** (`cameras` with `maintainLatestFlagFor: [camera_id]`): the
   entities from the interview, see app-architecture.md, "The entities". A child

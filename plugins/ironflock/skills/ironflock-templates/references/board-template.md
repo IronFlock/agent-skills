@@ -1024,17 +1024,17 @@ and a widget-embed on the device's page reads it:
 ```yaml
 webUrl:
     valueRef:
-        tablename: devices                   # maintainLatestFlagFor: [device_key]
+        tablename: devices                   # maintainLatestFlagFor: [device_id]
         column: ui_url
         queryParams:
             limit: 1
             filterAnd:
                 - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
-                - {column: device_key, operator: '=', value: '2', dataType: numeric, useRoute: true}
+                - {column: device_id, operator: '=', value: '2', dataType: numeric, useRoute: true}
 ```
 
 - Put it on the `*` page of a device list (pattern 2), whose menu routes by
-  `device_key`. The starter app's board in `assets/app-template/` has this page.
+  `device_id` (app-architecture.md, "Devices that register themselves"). The starter app's board in `assets/app-template/` has this page.
 - Set `multiEmbed: $bool:false`. With `multiEmbed: $bool:true`, `data` takes a
   tableRef with the format `{url: ui_url, title: device_name}` and shows every
   device's page side by side, which suits a handful of devices.

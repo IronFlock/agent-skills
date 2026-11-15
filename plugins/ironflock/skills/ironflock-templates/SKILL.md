@@ -266,6 +266,16 @@ complete reference.
   the markers on a map, any list. Show deleted entities only where the user
   explicitly asks for them (a "Show deleted" switch, a recycle bin, an audit
   view).
+- **Users delete what registered itself.** Edge code often registers its
+  device, or the gateways it finds, in a `devices` or `gateways` table at start.
+  A device can never unregister itself, because nothing can tell a device that
+  is offline from one that was scrapped. So that table always has a `deleted`
+  column, the device list on the board always has a delete icon or button, and
+  nothing ever deletes or expires an entry automatically. Key the table by a
+  column the device writes (`device_id`), not by `device_key`, which a
+  board-written row cannot set. The registration row at start writes
+  `deleted: False`, so a device that comes back reappears.
+  app-architecture.md, "Devices that register themselves", has the rules.
 - **Reach a device's web UI through its tunnel.** Declare the port in
   port-template.yml, write the URL from `getRemoteAccessUrlForPort` into a table,
   and bind widget-embed to it. Never hard-code a device's address, port or URL.
