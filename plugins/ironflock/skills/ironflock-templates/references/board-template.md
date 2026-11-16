@@ -853,6 +853,11 @@ link such as "Home", "Back to the list" or "Manage documents".
      dialog and leads back to the list after the save. Give its tile about the
      size of the button (some 12 × 5 cells), next to the edit form, not over it.
 
+   Never place a form button, such as the Delete button, at the bottom of the
+   screen (the last rows of the grid). Put it at the top of the record's area or
+   next to the content it acts on, such as the top-right corner beside the edit
+   form or the record's title.
+
    The delete form on the record's page:
 
    ```yaml
