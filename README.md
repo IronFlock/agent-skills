@@ -27,7 +27,8 @@ tunnels and embedded in the board. It holds:
   device agent does with a container or a Compose stack, and web UIs on devices;
 - a starter app, and `new_app.py`, which scaffolds a new app from it: a Python
   program that keeps each device's state and readings in tables, applies the
-  settings users save on the board, and serves a live view that the board embeds;
+  settings users save on the board, and serves a live view that the board embeds,
+  and an AI agent that loads an app skill to diagnose a machine;
 - a design step for the board: a brief (who looks at it, where, and what each
   page answers), a visual hierarchy, one meaning per colour, three style presets,
   and a wireframe on a design canvas when the agent has one;
@@ -41,6 +42,7 @@ tunnels and embedded in the board. It holds:
 | `env-template.yml` | app parameters, delivered as environment variables |
 | `port-template.yml` | ports users may open for remote access |
 | `ai-template.yml` | the app's AI agents for the IronFlock assistant |
+| `skills/<name>/SKILL.md` | app skills: instructions an AI agent loads when a task needs them |
 
 The skill gives the agent each template's schema and rules, a catalog of the 24
 board widgets, a tool that reads any widget's published configuration schema, and a
@@ -134,12 +136,13 @@ plugins/ironflock/
     │   │   ├── board-template.md        board format, data bindings, pages, layout
     │   │   ├── example-board.yml        a complete, valid three-page board
     │   │   ├── widget-catalog.md        which widget for which data (generated)
-    │   │   └── app-templates.md         data, env, port and ai templates
+    │   │   └── app-templates.md         data, env, port and ai templates, app skills
     │   ├── assets/app-template/         the starter app, with its design/ folder
     │   ├── schemas/<name>/v1.yml        JSON Schemas (vendored, see below)
     │   └── scripts/
     │       ├── validate.py              validates a whole .ironflock folder
     │       ├── board_checks.py          the board-specific part of it
+    │       ├── skill_checks.py          the app-skill part of it
     │       ├── widget.py                prints a widget's published schema
     │       └── new_app.py               scaffolds an app from the starter
     └── ironflock-widgets/
@@ -179,9 +182,18 @@ change here.
 then track the commit SHA, and every push becomes an update. If you add a `version`,
 you have to bump it on every change, or users keep the old copy.
 
-**Test the validator** after changing `validate.py` or `board_checks.py`:
-`python3 tests/run.py`. It requires the example board to stay clean and every
-mistake in `tests/boards/broken.yml` to be reported.
+**Test the validator** after changing `validate.py`, `board_checks.py` or
+`skill_checks.py`: `just test` (or `python3 tests/run.py`). It requires the
+example board to stay clean, every mistake in `tests/boards/broken.yml` to be
+reported, and, for app skills, one planted mistake per rule of the release
+build to be reported and every limit reached exactly to pass.
+
+**App skills follow the release build.** The platform checks an app's skills
+(`.ironflock/skills/`) when it builds a release. `skill_checks.py` repeats
+those rules and limits; when the platform changes one, change it there and in
+"App skills" in `app-templates.md`. The platform skills that apps may list as
+`platform/<name>` are `OPEN_PLATFORM_SKILLS` in `skill_checks.py`, empty while
+none is open to apps.
 
 **Keep the starter app working.** `tests/run.py` also requires
 `assets/app-template` to validate without findings, and `new_app.py` to scaffold
@@ -243,7 +255,12 @@ has to ask about first. It grades the first reply for the questions about the
 user's coding experience, the app's goal and its entities, and the app for one
 entity table per entity, lists bound to those tables with both filters, a "New"
 form that opens in a dialog and a delete form (a hidden checkbox on the flag); it has not
-been run yet either.
+been run yet either. The eighth, `app-skill`, came on 2026-11-19 with app skills:
+a fault procedure for the app's AI agent. It grades that the procedure is an
+app skill listed by the main agent, with a description that says to load it for
+a machine in FAULT and instructions that name the app's tables and the warning
+level, while the confirmation rule for changing a speed stays in the system
+prompt and the prompt names the skill as `app/<name>`; it has not been run yet.
 
 **Evaluate the widget skill** the same way with `evals/widgets/`:
 `python3 evals/widgets/grade.py setup <iteration-dir>` clones the fixture widgets

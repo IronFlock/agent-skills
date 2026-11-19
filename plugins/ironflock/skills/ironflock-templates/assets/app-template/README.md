@@ -23,6 +23,13 @@ pressure, and whether it runs hotter than the limit you set.
    in the app's parameters for that device.
 3. Set the maximum temperature on the board's Settings page.
 
+## Ask the assistant
+
+Ask the IronFlock assistant about your machines: their temperature, their
+state, the limit in force, or why a machine is too hot or has no reading. It
+reads the app's data and can read a machine on the spot, but it changes
+nothing: the limit stays yours to set on the Settings page.
+
 ## Live view and remote access
 
 Each device serves a live view of its machine. Installing the app switches on a

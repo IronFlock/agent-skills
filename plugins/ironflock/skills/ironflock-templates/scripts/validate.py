@@ -13,8 +13,9 @@ Every template file present is checked against its JSON Schema (the copies in
 against the rules the platform only enforces at install or render time:
 fleetdb's data-template checks, cross-file references (board data bindings must
 name real tables and columns), each board widget's config against that
-widget's published definition schema, and the app's docker-compose.yml against
-the privileged access data-template.yml declares.
+widget's published definition schema, the app's docker-compose.yml against
+the privileged access data-template.yml declares, and the app skills in
+skills/ against the release build's rules and the agents that list them.
 
 Prints one line per finding as `LEVEL file:line path: message` and exits 1 if
 there is any ERROR. Warnings point at things that are legal but probably wrong.
@@ -66,6 +67,7 @@ SCHEMAS = HERE.parent / "schemas"
 sys.path.insert(0, str(HERE))
 
 import compose_privileges  # noqa: E402
+import skill_checks  # noqa: E402
 
 TEMPLATES = ["data-template", "board-template", "env-template", "port-template", "ai-template"]
 
@@ -146,6 +148,10 @@ class Report:
 
     def warn(self, doc: Doc, path: list, message: str) -> None:
         self.add("WARN", doc, path, message)
+
+    def at(self, level: str, file: str, line: int | None, path: list, message: str) -> None:
+        """A finding in a file that is not a loaded YAML document (an app skill's files)."""
+        self.issues.append(Issue(level, file, line, list(path), message))
 
 
 def fmt_path(path: list) -> str:
@@ -551,6 +557,7 @@ def run(folder: Path, offline: bool) -> Report:
         check_port(docs["port-template"], report)
     if "ai-template" in docs:
         check_ai(docs["ai-template"], report, data)
+    skill_checks.check_skills(folder, docs.get("ai-template"), (folder / "ai-template.yml").exists(), report)
     if "board-template" in docs:
         import board_checks
 

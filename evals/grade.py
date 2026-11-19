@@ -525,6 +525,71 @@ def grade_design(app: Path, errors, warnings):
     ]
 
 
+def skill_parts(text: str):
+    """(frontmatter dict, instructions) of a SKILL.md, or (None, text) without frontmatter."""
+    m = re.match(r"\A\ufeff?---[ \t]*\n(.*?)\n---[ \t]*\n(.*)\Z", text, re.S)
+    if not m:
+        return None, text
+    try:
+        meta = yaml.safe_load(m[1])
+    except yaml.YAMLError:
+        return None, m[2]
+    return (meta if isinstance(meta, dict) else None), m[2]
+
+
+def grade_app_skill(app: Path, errors, warnings):
+    """A fault procedure as an app skill: listed by the agent, loaded at the right
+    moment, carrying the procedure, while the safety rule stays in the prompt."""
+    ai = load(app / ".ironflock/ai-template.yml") or {}
+    agents = {k: v for k, v in ai.items() if isinstance(v, dict)} if isinstance(ai, dict) else {}
+    main = next((v for v in agents.values() if v.get("main")), {})
+    listed = [s for a in agents.values() for s in a.get("skills") or [] if isinstance(s, str)]
+    own = [s for s in listed if "/" not in s]
+    skills = {}
+    for name in own:
+        file = app / ".ironflock/skills" / name / "SKILL.md"
+        if file.is_file():
+            skills[name] = skill_parts(file.read_text(encoding="utf-8", errors="replace"))
+    described = {
+        n: meta for n, (meta, _) in skills.items()
+        if meta and meta.get("name") == n and isinstance(meta.get("description"), str) and len(meta["description"]) <= 500
+    }
+    triggers = [n for n, meta in described.items() if re.search(r"\bFAULT\b", meta["description"])]
+    procedure = [
+        n for n, (_, body) in skills.items()
+        if "2.8" in body and "measurements" in body and "machine_status" in body
+    ]
+    prompt = " ".join(str(a.get("system_prompt") or "") for a in agents.values())
+    confirm = re.search(r"confirm", prompt, re.I) and re.search(r"speed|set_speed|rpm", prompt, re.I)
+    bare = [n for n in own if re.search(rf"(?<![\w/-]){re.escape(n)}(?![\w-])", prompt)]
+    prefixed = [n for n in own if f"app/{n}" in prompt]
+    tools = main.get("tools") if isinstance(main.get("tools"), dict) else {}
+    speed_tool = any(isinstance(t, dict) and t.get("topic") == "set_speed" for t in tools.values())
+    skill_errors = [e for e in errors if " skills/" in e or ".skills" in e or "skills (root)" in e]
+    return [
+        check("validate.py reports no errors", not errors, f"{len(errors)} error(s)" + (f": {errors[0][:160]}" if errors else "")),
+        check(
+            "a main agent with data_access and a set_speed tool",
+            bool(main) and main.get("data_access") is True and speed_tool,
+            f"main agent: data_access={main.get('data_access')}, tools={list(tools)}",
+        ),
+        check("an agent lists an app skill that has a folder with SKILL.md", bool(skills) and not skill_errors, f"listed {listed}, found {list(skills)}"),
+        check("the skill's description says to load it for a machine in FAULT", bool(triggers), f"descriptions: {[m.get('description') for m in described.values()]}"[:300]),
+        check("the skill carries the procedure: 2.8 mm/s, measurements and machine_status", bool(procedure), f"skills with it: {procedure}"),
+        check("the confirmation rule for the speed is in the system prompt", bool(confirm), "found" if confirm else "no confirmation rule in system_prompt"),
+        check(
+            "prompt text names the skill as app/<name>, never bare",
+            bool(prefixed) and not bare,
+            f"app/ form: {prefixed}, bare: {bare}",
+        ),
+        check(
+            "the procedure is in the skill, not in the system prompt",
+            bool(procedure) and "2.8" not in prompt,
+            "2.8 in system_prompt" if "2.8" in prompt else f"skills with it: {procedure}",
+        ),
+    ]
+
+
 GRADERS = {
     "overview-board": grade_overview,
     "multi-page-navigation": grade_multipage,
@@ -533,6 +598,7 @@ GRADERS = {
     "wall-screen-board": grade_design,
     "records-live": grade_records,
     "camera-app-interview": grade_entities,
+    "app-skill": grade_app_skill,
 }
 
 
