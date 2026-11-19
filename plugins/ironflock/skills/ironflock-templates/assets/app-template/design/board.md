@@ -29,7 +29,8 @@ The main menu (a sidenav on every page, its title linking home) has Devices and
 Settings. The device list on `/devices` and `/devices/<device_id>` is a
 data-driven sidenav bound to `devices` with `{latest: true}` and the filter on
 `deleted`, so a new device appears in it within a second, and a deleted one
-leaves it.
+leaves it. Each item's route is absolute, built from the row's `device_id`
+(`/devices/{{device}}`).
 
 ## Pages
 

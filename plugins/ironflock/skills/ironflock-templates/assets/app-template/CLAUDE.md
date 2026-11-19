@@ -43,6 +43,12 @@ function, a different look. Record a choice between alternatives in
 - Catch the SDK's `RuntimeError` around table writes in the main loop: a write
   raises when the platform has been unreachable for a minute, and the loop must
   keep running.
+- The AI agent (`.ironflock/ai-template.yml`) calls the device function
+  `current_reading` that `main.py` registers; the tool's `topic` and the
+  registered name must match. Its app skill
+  (`.ironflock/skills/machine-diagnosis/SKILL.md`) names tables, columns and
+  that tool: change it with them. Prompt text names the skill
+  `app/machine-diagnosis`; `skills:` lists it without the prefix.
 - `README.md` is the app's description in IronFlock, written for the people who
   install the app. Developer information goes here.
 - After changing anything in `.ironflock/`, run the validator of the

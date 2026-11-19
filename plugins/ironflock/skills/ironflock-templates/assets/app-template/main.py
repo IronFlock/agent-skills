@@ -17,6 +17,9 @@ neither side calls the other, and neither needs the other to be online.
 The live view on port 8080 is a web page this device serves itself. The
 port-template offers it as a remote-access tunnel, and the board embeds it on
 the device's page through the URL this program writes into the devices table.
+
+The device function current_reading is the tool of the app's AI agent
+(.ironflock/ai-template.yml): it reads the machine when the agent asks.
 """
 
 import asyncio
@@ -90,6 +93,20 @@ def on_settings(*args, **kwargs) -> None:
     apply_settings(args[0])
 
 
+# --- device function: the AI agent's tool -----------------------------------
+
+
+async def current_reading(*args, **kwargs) -> dict:
+    """Read the machine now, for the agent's current_reading tool. It takes no
+    arguments. A machine that cannot be read is an answer, not an exception:
+    the agent tells the user why."""
+    try:
+        reading = read_machine()
+    except Exception as error:
+        return {"device": DEVICE_NAME, "error": f"cannot read the machine: {error}"}
+    return {"device": DEVICE_NAME, **reading, "max_temperature": settings["max_temperature"]}
+
+
 # --- live view: a web page this device serves on UI_PORT -------------------
 
 
@@ -151,6 +168,7 @@ async def main() -> None:
     await serve_live_view()
     await flock.subscribe_to_table("settings", on_settings)  # before the read, so no row falls between
     await load_settings()
+    await flock.register_device_function("current_reading", current_reading)
     await announce()
 
     state = None  # what this device's row in the devices table says

@@ -118,6 +118,41 @@ definitions:
           for; an agent that also has data_access, file_access
           or log_access could otherwise put what it read into a query.
 
+      skills:
+        type: array
+        maxItems: 20
+        uniqueItems: true
+        items:
+          type: string
+          maxLength: 73
+          pattern: "^(platform/)?[a-z0-9]+(-[a-z0-9]+)*$"
+        description: >
+          Skills this agent can load when a task needs them. A skill is a
+          folder .ironflock/skills/<name>/ in your app holding a SKILL.md
+          file (frontmatter with a name equal to the folder name and a
+          description, then the instructions in markdown) and, optionally,
+          reference files references/<file>.md; no other files are allowed.
+          The agent always sees each skill's name and description; it loads
+          the instructions only when a task needs them, and each reference
+          file only when it needs that file. Name a skill of THIS app by its
+          folder name (for example maintenance-playbook), and a skill the
+          platform offers to apps as platform/<name>. The agent is offered
+          your skill as app/<name> and a platform skill as <name>, so use
+          those names in your system_prompt. The system_prompt is loaded on
+          every turn, a skill only when it is needed: put task-specific
+          procedures and long reference material in skills, and the role,
+          rules and domain semantics every turn needs in the prompt.
+          Limits: a name is lowercase letters and digits in words joined by
+          single hyphens, at most 64 characters; a skill's description is
+          plain text of at most 500 characters; the instructions at most
+          20,000 characters; a skill has at most 20 reference files of at
+          most 40,000 characters each; an app has at most 20 skills and
+          2 MiB of skill files in total. A release build fails when a skill
+          breaks these rules, when an entry names a skill your app does not
+          have or a platform skill that is not offered to apps, and when a
+          skill folder is listed by no agent. On an IronFlock version
+          without skill support, the agent runs without its skills.
+
       max_context_tokens:
         type: integer
         minimum: 1024

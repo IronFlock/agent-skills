@@ -232,6 +232,7 @@ def check_board(doc, report, data, offline: bool) -> None:
 
     check_routes(board, layout, placements)
     check_navigation(board, layout, placements)
+    check_list_item_routes(board, layout, placements)
     check_filter_wiring(board)
     if offline:
         board.warn([], "--offline: widget configs were not checked against their definition schemas")
@@ -1453,6 +1454,14 @@ def check_navigation(board: Board, layout: dict | None, placements: dict) -> Non
             )
 
 
+#: How a data-driven menu's items reach pages below a '*' page from anywhere.
+ABSOLUTE_ITEMS = (
+    "Build each item's absolute route from the keys in its row: route: $str:/a/{{a}}/b/{{b}} "
+    "with variables: [{label: $str:a, value: a_id}, {label: $str:b, value: b_id}] "
+    "(board-template.md, patterns 2 and 3)"
+)
+
+
 def unreachable_hint(board: Board, pattern: tuple, reached: dict, on_page: dict, widgets: list) -> str:
     parent = pattern[:-1]
     if pattern and pattern[-1] == "*" and parent in reached:
@@ -1465,8 +1474,7 @@ def unreachable_hint(board: Board, pattern: tuple, reached: dict, on_page: dict,
             return (
                 f"the data-driven menu '{lid}' on {page_label(parent)} has relative item routes, which "
                 f"open pages next to {page_label(parent)}, not below it, because its address never ends "
-                "with '/' (a route with '*' drops it). Bind the items' route to an absolute route "
-                "computed in a transform: '/a/' || id_column || ... AS route"
+                f"with '/' (a route with '*' drops it). {ABSOLUTE_ITEMS}"
             )
     if pattern and pattern[-1] == "*" and parent in reached:
         return (
@@ -1476,10 +1484,111 @@ def unreachable_hint(board: Board, pattern: tuple, reached: dict, on_page: dict,
     if pattern and pattern[-1] == "*":
         return (
             "no navigation widget on a reachable page links to it. Give a reachable page a data-driven "
-            "menu whose items lead to these pages, with the items' route bound to an absolute route "
-            "computed in a transform: '/a/' || id_column || ... AS route"
+            f"menu whose items lead to these pages. {ABSOLUTE_ITEMS}"
         )
     return "no navigation widget on a reachable page links to it. Add it to a menu, or link it with a widget-navbutton"
+
+
+def check_list_item_routes(board: Board, layout: dict | None, placements: dict) -> None:
+    """The items of a data-driven menu need absolute routes, built from the keys
+    in their row with format.variables. A relative item route (the key column
+    alone) replaces the last segment of the current address, so it only leads to
+    the items' pages from the pages next to them: from an asset's tab page
+    /machines/<id>/history a click opens /machines/<id>/<other id>, which has no
+    page, and the menu highlights no item there, because a relative item only
+    matches the end of the address. A menu on such a page is an error. A menu
+    that is only on the type's page and the items' own pages works for now, and
+    breaks as soon as it is also placed on a tab page: a warning."""
+    if not isinstance(layout, dict):
+        return
+    nodes = {tuple(route): page for route, page, _ in iter_pages(layout, [], ["layout"])}
+    for i, w in enumerate(board.doc.data.get("widgets") or []):
+        if not isinstance(w, dict) or w.get("package_name") not in MENU_WIDGETS:
+            continue
+        cfg = w.get("chartconfig")
+        items = cfg.get("navItems") if isinstance(cfg, dict) else None
+        ref = items.get("tableRef") if isinstance(items, dict) else None
+        fmt = ref.get("format") if isinstance(ref, dict) else None
+        raw = fmt.get("route") if isinstance(fmt, dict) else None
+        if not isinstance(raw, str) or not raw.strip():
+            continue
+        kind, value = decode(raw)
+        column = None
+        if kind is None:
+            link = NavLink([], "data", table=ref.get("tablename"), column=raw, provider=ref.get("provider_app"))
+            if link.provider or data_route(board.data, link) is not None:
+                continue  # another app's column, or an absolute route a transform computes
+            column = raw
+        elif kind != "str" or str(value).strip().startswith("/"):
+            continue
+        pages = sorted({tuple(p) for p in placements.get(w.get("layout_id"), [])}, key=lambda p: (len(p), p))
+        if not pages:
+            continue
+        target = item_target(nodes, pages)
+        rpath = ["widgets", i, "chartconfig", "navItems", "tableRef", "format", "route"]
+        shown = f"the column '{column}' alone" if column else f"'{value}'"
+        bound = [v.get("value") for v in fmt.get("variables") or [] if isinstance(v, dict)]
+        key = column or next((v for v in bound if isinstance(v, str) and decode(v)[0] is None), None)
+        fix = "Build each item's absolute route from the keys in its row: " + suggest_item_route(target, pages, key)
+        # From page P a relative item opens P without its last segment, plus the
+        # item. From the type's page (the target without its '*') that is right
+        # only when the address ends with a trailing slash: the warning's case.
+        def works(page: tuple) -> bool:
+            landed = page_of(layout, page[:-1] + (VALUE,))
+            if target is None:
+                return landed is not None
+            return page == target[:-1] or landed == target
+
+        broken = [p for p in pages if not works(p)]
+        if broken:
+            page = broken[0]
+            opens = "/" + "/".join([*("<key>" if s == "*" else s for s in page[:-1]), "<item>"])
+            landed = page_of(layout, page[:-1] + (VALUE,))
+            where = (
+                "which has no page (the board opens its home page instead)" if landed is None
+                else f"which is page {page_label(landed)}, not the item's page"
+            )
+            unlit = ", and no item is highlighted there" if target and len(page) > len(target) else ""
+            board.error(
+                rpath,
+                f"the item route is relative ({shown}) and the menu is on page {page_label(page)}: a relative "
+                f"route replaces the last segment of the current address, so a click there opens {opens}, "
+                f"{where}{unlit}. {fix}",
+            )
+        else:
+            board.warn(
+                rpath,
+                f"the item route is relative ({shown}): a relative route replaces the last segment of the "
+                "current address, so it works only on the type's page (reached with a trailing slash) and "
+                "on the items' own pages, and breaks once the menu is also placed on a page below an item, "
+                f"such as a tab page. {fix}",
+            )
+
+
+def item_target(nodes: dict, pages: list[tuple]) -> tuple | None:
+    """The '*' page a data-driven menu's items lead to: the shallowest '*' page
+    the menu is on, or the '*' page below the shallowest page it is on."""
+    for page in pages:
+        subs = nodes.get(page, {}).get("subRoutes")
+        if page and page[-1] == "*":
+            return page
+        if isinstance(subs, dict) and isinstance(subs.get("*"), dict):
+            return page + ("*",)
+    return None
+
+
+def suggest_item_route(target: tuple | None, pages: list[tuple], column: str | None) -> str:
+    """An absolute route for the items of a menu whose items lead to `target`.
+    A '*' above the key copies the parent's key from the current address, which
+    works only where every page of the menu has that segment (pattern 3)."""
+    key = column or "<key column>"
+    label = re.sub(r"_id$", "", column) if column and column != "_id" else "key"
+    copied = max((k + 1 for k, s in enumerate(target[:-1]) if s == "*"), default=0) if target else 0
+    if target and all(len(p) >= copied for p in pages):
+        route = "/" + "/".join([*target[:-1], "{{%s}}" % label])
+    else:
+        route = "/<type>/{{%s}}" % label
+    return f"route: $str:{route} with variables: [{{label: $str:{label}, value: {key}}}] (board-template.md, pattern 2)"
 
 
 def check_star_depth(board: Board, link: NavLink, page: tuple) -> None:

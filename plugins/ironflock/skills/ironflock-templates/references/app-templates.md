@@ -18,6 +18,7 @@ autocomplete in their editor:
 - [env-template.yml](#env-templateyml): app parameters
 - [port-template.yml](#port-templateyml): remote access
 - [ai-template.yml](#ai-templateyml): AI agents
+  - [App skills](#app-skills): instructions an agent loads when a task needs them
 - [The SDK](#the-sdk)
 
 ## data-template.yml
@@ -238,6 +239,110 @@ AI agents the app contributes to the IronFlock assistant.
   tables and transforms, like any agent's. If it needs part of one, add a shared
   transform with that part. Its `topic:` tools run in the app's own code, which
   reads private tables normally.
+- No tool may be named `load_skill`: the name is reserved for loading app
+  skills, in every app.
+
+### App skills
+
+An app skill is an instruction file the app ships for its own AI agents (not a
+skill for a coding assistant like this one). The agent sees each skill's name
+and description on every turn and loads the instructions only when a task
+needs them, so they cost nothing until then.
+
+- **Layout.** `.ironflock/skills/<name>/SKILL.md`, and optionally
+  `.ironflock/skills/<name>/references/<file>.md`. Nothing else may be in the
+  folder: no scripts, no images, no symbolic links, only UTF-8 text.
+  `SKILL.md` starts with YAML frontmatter holding `name` (the folder's name)
+  and `description`, followed by the instructions in Markdown.
+- **List it on the agent** by its folder name: `skills: [machine-diagnosis]`.
+  Never write `app/` or `project/` in the list. The agent is offered the skill
+  as `app/machine-diagnosis`, so text in `system_prompt` or `tool_description`
+  that mentions it uses that form. Every skill folder must be listed by at
+  least one agent, and the folder needs an `ai-template.yml`. `platform/<name>`
+  would list a skill the platform provides to apps; none is open to apps yet,
+  so such an entry fails the build.
+- **Skill or system prompt?** The system prompt is read on every turn, a skill
+  only when the agent decides to load it. Put the role, the rules that always
+  apply, everything safety relevant (what the agent must never do or must
+  confirm first) and short facts in the prompt: an agent that never loads the
+  skill must still keep them. Put knowledge that only some tasks need, long
+  procedures (a diagnosis, a commissioning check) and domain reference (fault
+  codes, a machine's parameters) in skills.
+- **The description decides when the skill is loaded.** Until then it is all
+  the agent sees. Say what the skill covers and the situations that call for
+  it, in the words users and the data use (the state values, the symptoms, the
+  task), and end with when to load it: "Load it before you answer why a
+  machine is TOO_HOT or shows NO_READING." A description like "Information
+  about machines" is never loaded at the right moment.
+- **Write the instructions for a model that reads them mid-task**, with a user
+  waiting. Make them self-contained: name the tables, columns and the app's own
+  tools exactly (`measurements`, `current_reading`) instead of relying on the
+  prompt. Write imperative steps in the order to follow them, with the query
+  or tool call for each, say when to stop and what to tell the user, and list
+  what not to do.
+- **Split into references** what only some paths need, such as the fault codes
+  of each machine model. `SKILL.md` says which file to read when
+  (`references/codes-press.md` for presses); the agent loads each one only
+  then, so each file must make sense on its own.
+- **Limits**, which the release build checks and the validator reports: a name
+  is lowercase letters and digits in words joined by single hyphens, at most
+  64 characters; a description at most 500 characters of plain text;
+  instructions at most 20,000 characters; at most 20 reference files per skill,
+  each at most 40,000 characters, named `<name>.md` with at most 64
+  characters; at most 20 skills per app and 2 MiB of skill files together; an
+  agent lists at most 20 skills, each once. Text may not contain a `<skill>`
+  tag.
+
+The starter app's agent loads one skill. In `ai-template.yml`:
+
+```yaml
+machines:
+  main: true
+  system_prompt: >-
+    You answer questions about the machines that App Starter watches. ...
+    You only read. ... Never tell anyone that a machine running too hot is
+    safe to keep running.
+
+    When a user asks why a machine is too hot or has no reading, or what is
+    wrong with a machine, load the skill app/machine-diagnosis and follow it.
+  data_access: true
+  skills: [machine-diagnosis]
+  tools:
+    current_reading:
+      topic: current_reading
+      description: Reads the machine at one device now. ...
+```
+
+And `.ironflock/skills/machine-diagnosis/SKILL.md`, shortened:
+
+````markdown
+---
+name: machine-diagnosis
+description: >-
+  How to find out why a machine is TOO_HOT or shows NO_READING, or what is
+  wrong with a machine a user asks about: which rows to read, when to read the
+  machine now with current_reading, and what to tell the user. Load it before
+  you answer such a question.
+---
+
+# Diagnosing a machine
+
+## 1. Find the device and its state
+Run with `execute_sql`: ...
+
+## 4. NO_READING
+1. Note the `tsp` of the device's newest `measurements` row.
+2. Call `current_reading` for the device:
+   - **It returns an error:** the device runs but cannot read the machine. ...
+   - **The call fails:** the device is offline or the app is not running on it. ...
+
+## 5. Answer
+Say the state, since when, the cause you found and the evidence. ...
+Do not: tell anyone that a machine running too hot is safe to keep running; ...
+````
+
+The safety rule is in the prompt as well as the skill, because the prompt is
+the only text the agent is sure to read.
 
 ## The SDK
 

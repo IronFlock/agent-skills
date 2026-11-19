@@ -222,9 +222,9 @@ it right before anything else, and keep it in `design/entities.md` as a table:
   a column on the entity that gets assigned to (`streams.model_id`), and a
   many-to-many is an entity of its own, keyed by both. A binding cannot join,
   so the board shows a relation by filtering the child's table on a key from
-  the route (pattern 2 in board-template.md), and builds the route to a child
-  from the keys in its row (pattern 3). A transform joins only for what a
-  filter cannot show.
+  the route (pattern 2 in board-template.md), and builds the absolute route to
+  each listed entity from the keys in its row (patterns 2 and 3). A transform
+  joins only for what a filter cannot show.
 - **Readings and events carry the entity's key.** `detections` has `stream_id`
   and `tsp`, `drives` has `car_id` and `driver_id`. These tables have no
   `maintainLatestFlagFor`, because every row counts.
@@ -646,8 +646,10 @@ Rules for the page:
   device writes with its own key, because users delete its entries from the
   board (see the next section).
 - **A device list and a page per device**: a data-driven menu over the device
-  table with `route: device_id`, and on the `*` page a filter
-  `{column: device_id, operator: '=', value: '2', dataType: numeric, useRoute: true}`
+  table whose item routes are built from the key
+  (`route: $str:/devices/{{device}}` with
+  `variables: [{label: $str:device, value: device_id}]`), and on the `*` page
+  a filter `{column: device_id, operator: '=', value: '2', dataType: numeric, useRoute: true}`
   (board-template.md, pattern 2); the device's readings filter `device_key`
   the same way, since it holds the same number. The starter's board does this.
 - **Settings per device or per machine**: key the settings table by a column

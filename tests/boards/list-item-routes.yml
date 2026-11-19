@@ -1,0 +1,175 @@
+# yaml-language-server: $schema=https://ironflock.com/schemas/board-template/v1.yml
+# Item routes of data-driven menus. A relative item route (the key column alone)
+# replaces the last segment of the current address: on a machine's tab page
+# /machines/<id>/history a click opens /machines/<id>/<other id>, which has no
+# page, so a menu with relative items on a page below an item is an error. On
+# the type's page and the items' own pages only, it works for now: a warning,
+# also for a relative constant route with variables. Absolute item routes, built
+# with format.variables or computed in a transform, are fine on every page.
+# expect: ERROR widgets[1].chartconfig.navItems.tableRef.format.route :: the menu is on page /machines/*/history
+# expect: ERROR widgets[1].chartconfig.navItems.tableRef.format.route :: opens /machines/<key>/<item>, which has no page
+# expect: ERROR widgets[1].chartconfig.navItems.tableRef.format.route :: route: $str:/machines/{{machine}} with variables: [{label: $str:machine, value: machine_id}]
+# expect: WARN  widgets[2].chartconfig.navItems.tableRef.format.route :: the item route is relative ('{{machine}}')
+# expect: WARN  widgets[2].chartconfig.navItems.tableRef.format.route :: breaks once the menu is also placed on a page below an item
+# expect: WARN  widgets[2].chartconfig.navItems.tableRef.format.route :: route: $str:/fleet/{{machine}} with variables: [{label: $str:machine, value: machine_id}]
+# expect-none: widgets[3].chartconfig.navItems.tableRef.format.route
+# expect-none: widgets[4].chartconfig.navItems.tableRef.format.route
+# expect-none: layout.subRoutes.machines.subRoutes.*
+# expect-none: layout.subRoutes.fleet.subRoutes.*
+# expect-none: layout.subRoutes.assets.subRoutes.*
+# expect-none: layout.subRoutes.assets.subRoutes.*.subRoutes.history
+name: list-item-routes
+widgets:
+    - layout_id: nav
+      package_name: widget-sidenav
+      version: 1.0.27
+      chartconfig:
+          title: $str:Plant
+          route: $str:/
+          navItems:
+              - {label: $str:Machines, route: $str:/machines/}
+              - {label: $str:Fleet, route: $str:/fleet/}
+              - {label: $str:Assets, route: $str:/assets}
+    # Relative, and also on a tab page below a machine: an error.
+    - layout_id: machine-list
+      package_name: widget-sidenav
+      version: 1.0.27
+      chartconfig:
+          title: $str:Machines
+          navItems:
+              tableRef:
+                  tablename: machine_status
+                  format: {label: machine_id, route: machine_id}
+                  queryParams:
+                      limit: 50
+                      filterAnd:
+                          - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
+    # Relative (a constant without a leading '/'), only on the type's page and
+    # the items' own pages: a warning.
+    - layout_id: fleet-list
+      package_name: widget-sidenav
+      version: 1.0.27
+      chartconfig:
+          title: $str:Fleet
+          navItems:
+              tableRef:
+                  tablename: machine_status
+                  format:
+                      label: machine_id
+                      route: $str:{{machine}}
+                      variables:
+                          - {label: $str:machine, value: machine_id}
+                  queryParams:
+                      limit: 50
+                      filterAnd:
+                          - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
+    # Absolute, built from the row's key: fine on the tab page too.
+    - layout_id: asset-list
+      package_name: widget-sidenav
+      version: 1.0.27
+      chartconfig:
+          title: $str:Assets
+          route: $str:/assets
+          navItems:
+              tableRef:
+                  tablename: machine_status
+                  format:
+                      label: machine_id
+                      route: $str:/assets/{{machine}}
+                      variables:
+                          - {label: $str:machine, value: machine_id}
+                  queryParams:
+                      limit: 50
+                      filterAnd:
+                          - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
+    # Absolute, computed in a transform ('/machines/' || machine_id || ...): not relative.
+    - layout_id: alarm-links
+      package_name: widget-sidenav
+      version: 1.0.27
+      chartconfig:
+          title: $str:Alarms
+          navItems:
+              tableRef:
+                  tablename: machine_alarm_links
+                  format: {label: state, route: route}
+                  queryParams: {limit: 50}
+    - layout_id: tabs
+      package_name: widget-navbar
+      version: 1.0.27
+      chartconfig:
+          title: $str:Machine
+          route: '$str:/machines/*'
+          navItems:
+              - {label: $str:History, route: '$str:/machines/*/history'}
+    - layout_id: asset-tabs
+      package_name: widget-navbar
+      version: 1.0.27
+      chartconfig:
+          title: $str:Asset
+          route: '$str:/assets/*'
+          navItems:
+              - {label: $str:History, route: '$str:/assets/*/history'}
+    - layout_id: text
+      package_name: widget-markdown
+      version: 1.1.0
+      chartconfig:
+          markdown: |
+              Page content.
+layout:
+    gridLayout:
+        - {id: nav, x: 0, y: 0, w: 16, h: 64}
+        - {id: text, x: 16, y: 0, w: 80, h: 64}
+    subRoutes:
+        machines:
+            gridLayout:
+                - {id: nav, x: 0, y: 0, w: 16, h: 64}
+                - {id: machine-list, x: 16, y: 0, w: 16, h: 64}
+                - {id: text, x: 32, y: 0, w: 64, h: 64}
+            subRoutes:
+                '*':
+                    gridLayout:
+                        - {id: nav, x: 0, y: 0, w: 16, h: 64}
+                        - {id: machine-list, x: 16, y: 0, w: 16, h: 64}
+                        - {id: tabs, x: 32, y: 0, w: 64, h: 8}
+                        - {id: text, x: 32, y: 8, w: 64, h: 56}
+                    subRoutes:
+                        history:
+                            gridLayout:
+                                - {id: nav, x: 0, y: 0, w: 16, h: 64}
+                                - {id: machine-list, x: 16, y: 0, w: 16, h: 64}
+                                - {id: tabs, x: 32, y: 0, w: 64, h: 8}
+                                - {id: text, x: 32, y: 8, w: 64, h: 56}
+        fleet:
+            gridLayout:
+                - {id: nav, x: 0, y: 0, w: 16, h: 64}
+                - {id: fleet-list, x: 16, y: 0, w: 16, h: 64}
+                - {id: text, x: 32, y: 0, w: 64, h: 64}
+            subRoutes:
+                '*':
+                    gridLayout:
+                        - {id: nav, x: 0, y: 0, w: 16, h: 64}
+                        - {id: fleet-list, x: 16, y: 0, w: 16, h: 64}
+                        - {id: text, x: 32, y: 0, w: 64, h: 64}
+        assets:
+            gridLayout:
+                - {id: nav, x: 0, y: 0, w: 16, h: 64}
+                - {id: asset-list, x: 16, y: 0, w: 16, h: 64}
+                - {id: text, x: 32, y: 0, w: 64, h: 64}
+            subRoutes:
+                '*':
+                    gridLayout:
+                        - {id: nav, x: 0, y: 0, w: 16, h: 64}
+                        - {id: asset-list, x: 16, y: 0, w: 16, h: 64}
+                        - {id: asset-tabs, x: 32, y: 0, w: 64, h: 8}
+                        - {id: text, x: 32, y: 8, w: 64, h: 56}
+                    subRoutes:
+                        history:
+                            gridLayout:
+                                - {id: nav, x: 0, y: 0, w: 16, h: 64}
+                                - {id: asset-list, x: 16, y: 0, w: 16, h: 64}
+                                - {id: asset-tabs, x: 32, y: 0, w: 64, h: 8}
+                                - {id: alarm-links, x: 32, y: 8, w: 16, h: 56}
+                                - {id: text, x: 48, y: 8, w: 48, h: 56}
+style:
+    columns: 96
+    rows: 64

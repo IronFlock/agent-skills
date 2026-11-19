@@ -520,12 +520,13 @@ follow from how links resolve (Pages and navigation):
 - **An entity's aspects are its tabs.** A widget-navbar with absolute routes
   that copy the keys from the current URL (`/stream/*/events`), titled
   with the entity's name and linking to its page (pattern 4).
-- **A menu builds each item's route from the keys in its row** (pattern 3):
-  `route: $str:/stream/{{stream}}/zone/{{zone}}` with `variables` bound to
-  `stream_id` and `zone_id`. This works at any depth, for a stream's zones, a
-  device's streams (`/stream/{{stream}}`) and the list at the top of a nested
-  type (`/zone`) alike, so every menu stays bound to its entity table and follows
-  new and deleted entities live.
+- **A menu builds each item's absolute route from the keys in its row**
+  (patterns 2 and 3): `route: $str:/stream/{{stream}}/zone/{{zone}}` with
+  `variables` bound to `stream_id` and `zone_id`, never the key column alone.
+  This works at any depth and on every page the menu is on, for the list of
+  streams (`/stream/{{stream}}`), a stream's zones, a device's streams and the
+  list at the top of a nested type (`/zone`) alike, so every menu stays bound
+  to its entity table and follows new and deleted entities live.
 
 ### What goes where
 
@@ -668,9 +669,10 @@ screen has no address bar. So:
   a transient page no widgets (`gridLayout: []`), and the validator skips it. A
   page with widgets is one users see, so it must be reachable. If a link opens an
   empty page after all, the validator warns, because users see a blank screen.
-  A data-driven menu on another page reaches `/devices/*` only with absolute item
-  routes built from the key (`route: $str:/devices/{{device}}`, pattern 3): a
-  relative route from `/` opens `/<device_key>`.
+  A data-driven menu's item routes are absolute, built from the key
+  (`route: $str:/devices/{{device}}`, pattern 2), so the menu reaches
+  `/devices/*` from any page: a relative route from `/` would open
+  `/<device_key>`.
 - **Only navigation widgets move between pages:** widget-navbar, widget-sidenav and
   widget-navbutton. A widget-table `button` or `image` cell opens its link in a new
   browser tab, so it cannot move inside the board. Use those cells for external
@@ -685,10 +687,14 @@ route with the current route **segment by segment**, after filling in its
 `{{variables}}` and `*` segments, and of all items that match they highlight
 only **the most specific**:
 
-- **An absolute item matches its page and every page below it.** `/machines/`
+- **An absolute item matches its page and every page below it.** `/machines`
   matches `/machines/press-1` too. An item for the home page (`/`) matches only
   the home page.
 - **A relative item** (no leading `/`) matches a page whose route ends with it.
+  An item `press-1` matches `/machines/press-1`, but not its tab page
+  `/machines/press-1/history`, where the absolute item `/machines/press-1`
+  stays highlighted. That is one reason why data-driven menus use absolute item
+  routes (pattern 2).
 - **The most specific match wins.** An item that names the current page beats
   one that names a section it is in, and a deeper section beats a shallower one.
   On `/reports/daily`, only `/reports/daily` is highlighted, not `/reports`.
@@ -729,9 +735,15 @@ link such as "Home", "Back to the list" or "Manage documents".
 
 - **`/machines` is absolute**, from the board's home.
 - **`press-2`, with no leading slash, replaces the last segment** of the current
-  URL. From `/machines/press-1` it goes to `/machines/press-2`. From `/machines`
-  (no trailing slash) it would go to `/press-2`. So link a page whose children are
-  reached relatively with a trailing slash: `/machines/`.
+  URL. From `/machines/press-1` it goes to `/machines/press-2`. From
+  `/machines/press-1/history` it goes to `/machines/press-1/press-2`, which has
+  no page, so the board opens its home page. From `/machines` (no trailing
+  slash) it goes to `/press-2`; only from `/machines/` would it reach
+  `/machines/press-2`. A relative route therefore works only on the pages that
+  sit next to its target, which is why the items of a data-driven menu are
+  always absolute, built from the row's keys (pattern 2), and never the key
+  column alone. A trailing slash only changes where a relative link on that
+  page leads; link pages without one (`/machines`).
 - **A segment that is exactly `*`** is replaced by the current URL's segment at
   that position, and `{{name}}` by the item's `variables` entry with `label: name`.
   A `*` needs a segment at its position: on `/machines`, the route
@@ -739,16 +751,20 @@ link such as "Home", "Back to the list" or "Manage documents".
   `/machines/trend`.
 - **A route that contains `*` loses its trailing slash.** `/line/*/andon/` opens
   `/line/LINE-1/andon`, so relative links on that page lead next to it
-  (`/line/LINE-1/<id>`), never below it. Below a `*` page, item routes have to be
-  absolute (pattern 3).
+  (`/line/LINE-1/<id>`), never below it. Item routes built from the row's keys
+  (patterns 2 and 3) are not affected.
 
 ### Navigation patterns
 
 1. **Sections.** One widget-navbar or widget-sidenav on every page. Its title links
-   home, and each item opens one section (`/machines/`, `/alarms`, `/settings`).
+   home, and each item opens one section (`/machines`, `/alarms`, `/settings`).
 
 2. **A list and its detail pages** (`/machines` and `/machines/*`). A data-driven
-   menu lists one item per row:
+   menu lists one item per row. Build each item's absolute route in the item's
+   `format`: a constant route with a `{{label}}` placeholder for the key, and a
+   `variables` list that binds the placeholder to the key column of the row.
+   The widget puts each row's value in (URL-encoded), so the menu stays bound to
+   the entity table and is live:
 
    ```yaml
    navItems:
@@ -757,23 +773,29 @@ link such as "Home", "Back to the list" or "Manage documents".
            format:
                label: name                               # what users see
                iconName: $str:precision_manufacturing    # Material icon name
-               route: machine_id                         # relative: /machines/<id>, the generated id
+               route: $str:/machines/{{machine}}         # absolute: /machines/<id>
+               variables:
+                   - {label: $str:machine, value: machine_id}   # the generated id
            queryParams:
                limit: 50
                filterAnd:
                    - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
    ```
 
-   Put this menu on `/machines` and `/machines/*`, and link to the list with a
-   trailing slash and no `*`: `/machines/`. On the `*` page, filter every widget
-   with `{column: machine_id, operator: '=', value: '2', dataType: string, useRoute: true}`.
+   Never bind `route` to the key column alone (`route: machine_id`). That is a
+   relative route, which replaces the last segment of the current address: it
+   works on `/machines/` and `/machines/press-1`, but on a tab page of the
+   machine (`/machines/press-1/history`) a click opens
+   `/machines/press-1/press-2`, which has no page, and no item is highlighted.
+   An absolute route works on every page, also when tab pages are added later.
 
-3. **Detail pages below a `*` page** (`/line/*/andon/*`), from a menu anywhere. A
-   relative route cannot reach them (see above). Build the absolute route in the
-   item's `format`: a constant route with a `{{label}}` placeholder per key, and
-   a `variables` list that binds each placeholder to the key column of the row.
-   The widget puts each row's values in (URL-encoded), so the menu stays bound
-   to the entity table and is live:
+   Put this menu on `/machines`, on `/machines/*` and on the pages below it, and
+   link to the list as `/machines`, without `*`. On the `*` page, filter every
+   widget with `{column: machine_id, operator: '=', value: '2', dataType: string, useRoute: true}`.
+
+3. **Detail pages below a `*` page** (`/line/*/andon/*`), from a menu anywhere.
+   The route holds every key on the way, each with its own placeholder and
+   variable:
 
    ```yaml
    navItems:
@@ -876,7 +898,7 @@ link such as "Home", "Back to the list" or "Manage documents".
          buttonLabels:
              submitLabel: $str:Delete
              cancelLabel: $str:Keep
-         submitNavigationRoute: $str:/settings/machines/
+         submitNavigationRoute: $str:/settings/machines
          formFields:                       # exactly these two, both hidden
              - label: $str:Machine
                type: $str:textfield
@@ -927,14 +949,16 @@ find their way around without having to think about it:
 1. **The asset types are the main menu.** A widget-navbar (or widget-sidenav) has
    one fixed item per route at the top of the route tree (see
    [The route tree](#the-route-tree)): the asset types that belong to no other
-   (`/machines/`, `/lines/`, `/recipes/`), and the views across all assets. Its
+   (`/machines`, `/lines`, `/recipes`), and the views across all assets. Its
    title links home, and it is on every page (pattern 1). Each item opens the
    page of that asset type.
 2. **An asset type's page lists its assets in a widget-sidenav.** For assets that
    users create and change, the list is a data-driven widget-sidenav with one item
-   per asset (pattern 2). It is on the asset type's page and on every page of an
+   per asset, whose route is absolute and built from the asset's key
+   (`route: $str:/machines/{{machine}}` with a variable bound to `machine_id`,
+   pattern 2). It is on the asset type's page and on every page of an
    asset below it. Its title names the type ("Machines") and links to the type's
-   page (`/machines/`). The type's page itself shows an overview of all its assets,
+   page (`/machines`). The type's page itself shows an overview of all its assets,
    such as a widget-table of them or the fleet's KPIs, and never stays empty. The
    sidenav and the table are bound to the entity table itself, with
    `{latest: true}` and the filter on `deleted` (pattern 6), never to a
@@ -981,7 +1005,9 @@ find their way around without having to think about it:
    (`/machines/*/history`, `/machines/*/kpis`). A widget-navbar above the detail
    area works as the tab bar, with absolute item routes (`/machines/*/history`).
    The sidenav stays on these pages, and its item for the asset stays highlighted
-   on all of them (rule 3). The tab bar's title is bound to the asset's name and
+   on all of them (rule 3), because its item routes are absolute (point 2): a
+   relative item would open `/machines/<asset>/<other asset>` from a tab page
+   and highlight nothing there. The tab bar's title is bound to the asset's name and
    leads to its detail page (`route: $str:/machines/*`), and an "Overview" tab
    for the same route may sit next to the others (pattern 4).
 6. **Sub-assets repeat the same structure one level down.** An asset's sub-assets
@@ -996,7 +1022,7 @@ find their way around without having to think about it:
    little room, or users should focus on one asset, an asset's pages may leave the
    list out and use the full width. Then put a prominent back button in the
    top-left corner: a widget-navbutton with `iconName: $str:arrow_back` whose route
-   leads to the page with the list (`/machines/`, or the parent asset's page). Give
+   leads to the page with the list (`/machines`, or the parent asset's page). Give
    the button an explicit route. An empty route means "browser back", which leads
    nowhere on a page opened from a link or bookmark, and the validator reads it as
    a link home.
@@ -1077,8 +1103,8 @@ webUrl:
                 - {column: device_id, operator: '=', value: '2', dataType: numeric, useRoute: true}
 ```
 
-- Put it on the `*` page of a device list (pattern 2), whose menu routes by
-  `device_id` (app-architecture.md, "Devices that register themselves"). The starter app's board in `assets/app-template/` has this page.
+- Put it on the `*` page of a device list (pattern 2), whose items' routes are
+  built from `device_id` (app-architecture.md, "Devices that register themselves"). The starter app's board in `assets/app-template/` has this page.
 - Set `multiEmbed: $bool:false`. With `multiEmbed: $bool:true`, `data` takes a
   tableRef with the format `{url: ui_url, title: device_name}` and shows every
   device's page side by side, which suits a handful of devices.
@@ -1494,7 +1520,9 @@ Some values only exist inside a running platform, and a template cannot know the
    comes after a type segment, a child's pages sit below its parent's key, each
    entity has one page, and its aspects (events, settings, details) are pages
    below it. Every page fills the grid. Every page can be reached from the home
-   page by clicking and leads back to it, and every route leads to a page. Menus
+   page by clicking and leads back to it, and every route leads to a page. The
+   items of every data-driven menu have absolute routes built from the row's
+   keys with `format.variables`, never the key column alone. Menus
    pin widget-navbar and widget-sidenav 1.0.26 or later, and no two items of a
    menu share a route; on an older version, no item links to `/` and no item's
    route starts another item's in the same menu.

@@ -10,6 +10,7 @@
 | The app's tables (`.ironflock/data-template.yml`) | the project's database | hold all state: the devices, their readings, the settings |
 | The board (`.ironflock/board-template.yml`) | IronFlock, in the browser | the app's user interface, bound to the tables live |
 | The live view (`web/index.html`) | served by `main.py` on port 8080 | the machine's readings as they are taken, embedded in the board through the device's remote-access tunnel |
+| The AI agent `machines` (`.ironflock/ai-template.yml`) | the IronFlock assistant | answers questions about the machines from the tables (read-only SQL) and the device function `current_reading`; loads the app skill `machine-diagnosis` (`.ironflock/skills/`) to diagnose a machine |
 
 The program and the board never call each other. Both read and write the
 tables, so either works while the other is offline.
@@ -53,6 +54,13 @@ One writer per table. Every row has a `tsp`.
   writes the tunnel's URL into `devices.ui_url`, and the board embeds that URL
   on each device's page. A development run gets a private tunnel ending in
   `-dev`.
+
+## Device functions
+
+- `current_reading`, registered by `main.py` on every device: reads the
+  machine now and returns its temperature, pressure and the limit in force on
+  that device, or why it cannot be read. The AI agent's only tool; it changes
+  nothing.
 
 ## Failure behaviour
 

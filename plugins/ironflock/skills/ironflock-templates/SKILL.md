@@ -26,6 +26,7 @@ files. Each file is optional and independent:
 | `env-template.yml` | Renders a parameters form per device or device group. Values reach the app as environment variables. |
 | `port-template.yml` | Lists the ports the app serves. A production install opens a remote-access tunnel for each. |
 | `ai-template.yml` | Registers the app's AI agents with the IronFlock assistant. |
+| `skills/<name>/SKILL.md` | App skills: instructions an agent of `ai-template.yml` loads only when a task needs them ("App skills" in app-templates.md). |
 
 Each file has a JSON Schema in `${CLAUDE_SKILL_DIR}/schemas/<name>/v1.yml`, the same
 file that is published at `https://ironflock.com/schemas/<name>/v1.yml`. Every field
@@ -63,16 +64,18 @@ in it is described.
    `<app-name>` is the app's name in IronFlock. The copy is a working app: a
    program that reads a machine (simulated) on every device, keeps each device's
    state and readings in tables, applies the limit users set on the board, and
-   serves a live view that the board embeds. Keep its structure and replace its
+   serves a live view that the board embeds, plus an AI agent with one app
+   skill that diagnoses a machine. Keep its structure and replace its
    example: the data source in `read_machine()`, the tables, the board, the live
-   view, and the `TODO:` texts in `README.md` (the app's description for its
+   view, the agent and its skill, and the `TODO:` texts in `README.md` (the app's description for its
    users), `CLAUDE.md` and the `design/` folder. `design/` holds the app's
    architecture and design documents: its purpose and users, the architecture,
    the entity model, the board's design and the decisions ("The design folder"
    in app-architecture.md). Rewrite each one for this app before the first
    template, and keep them current from then on. Delete what the app does not
    need, such as the live view and the port-template when it serves no web
-   page. Never scaffold over an existing app, including the demo app IronFlock
+   page, or `ai-template.yml` and `.ironflock/skills/` with the
+   `current_reading` device function when it has no AI agent. Never scaffold over an existing app, including the demo app IronFlock
    puts into a new app's repository: use the starter's files as the reference
    for changing the app's own, and ask before replacing demo code. Such an app
    is new all the same, so give it a `design/` folder shaped like the
@@ -118,7 +121,7 @@ in it is described.
    example [references/example-board.yml](references/example-board.yml) first,
    choose widgets with [references/widget-catalog.md](references/widget-catalog.md),
    and look up each chosen widget's exact properties (see below). For the other four
-   files, read [references/app-templates.md](references/app-templates.md) and the
+   files and the app skills, read [references/app-templates.md](references/app-templates.md) and the
    file's schema.
 7. **Validate, fix and repeat until there are no errors:**
 
@@ -255,9 +258,15 @@ complete reference.
   would create or delete an asset without seeing it happen. This holds even when a
   view with more columns exists: bind other widgets to the view, never the
   list. Nested lists are no exception: the table carries the keys of every
-  entity above it, and the menu builds each route from them
-  (`route: $str:/stream/{{stream}}/zone/{{zone}}` with `variables`,
-  board-template.md, pattern 3).
+  entity above it.
+- **A list's item routes are absolute, built from the keys in its row.** Every
+  data-driven menu builds each item's route from its row's keys
+  (`route: $str:/stream/{{stream}}` or `$str:/stream/{{stream}}/zone/{{zone}}`
+  with `variables` bound to the key columns, board-template.md, patterns 2 and
+  3), never from the key column alone. A relative route replaces the last
+  segment of the current address, so it only works on the type's page and the
+  asset's own page: on an asset's tab page it opens a page that does not
+  exist, and the list highlights nothing.
 - **Refresh the transforms your code changes.** A widget that needs a
   transform (a join, an aggregate, an overview of each asset's state and
   counts) gets its rows on the transform's schedule tick. When the app's code
@@ -322,8 +331,9 @@ complete reference.
   detail pages, records with edit pages), and the validator walks every link to
   check.
 - **Give boards that manage assets one familiar shape.** The asset types are the
-  main menu. An asset type's page lists its assets in a sidenav, with a "New"
-  floating action button on top. An asset opens its detail page with settings and
+  main menu. An asset type's page lists its assets in a sidenav whose item
+  routes are absolute, built from each asset's key, with a "New" floating
+  action button on top. An asset opens its detail page with settings and
   delete, and further aspects go on tab pages. Sub-assets repeat this one level
   down. A full-width asset page needs a prominent back button in the top-left
   corner. board-template.md, "Boards that manage assets", has the details.

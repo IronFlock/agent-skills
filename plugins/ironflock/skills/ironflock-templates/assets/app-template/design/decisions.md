@@ -6,6 +6,16 @@ Newest first. Each entry: the date, what was decided, why, and what was left
 out. Add an entry when a choice between alternatives is made; rewrite the other
 documents to match, and leave the entries themselves as they were written.
 
+## The diagnosis procedure is an app skill
+
+**Decision:** the steps for diagnosing a machine that is too hot or has no
+reading are the app skill `machine-diagnosis`, which the agent loads when a
+user asks such a question. The system prompt keeps the role, the read-only
+rule and the safety rule.
+**Why:** the procedure is long and only some questions need it; the prompt is
+read on every turn, and the rules must hold even when the skill is not loaded.
+**Left out:** changing the limit from the assistant; users set it on the board.
+
 ## The limit is a settings table, not a parameter
 
 **Decision:** the temperature limit is a row in `settings`, written by the
