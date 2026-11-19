@@ -255,9 +255,15 @@ complete reference.
   would create or delete an asset without seeing it happen. This holds even when a
   view with more columns exists: bind other widgets to the view, never the
   list. Nested lists are no exception: the table carries the keys of every
-  entity above it, and the menu builds each route from them
-  (`route: $str:/stream/{{stream}}/zone/{{zone}}` with `variables`,
-  board-template.md, pattern 3).
+  entity above it.
+- **A list's item routes are absolute, built from the keys in its row.** Every
+  data-driven menu builds each item's route from its row's keys
+  (`route: $str:/stream/{{stream}}` or `$str:/stream/{{stream}}/zone/{{zone}}`
+  with `variables` bound to the key columns, board-template.md, patterns 2 and
+  3), never from the key column alone. A relative route replaces the last
+  segment of the current address, so it only works on the type's page and the
+  asset's own page: on an asset's tab page it opens a page that does not
+  exist, and the list highlights nothing.
 - **Refresh the transforms your code changes.** A widget that needs a
   transform (a join, an aggregate, an overview of each asset's state and
   counts) gets its rows on the transform's schedule tick. When the app's code
@@ -322,8 +328,9 @@ complete reference.
   detail pages, records with edit pages), and the validator walks every link to
   check.
 - **Give boards that manage assets one familiar shape.** The asset types are the
-  main menu. An asset type's page lists its assets in a sidenav, with a "New"
-  floating action button on top. An asset opens its detail page with settings and
+  main menu. An asset type's page lists its assets in a sidenav whose item
+  routes are absolute, built from each asset's key, with a "New" floating
+  action button on top. An asset opens its detail page with settings and
   delete, and further aspects go on tab pages. Sub-assets repeat this one level
   down. A full-width asset page needs a prominent back button in the top-left
   corner. board-template.md, "Boards that manage assets", has the details.

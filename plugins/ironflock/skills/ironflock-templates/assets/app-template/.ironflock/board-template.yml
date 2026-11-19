@@ -22,7 +22,7 @@ widgets:
           navItems:
               - label: $str:Devices
                 iconName: $str:developer_board
-                route: $str:/devices/
+                route: $str:/devices
               - label: $str:Settings
                 iconName: $str:tune
                 route: $str:/settings
@@ -181,7 +181,9 @@ widgets:
                   format:
                       label: device_name
                       iconName: $str:developer_board
-                      route: device_id
+                      route: $str:/devices/{{device}}       # absolute, built from the row's key
+                      variables:
+                          - {label: $str:device, value: device_id}
                   queryParams:
                       limit: 100
                       filterAnd:
@@ -300,7 +302,7 @@ widgets:
           buttonLabels:
               submitLabel: $str:Delete
               cancelLabel: $str:Keep
-          submitNavigationRoute: $str:/devices/
+          submitNavigationRoute: $str:/devices
           formFields:
               - label: $str:Device
                 type: $str:numberfield

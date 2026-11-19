@@ -24,7 +24,7 @@ widgets:
           navItems:
               - label: $str:Machines
                 iconName: $str:precision_manufacturing
-                route: $str:/machines/
+                route: $str:/machines
     - layout_id: temperature-gauges
       package_name: widget-gauge
       version: 1.7.45
@@ -173,7 +173,9 @@ widgets:
                   format:
                       label: machine_id
                       iconName: $str:precision_manufacturing
-                      route: machine_id
+                      route: $str:/machines/{{machine}}     # absolute, built from the row's key
+                      variables:
+                          - {label: $str:machine, value: machine_id}
                   queryParams:
                       limit: 50
                       filterAnd:
