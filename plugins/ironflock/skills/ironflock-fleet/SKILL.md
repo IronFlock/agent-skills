@@ -270,20 +270,21 @@ in Studio:
 ## Devices
 
 - **A new device.** A device's configuration file (`.flock`) holds its
-  secret and private key: whoever has it can connect as that device. Never
-  show it in the chat, and never write it into a file that others can read.
-  Prefer a way in which the file passes through no chat at all: on the
-  machine itself with the `ironflock` command (`ironflock agent install` with
-  `--project` and `--name`; the skill `ironflock-cli`), or in Studio.
-  - Call `create_device` only when the person asks for a new device and you
-    can write files on their own machine (Claude Code). Then write the answer's
-    configuration file only to a path the person names, outside any
-    repository, readable only by them (for example mode 600), never print it
-    or repeat it, and tell them to move it to the device (its boot medium or
-    the device agent) and to delete every other copy.
-  - Where you cannot write files on the person's machine (the Claude app,
-    Cowork), do not call `create_device`: send the person to Studio or to the
-    `ironflock` command on the machine.
+  secret and private key: whoever has it can connect as that device. It never
+  passes through the chat.
+  - When the person can run the `ironflock` command on the machine that
+    becomes the device, that is the best way: `ironflock agent install` with
+    `--project` and `--name` creates the device and keeps its file on the
+    machine (the skill `ironflock-cli`). Do not create the device with
+    `create_device` first then.
+  - Otherwise call `create_device` when the person asks for a new device. It
+    answers the device's key and name, not its file. Tell the person where to
+    get the file: in Studio, in the device's settings under **Maintenance** >
+    **Device Configuration File** > **Download config file**; it goes on the
+    device's boot medium (IronFlockOS) or into the device agent's
+    installation.
+  - If an older IronFlock answers with the file anyway, do not show, repeat
+    or save it; send the person to Studio as above.
   - If the file was exposed, the device has to be deleted and created again
     (with confirmation).
 - `delete_device` removes the device from the project for good: its apps are
