@@ -5,7 +5,7 @@ platform:
 
 | Plugin | For | Skills |
 |---|---|---|
-| `ironflock` | people who operate IronFlock: projects, devices, apps and their data | `ironflock-connect`, `ironflock-fleet`, `ironflock-data`, `ironflock-cli` (and `ironflock-dev-moved`, see below) |
+| `ironflock` | people who operate IronFlock: projects, devices, apps and their data | `ironflock-connect`, `ironflock-fleet`, `ironflock-data`, `ironflock-production-figures`, `ironflock-cli` (and `ironflock-dev-moved`, see below) |
 | `ironflock-dev` | people who build apps and widgets for IronFlock | `ironflock-templates`, `ironflock-widgets` |
 
 `ironflock-dev` needs `ironflock`. It says so in its `plugin.json`
@@ -16,6 +16,7 @@ platform:
 | `ironflock-connect` | connecting Claude to IronFlock in the cloud or on an appliance, checking the connection, and what an API key lets Claude do |
 | `ironflock-fleet` | devices, the apps on them, alarms, logs and the audit log: what runs where, why something does not work, and changing apps, devices and alarms with the person's agreement |
 | `ironflock-data` | a project's data: finding its tables, read-only SQL on the project database, the files apps store, and custom transforms for boards |
+| `ironflock-production-figures` | production figures of machines: OEE with availability, performance and quality, stops ranked by minutes and by count, losses, and why a machine stopped; for answers from an instance and for an app's transforms and board |
 | `ironflock-cli` | machine work with the `ironflock` command in a shell: install the agent, connect a machine as a new device, log in, check a machine (`status`, `doctor`), work on another machine with `--host`; needs a shell, so Claude Code |
 | `ironflock-templates` | IronFlock apps: their architecture, a starter app, and the integration templates in the app's `.ironflock/` folder |
 | `ironflock-widgets` | the board widgets themselves: the `@ironflock/widget-*` Lit web components |
@@ -45,6 +46,17 @@ TimescaleDB) read-only with a time range and aggregation, reads the files
 apps store, and saves custom transforms for boards. Both read before they
 change anything and ask before every change, deletions and paid installs
 included. Both need version 2.0.0 or later of the IronFlock API service.
+
+`ironflock-production-figures` computes production figures from the rows
+machines write: OEE with its three parts shown apart, stops ranked by minutes
+and by count, losses, and the checks that find out why a machine stopped,
+slowed down or made scrap. It asks for what the data does not hold (planned
+time, ideal cycle time) instead of assuming it, computes in SQL, and reports
+each figure with its inputs and period. Its references serve both the
+questions people ask an instance and the transforms and boards of apps built
+with `ironflock-dev`. Their domain knowledge incorporates material adapted
+from the claude-for-manufacturing plugin by Anthropic (Apache License 2.0;
+see [License](#license)).
 
 `ironflock-cli` is for machines: where Claude has a shell, it uses the
 `ironflock` command to connect a machine as a device and to check it.
@@ -228,11 +240,14 @@ The skills trigger on their own: `ironflock-connect` when you connect Claude
 to IronFlock or the connection fails, `ironflock-fleet` when you ask about
 devices, apps, alarms or logs, or why something does not work,
 `ironflock-data` when you ask about a project's data or transforms,
+`ironflock-production-figures` when you ask for OEE, availability, stops or
+downtime, or why a machine stopped,
 `ironflock-cli` when you connect a machine as a device or use the `ironflock`
 command, `ironflock-templates` when you work on an IronFlock app,
 `ironflock-widgets` when you work on a widget. You can also invoke them
 directly as `/ironflock:ironflock-connect`, `/ironflock:ironflock-fleet`,
-`/ironflock:ironflock-data`, `/ironflock:ironflock-cli`,
+`/ironflock:ironflock-data`, `/ironflock:ironflock-production-figures`,
+`/ironflock:ironflock-cli`,
 `/ironflock-dev:ironflock-templates` and `/ironflock-dev:ironflock-widgets`.
 
 ### If you had the plugin enabled before 1.0.0
@@ -273,6 +288,15 @@ plugins/ironflock/
     ├── ironflock-connect/SKILL.md       connect, check, what a key lets Claude do
     ├── ironflock-fleet/SKILL.md         devices, apps, alarms, logs, diagnosis, the apps' own tools
     ├── ironflock-data/SKILL.md          tables, read-only SQL, files, transforms
+    ├── ironflock-production-figures/
+    │   ├── SKILL.md                     which reference for which task, the rules
+    │   ├── references/
+    │   │   ├── oee.md                   OEE, its three parts and TEEP: inputs, formulas, what each is not
+    │   │   ├── downtime-losses.md       stops ranked by minutes and by count, MTTR, MTBF, losses, prices
+    │   │   ├── machine-data-sql.md      durations, stops, shifts and counts from machine rows in SQL
+    │   │   └── root-cause-checks.md     why a machine stopped: safety, checks, ranked causes
+    │   ├── NOTICE                       origin of the adapted references and what was changed
+    │   └── LICENSE-APACHE-2.0.txt       the licence of the adapted references
     ├── ironflock-cli/SKILL.md           machine work with the ironflock command
     └── ironflock-dev-moved/SKILL.md     points to ironflock-dev
 plugins/ironflock-dev/
@@ -630,3 +654,12 @@ GitHub one back.
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+Except: three references of the skill `ironflock-production-figures`,
+`oee.md`, `downtime-losses.md` and `root-cause-checks.md`, incorporate
+material adapted from the claude-for-manufacturing plugin by Anthropic and
+are under the Apache License, Version 2.0. Each says so at its top; the
+licence text and the notice of what was changed are in that skill's folder
+([LICENSE-APACHE-2.0.txt](plugins/ironflock/skills/ironflock-production-figures/LICENSE-APACHE-2.0.txt),
+[NOTICE](plugins/ironflock/skills/ironflock-production-figures/NOTICE)), so
+they travel with the installed plugin.

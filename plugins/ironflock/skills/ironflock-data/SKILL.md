@@ -17,7 +17,10 @@ read the files apps store, and save transforms.
 
 It needs version 2.0.0 or later of the IronFlock API service. If the
 IronFlock tools are missing or fail to connect, use `ironflock-connect`. For
-devices, apps, alarms and logs, use `ironflock-fleet`.
+devices, apps, alarms and logs, use `ironflock-fleet`. For production figures
+(OEE and its parts, stops and downtime, why a machine stopped), also use
+`ironflock-production-figures`: it says which inputs they need and how to
+compute them.
 
 ## Rules
 

@@ -77,6 +77,11 @@ read them.
 - Transforms are SQL views over the app's own tables and transforms. Boards can bind to them, but
   board-side aggregation only works on plain tables. Do the aggregation in the
   transform's SQL instead.
+- **Production figures** (OEE with availability, performance and quality,
+  stops ranked by minutes and by count) are transforms too. Compute them as
+  the skill `ironflock-production-figures` of the `ironflock` plugin, which
+  comes with this one, describes: its references say which inputs each
+  figure needs and how to derive durations and counts from machine rows.
 - **Never write a transform to pick the newest row per entity or to hide deleted
   rows.** The `{latest: true}` filter and a filter on `deleted` do that on the
   table itself, live; a transform would show the same rows late. A transform is
