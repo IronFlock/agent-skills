@@ -6,7 +6,25 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
-## Unreleased
+## 1.1.0 - 2026-11-20
+
+- `ironflock-templates` keeps its board design rules in three references of
+  their own: `board-design.md` (the brief, what goes where, one colour for one
+  meaning, the look and its three presets), `board-route-tree.md` (the pages
+  and routes) and `board-assets.md` (boards that manage assets). The file
+  format is split by task as well: `board-bindings.md`, `board-navigation.md`,
+  `board-forms.md`, `board-layout-style.md` and `board-markdown.md`, while
+  `board-template.md` keeps the basics and the checklist and says which
+  references a task needs. Claude reads only those, so a small board change
+  is faster and costs fewer tokens. The rules are
+  unchanged, with a few additions: a menu placeholder must not share its name
+  with a URL parameter a filter sets, a sub-asset route may come from a
+  transform only when the table cannot get the parent's key, and a back button
+  with an empty route goes one level up, not back in the browser.
+- `ironflock-connect` knows that appliances offer the connection from
+  IronFlock 1.6.66 on, with keys from the appliance's own Studio, that the
+  computer must trust the appliance's certificate, and how to switch the
+  plugin between the cloud and an appliance.
 
 ## 1.0.0 - 2026-11-20
 

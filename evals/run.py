@@ -31,6 +31,11 @@ run that shows anything else. `claude --bare` is not used: it leaves the agent
 only Bash, Edit and Read, no Skill tool and no skill list, so a skill could
 not be used at all.
 
+Evals run on demand (they cost model usage); a release does not need them.
+To record a run, copy the sections SUMMARY.md lists into
+evals/results/<version>.md and commit it (README.md, "Eval results, on
+demand").
+
 Needs ANTHROPIC_API_KEY; fleet and data also IRONFLOCK_EVAL_API_URL (a local
 test instance) and IRONFLOCK_EVAL_API_KEY, and <iteration-dir>/placeholders.json.
 Standard library only.
@@ -754,7 +759,7 @@ def summary(iteration: Path, graded: dict[str, dict], model_flag: str | None) ->
         lines += [f"- {label}: {len(lookups)} tool calls, first: `{lookups[0][:160]}`" for label, lookups in tainted]
         lines.append("")
     lines += [
-        "The sections for evals/results/<version>.md:",
+        "To record this run (optional), the sections for evals/results/<version>.md:",
         "",
     ]
     for n, sk, w, wo, *_ in rows:

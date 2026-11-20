@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""The repository's version, changelog and eval results, for `just test` and
-the release.
+"""The repository's version, changelog and recorded eval results, for `just
+test` and the release.
 
     python3 tools/release.py check            the files agree (just test)
     python3 tools/release.py gate <level>     before a release (just release-<level>)
@@ -13,17 +13,17 @@ plugin the marketplace lists. A release is the git tag v<version>.
 CHANGELOG.md collects what changed under `## Unreleased`; the release turns
 that heading into `## <version> - <date>`.
 
-evals/results/<version>.md records the evals of a release: one section
-`## <skill>` per skill, each with a line `Result: ...`. A release needs a
-section for every skill whose files changed since the last release tag (every
-skill, before the first one).
+Evals run on demand, not for every release: they cost model usage. Whoever
+runs them for a version may record the result in evals/results/<version>.md,
+one section `## <skill>` per skill evaluated, each with a line `Result: ...`.
+A release does not need such a file.
 
 `check` makes sure VERSION is a version, every plugin carries it, the
 marketplace entries carry none, the changelog has a section for it, and every
-results file is well formed. `gate <level>` takes the version that
+results file that exists is well formed. `gate <level>` takes the version that
 `just release-<level>` will make from VERSION on origin/main and refuses,
 saying why, unless the commit (HEAD) has an `## Unreleased` section with
-content and evals/results/<version>.md covers every changed skill. `ci` does
+content, and evals/results/<version>.md is well formed if it exists. `ci` does
 the same for the version in VERSION, whose changelog section is written by
 then.
 
@@ -45,8 +45,6 @@ CHANGELOG = REPO / "CHANGELOG.md"
 MARKETPLACE = REPO / ".claude-plugin/marketplace.json"
 RESULTS = "evals/results"
 SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
-TAG = re.compile(r"^v(\d+\.\d+\.\d+)$")
-SKILL_PATH = re.compile(r"^plugins/[^/]+/skills/([^/]+)/")
 RESULT = re.compile(r"^Result:\s*(\S.*)$")
 
 
@@ -156,28 +154,6 @@ def check(root: Path = REPO) -> list[str]:
     return findings
 
 
-def last_release(below: str) -> str | None:
-    """The highest release tag v<x.y.z> below the given version."""
-    versions = [m[1] for m in map(TAG.match, git("tag", "--list", "v*").split()) if m]
-    versions = [v for v in versions if key(v) < key(below)]
-    return f"v{max(versions, key=key)}" if versions else None
-
-
-def skills_at_head() -> set[str]:
-    paths = git("ls-tree", "-r", "--name-only", "HEAD", "--", "plugins").split("\n")
-    return {m[1] for m in map(SKILL_PATH.match, paths) if m and m[0] + "SKILL.md" == m.string}
-
-
-def changed_skills(since: str | None) -> set[str]:
-    """Skills of HEAD whose files changed since the tag (every skill without a
-    tag). A skill that was deleted needs no eval."""
-    skills = skills_at_head()
-    if since is None:
-        return skills
-    paths = git("diff", "--name-only", since, "HEAD", "--", "plugins").split("\n")
-    return {m[1] for m in map(SKILL_PATH.match, paths) if m} & skills
-
-
 def at_head(path: str) -> str | None:
     done = subprocess.run(["git", "-C", str(REPO), "show", f"HEAD:{path}"], capture_output=True, text=True)
     return done.stdout if done.returncode == 0 else None
@@ -190,21 +166,12 @@ def release_findings(version: str, changelog_heading: str) -> list[str]:
         findings.append(
             f"CHANGELOG.md has no section '## {changelog_heading}' with content: write what changed for users, commit it"
         )
-    since = last_release(version)
-    changed = changed_skills(since)
+    # Eval results are optional: evals run on demand. A file recorded for this
+    # version must still be well formed.
     name = f"{version}.md"
     results = at_head(f"{RESULTS}/{name}")
-    what = f"since {since}" if since else "(the first release: every skill)"
-    if results is None:
-        if changed:
-            findings.append(
-                f"{RESULTS}/{name} is missing: run the evals of {', '.join(sorted(changed))}, changed {what}, record them there, commit it"
-            )
-        return findings
-    findings += results_findings(name, results, skill_names())
-    missing = sorted(changed - set(sections(results)))
-    if missing:
-        findings.append(f"{RESULTS}/{name} has no section for {', '.join(missing)}, changed {what}")
+    if results is not None:
+        findings += results_findings(name, results, skill_names())
     return findings
 
 
@@ -238,7 +205,7 @@ def main(argv: list[str]) -> int:
             sys.exit("release: VERSION has no version on origin/main (git fetch origin main)")
         version = next_version(argv[1], base)
         print(f"==> release {version} (main has {base})")
-        return report(release_findings(version, "Unreleased"), f"release notes and evals for {version}")
+        return report(release_findings(version, "Unreleased"), f"release notes for {version}")
     if cmd == "ci" and len(argv) == 1:
         version = VERSION_FILE.read_text(encoding="utf-8").strip()
         key(version)

@@ -309,7 +309,7 @@ layout:
                         - {id: machine-list, x: 16, y: 0, w: 16, h: 64, fixedWidth: true}
                         - {id: machine-power, x: 32, y: 0, w: 64, h: 16}
                         - {id: machine-trend, x: 32, y: 16, w: 64, h: 48}
-style:                            # the office preset (board-template.md, Style)
+style:                            # the office preset (board-design.md, Pick a look)
     theme: {theme_name: light}
     background_color: '#f1f5f9'
     text_color: '#1e293b'

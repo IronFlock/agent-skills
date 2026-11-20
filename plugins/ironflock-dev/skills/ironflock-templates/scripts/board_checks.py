@@ -863,7 +863,7 @@ def check_markdown(board: Board, config: dict, path: list, version: str | None) 
 def check_single_record_table(board: Board, config: dict, path: list) -> None:
     """A widget-table whose every column yields at most one row shows one record,
     which reads like a spreadsheet cell under a header. One record belongs in a
-    widget-markdown card (board-template.md, One record as a card)."""
+    widget-markdown card (board-markdown.md, One record as a card)."""
     columns = config.get("columns")
     if not isinstance(columns, list):
         return
@@ -1458,7 +1458,7 @@ def check_navigation(board: Board, layout: dict | None, placements: dict) -> Non
 ABSOLUTE_ITEMS = (
     "Build each item's absolute route from the keys in its row: route: $str:/a/{{a}}/b/{{b}} "
     "with variables: [{label: $str:a, value: a_id}, {label: $str:b, value: b_id}] "
-    "(board-template.md, patterns 2 and 3)"
+    "(board-navigation.md, patterns 2 and 3)"
 )
 
 
@@ -1588,7 +1588,7 @@ def suggest_item_route(target: tuple | None, pages: list[tuple], column: str | N
         route = "/" + "/".join([*target[:-1], "{{%s}}" % label])
     else:
         route = "/<type>/{{%s}}" % label
-    return f"route: $str:{route} with variables: [{{label: $str:{label}, value: {key}}}] (board-template.md, pattern 2)"
+    return f"route: $str:{route} with variables: [{{label: $str:{label}, value: {key}}}] (board-navigation.md, pattern 2)"
 
 
 def check_star_depth(board: Board, link: NavLink, page: tuple) -> None:

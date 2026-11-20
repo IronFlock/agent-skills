@@ -63,7 +63,7 @@ read them.
   the key, a `tsp` and only the changed columns. A column the row omits is inherited
   from the previous row, and an explicit `null` clears it. Use it for state such as
   machine status, settings or orders, and for records users create and edit. Read
-  the current state with the `{latest: true}` filter (see board-template.md);
+  the current state with the `{latest: true}` filter (see board-bindings.md);
   there is no `latest_flag` column. The filter is live: a widget bound with it
   replaces an entity's row the moment a new one arrives, so the board shows the
   current version of every entity without any view in between.
@@ -130,7 +130,7 @@ read them.
 - Add `downsample` to tables that will back charts spanning weeks or months.
 - To read another app's tables, list it under `consumes:`. Board widgets that bind
   to those tables then need `provider_app` on their data reference (see
-  board-template.md).
+  board-bindings.md).
 - **An app that needs host access declares `privileged:`** next to `data:`, with a
   `reason` the user reads when granting it:
 
@@ -211,7 +211,7 @@ the app must authenticate its clients itself.
   `getRemoteAccessUrlForPort(<port>)` into the device's row of a table, and the
   board's widget-embed binds `webUrl` to that column. A development run writes
   the URL of its own tunnel, ending in `-dev`. app-architecture.md ("Web UIs on the device") has the whole
-  pattern, and board-template.md the binding.
+  pattern, and board-bindings.md the binding.
 
 ## ai-template.yml
 

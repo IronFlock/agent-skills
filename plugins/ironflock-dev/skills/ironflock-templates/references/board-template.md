@@ -9,24 +9,38 @@ up your version.
 Structure is defined by `schemas/board-template/v1.yml`. Each widget's own settings
 are defined by its published definition schema (`scripts/widget.py <package>`).
 
-## Contents
+## Which file to read
 
-1. [Anatomy](#anatomy)
-2. [Literal values](#literal-values)
-3. [Binding data](#binding-data): valueRef, tableRef, queryParams, filters, aggregation
-4. [What a binding can and cannot read](#what-a-binding-can-and-cannot-read)
-5. [Designing a board](#designing-a-board): the brief, the route tree, what goes
-   where, one meaning per colour, the look, a sketch on a design canvas
-6. [Pages and navigation](#pages-and-navigation): reachability, highlighting, link
-   resolution, navigation patterns, boards that manage assets, filter widgets,
-   uploading files with a form, embedding a web UI the app serves
-7. [Layout](#layout)
-8. [Style](#style): the keys, and the presets
-9. [Markdown and HTML](#markdown-and-html): placeholders, HTML blocks, one record
-   as a card, how a value is shown, figures as cards
-10. [SCADA pages](#scada-pages)
-11. [Left to the board editor](#left-to-the-board-editor)
-12. [Checklist](#checklist)
+The board's reference is split by task, so that a change reads only what it
+needs. Every task needs this file: its [Anatomy](#anatomy) and
+[Literal values](#literal-values), and its [Checklist](#checklist) before you
+run the validator. Beyond that, read only the files your task needs: the
+table in step 6 of the skill's SKILL.md names them for each task.
+
+What each file holds:
+
+- [board-design.md](board-design.md), [board-route-tree.md](board-route-tree.md)
+  and [board-assets.md](board-assets.md): the design rules (the brief, what
+  goes where, colours, the look and its presets; the route tree; boards that
+  manage assets). They describe boards, pages and widget settings and hold for
+  every way a board is built, so their fragments are JSON, which is valid YAML
+  as it stands.
+- [board-bindings.md](board-bindings.md): valueRef, tableRef, queryParams,
+  filters, aggregation, what a binding can and cannot read, filter widgets,
+  embedding a web UI the app serves.
+- [board-navigation.md](board-navigation.md): the page tree, reachability,
+  highlighting, how a link resolves, the navigation patterns.
+- [board-forms.md](board-forms.md): the file side of boards that manage
+  records: the delete form in YAML, uploading files with a form.
+- [board-layout-style.md](board-layout-style.md): the grid, fixed-size
+  widgets, layering, the `style` keys, tile frames, the presets in the file.
+- [board-markdown.md](board-markdown.md): widget-markdown placeholders and
+  HTML, one record as a card, how a value is shown, figures as cards.
+- This file: [Anatomy](#anatomy), [Literal values](#literal-values),
+  [Designing a board](#designing-a-board) (where the design is written, a
+  sketch on a design canvas), [SCADA pages](#scada-pages),
+  [Left to the board editor](#left-to-the-board-editor) and the
+  [Checklist](#checklist).
 
 [example-board.yml](example-board.yml) is a complete, valid three-page board. It
 has navigation, a data-driven machine menu, route filtering, aggregation and a
@@ -75,7 +89,7 @@ style:
 - **`chartconfig`**: only properties from the widget's definition schema. Unknown
   keys are silently ignored, so an invented key does nothing.
 - **`custom_style`**: `text_color`, `tile_background_color`, `tile_border_color`,
-  `tile_border_radius` (e.g. `8px`), `tile_style` (the tile's frame, see Style) and
+  `tile_border_radius` (e.g. `8px`), `tile_style` (the tile's frame, board-layout-style.md, "Style") and
   `tile_style_strength` for that frame.
 
 Start the file with the schema line shown above, like the other templates. The
@@ -126,247 +140,30 @@ Boards the editor saved also contain:
   among them is kept as `$num:0`, `$bool:false` or `'$str:'`. Studio 3.5.7 and
   earlier stored those three as `null`.
 
-## Binding data
-
-A property can hold a binding instead of a literal. The binding object has exactly
-one key and replaces the whole value:
-
-```yaml
-value:                   # a single value  →  valueRef
-    valueRef: {...}
-data:                    # a list          →  tableRef
-    tableRef: {...}
-```
-
-Use `widget.py` to see each property's type. **valueRef** goes where the schema
-says string, number, boolean, color and so on. **tableRef** goes where it says
-`array`, never as an element inside a list (`[ {tableRef} ]` is wrong). An object
-property never takes a binding; bind its fields instead. Properties marked
-`dataDrivenDisabled` take no binding at all.
-
-### valueRef: one value
-
-```yaml
-valueRef:
-    tablename: measurements    # a table or transform from data-template.yml
-    column: temperature        # column id, or a json path: payload.sensor.value
-    queryParams:
-        limit: 1
-```
-
-This gives the newest value of the column after the filters are applied.
-`queryParams` is optional (it defaults to `limit: 1`), but when present it needs a
-`limit`.
-
-### tableRef: a list
-
-```yaml
-data:
-    tableRef:
-        tablename: measurements
-        format:                # one array item per row
-            x: tsp
-            y: temperature
-            pivot: machine_id
-        queryParams:
-            limit: 500         # 1 to 3000; the newest rows are kept
-```
-
-- **`format` is the template for one array item.** It is shaped exactly like the
-  `items` of that array in the widget's schema
-  (`widget.py <pkg> --path dataseries.data`). For an array of objects it is an
-  object. For an array of arrays, such as doughnut `sections`, it is a list.
-- **Leaves are column ids or json paths**, or prefixed constants such as
-  `iconName: $str:settings`. Only properties of the item are allowed.
-- **Rows arrive oldest first.**
-- **`pivot` splits the rows** into one series, gauge or doughnut per distinct
-  value. For example, `pivot: machine_id` draws one line per machine. Gauges and
-  value tiles split only with `multiChart: $bool:true`, and then read `data`
-  instead of `value`. A doughnut becomes one separate chart per value, never
-  nested rings; bind the same pivot column on every slice of its format.
-- **`limit` is required.** Charts usually want 500 to 3000; a list of entities as
-  many as you expect.
-
-### queryParams
-
-| Key | Meaning |
-|---|---|
-| `limit` | Maximum rows, 1 to 3000. Always set it. |
-| `windowPeriod`, `windowLength`, `nowMinusPeriods` | Rolling time window, e.g. `hour`, `24`, `0` for the last 24 hours up to now. Periods: `second minute hour day week month year`. The window applies only when **all three** are set. |
-| `timeStartParam`, `timeEndParam` | Names of URL parameters (a filter-calendar's `startKey`/`endKey`) whose values replace the window's start and end. They need a complete window. |
-| `filterAnd` | List of filters, all of which must match. |
-| `series` | Aggregation, see below. |
-
-The order of application is: time window, then filters, then aggregation, then
-limit. Never write `timeRange`, `columns` or `swarm_app_databackend_key`; the
-platform derives or sets them.
-
-### Filters
-
-```yaml
-filterAnd:
-    - column: machine_id
-      operator: '='              # quote it: a bare = breaks some YAML parsers
-      value: press-1
-      dataType: string           # the column's dataType from data-template.yml
-```
-
-- **Operators:** `= != <> > >= < <= LIKE ILIKE NOT LIKE NOT ILIKE IN NOT IN IS NULL
-  IS NOT NULL IS CURRENT USER`, in uppercase. `IN` takes a list as its value, and
-  `IS NULL` and `IS CURRENT USER` take no value.
-- **The person viewing the board:** `operator: IS CURRENT USER` keeps the rows
-  whose column (string or bigint) is the viewer's account id, the id the platform
-  stamps as `authid` on every row a person saves. The data backend fills it in
-  for each read, so a widget can show the viewer their own record or their own
-  saves; a visitor who is not signed in sees no row. The column must exist on the
-  table (or transform) the binding reads, and the operator does nothing in alarms.
-
-  ```yaml
-  # The viewer's own user record, e.g. their name in a header label
-  - {column: account_id, operator: IS CURRENT USER, dataType: string}
-  # Rows the viewer saved through a form
-  - {column: authid, operator: IS CURRENT USER, dataType: string}
-  ```
-- **`dataType` is required in practice.** Without it, the database does not apply
-  the filter.
-- **Latest row per entity:** on a table with `maintainLatestFlagFor`, this filter
-  keeps only the newest row of each entity:
-
-  ```yaml
-  - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
-  ```
-
-  The newest row is chosen by `tsp` each time the widget reads. On a table without
-  an entity key, the filter keeps only the single newest row. Other conditions and
-  the time window apply to those newest rows, so an entity whose newest row fails
-  them is hidden. It is never replaced by an older row. There is no `latest_flag`
-  column, so don't filter on one.
-
-  The filter is live. The widget gets every new row of the table in realtime, in
-  under a second, and a new row replaces the entity's previous row in the widget.
-  So a table bound with this filter shows the current version of every entity,
-  although the table keeps them all. No transform is needed for that, and one
-  would only show the same rows later: on its schedule tick, or when the app's
-  code refreshes it.
-
-- **From the URL path:** `useRoute: true`, where `value` is the index of the route
-  segment. On `/machines/press-1`, segment `'1'` is `machines` and `'2'` is
-  `press-1`. See [Pages and navigation](#pages-and-navigation).
-- **From a filter widget:** `useFilter: true`, where `value` is the URL parameter
-  name, i.e. a filter-dropdown's `parameterKey`. When the parameter is absent, the
-  filter is dropped, so the widget shows everything.
-- **OR logic:** `{combinator: OR, filters: [ ... ]}`.
-- **A filter that is off until the user switches it on.** An unset `useFilter`
-  parameter removes its predicate, also inside a group. So put the switchable
-  predicate into an OR group with the default condition. This table shows the
-  records that are not deleted, until a widget-filter-dropdown with
-  `parameterKey: $str:show_deleted` and the option
-  `{label: $str:Show deleted, value: $str:true}` sets the parameter:
-
-  ```yaml
-  filterAnd:
-      - combinator: OR
-        filters:
-            - {column: deleted, operator: 'IS NULL', dataType: boolean}
-            - {column: deleted, operator: '=', value: false, dataType: boolean}
-            - {column: deleted, operator: '=', value: show_deleted, dataType: boolean, useFilter: true}
-  ```
-
-  With the latest filter in the same list, this is the live list of current
-  records: a row with `deleted: true` removes its entity from the widget the
-  moment it arrives, because the newest row per entity is picked first and this
-  condition hides it afterwards. An older, undeleted row never comes back. Bind
-  lists, menus and tables of records to the table this way, not to a transform.
-
-- **Every list of a table with a delete flag filters on it.** When a table has a
-  delete flag (a boolean `deleted` column, the column a delete form writes,
-  pattern 6), every widget that lists its entities hides the
-  flagged ones: tables, sidenavs, navbar items, the options of a dropdown or of
-  a form's dropdown field, markers on a map, any list. This holds for every list
-  on the board, not only the one next to the edit form. Leave the filter out, or
-  make it switchable as above, only where the user explicitly asks to see
-  deleted entities.
-
-### Aggregation
-
-`series` makes the database compute one value per group instead of returning raw
-rows:
-
-```yaml
-queryParams:
-    limit: 3000
-    windowPeriod: day
-    windowLength: 7
-    nowMinusPeriods: 0
-    series:
-        method: AVG              # AVG SUM COUNT MIN MAX FIRST LAST
-        bucket:                  # optional: a fixed interval; omit for automatic
-            length: 1
-            period: hour         # second minute hour day week
-```
-
-The roles come from the format:
-
-| Format | Result |
-|---|---|
-| `x: tsp` | A time series. Buckets are automatic (sized to the widget's width) or fixed by `bucket`. |
-| `x: <other column>` | One value per category over the whole window. No `bucket`. |
-| `pivot: <column>` | Each group aggregated separately, e.g. one line per machine. |
-| every other column leaf | Aggregated with the method. |
-
-Rules, which the validator enforces:
-
-- Aggregation needs a complete time window. Without one, raw rows come back
-  silently.
-- `AVG` and `SUM` need numeric columns. `tsp` can only be counted: `y: tsp` with
-  `COUNT` is the number of records.
-- On a valueRef, aggregation means one value over the whole window. It needs
-  `limit: 1` and no bucket. Example: readings today is
-  `column: tsp, series: {method: COUNT}` with a 1-day window.
-- There is one method per series. To show average and maximum, add two series.
-- Transforms cannot be aggregated (see below).
-
-## What a binding can and cannot read
-
-You can read:
-
-- **The app's own tables:** every column, plus `device_key` (the publishing device)
-  and `authid`, which exist on every table. That includes tables and transforms
-  marked `private: true`: users can't reach those directly, but the app's own
-  board can. Users see whatever the board shows, so show only what they should see.
-- **Transforms (SQL views):** only `limit`, `offset` and `filterAnd` work. There is
-  no time window, no aggregation and no latest filter, and rows come in the view's
-  own order.
-- **`error-logs`:** the app's error log, with columns `tsp msg user_message source
-  level device_key`. `source` is `app` for what the app reports with
-  `report_error` and `system` for the platform's own errors, and `user_message` is
-  the text for operators. A widget-toast shows the app's reports with `message`
-  bound to `user_message` and `type` to `level`, both filtered on
-  `{column: source, operator: '=', value: app, dataType: string}`. The toast knows
-  the types `success`, `error`, `info` and `warning`; `report_error` sends `error`,
-  `warning`, `info` or `debug`, and the toast shows `debug` as `info`. SDK versions
-  before 1.10.0 sent `warn` for `warning`, which the toast shows as `info` too.
-- **Another app's table:** add `provider_app: <app name in lowercase>` to the ref,
-  and list that app under `consumes` in data-template.yml. Only that app's shared
-  tables and transforms can be read. Its private ones are not shared.
-
-There's no arithmetic, ratio, join or derived column in a binding, and no widget
-computes those either. When a widget needs one, add a transform to
-data-template.yml that computes it in SQL and bind to the transform. The same goes
-for "latest value per machine, summed", or anything else that combines rows in a
-way the aggregation table above cannot express. A transform reaches the board
-on its schedule tick, or at once when the app's code calls `refresh_transform`
-after writing the tables it reads (app-architecture.md, "Reading and writing
-state with the SDK"). A filter on the table needs neither, so use a transform
-only for what no filter can do. The current
-row of each entity and the hiding of deleted records are filters (see above),
-never a transform.
-
 ## Designing a board
 
-A board is glanced at, not studied. Before you place a widget, decide what the
-board is for, and write that decision where the next person who edits the board
-finds it. The full design goes into the app's `design/board.md` (app-architecture.md,
+The design rules are in three references of their own. They describe boards,
+pages, routes and widget settings, and hold for every way a board is built:
+
+- [board-design.md](board-design.md): the brief, what goes where on a page,
+  one colour for one meaning, and the look, with the three style presets.
+- [board-route-tree.md](board-route-tree.md): the route tree, how the pages
+  and routes follow the entity model (app-architecture.md, "The entities"),
+  and how menus and tab bars build their routes.
+- [board-assets.md](board-assets.md): the one familiar shape of boards that
+  manage assets: the asset types as the main menu, each type's list with a
+  "New" button on top, the edit and delete forms, detail and tab pages,
+  sub-assets, and the tiling of an asset's page.
+
+Read board-design.md and board-route-tree.md before you place the first
+widget, and board-assets.md before a board gets a list, a form or a detail
+page of an entity users manage. Their configuration fragments are written as
+JSON, which is valid YAML as it stands. This section says how the design goes
+into the app's files.
+
+### Where the design is written
+
+The full design goes into the app's `design/board.md` (app-architecture.md,
 "The design folder"): the brief, the route tree with what each page shows and
 offers, the band plan of each page, the look. The comment header at the top of
 board-template.yml, under the schema line, carries the short version (the
@@ -374,25 +171,8 @@ brief and the route tree, one line each) and points to `design/board.md`, so
 someone who opens only the template in the board editor finds it too. Keep the
 two in step.
 
-### The brief
-
-Answer these in `design/board.md`, and in the header one line each:
-
-- **Who looks at the board, where, and from how far.** Operators glancing at a
-  wall screen in the hall from ten metres, a supervisor at a laptop, a technician
-  on a tablet next to the machine. This decides the look, how many tiles a page
-  can carry, and how big the numbers have to be.
-- **What question each page answers.** The home page answers "is everything all
-  right, and if not, where?". Every other page answers one question of its own:
-  "how did press-1 run today?", "what are the settings?". A page with two jobs
-  becomes two pages.
-- **What people look for first.** On the home page that is usually a state (how
-  many machines run, which one has a fault) or one headline figure. It gets the
-  most prominent place and the biggest tile.
-- **What users change on the board**, if anything: the settings a form writes,
-  the functions a switch calls. Controls get a page or a corner of their own,
-  never a place between the readings.
-- **The states that matter and their colours** (see below).
+Answer the questions of the brief (board-design.md, "The brief") in
+`design/board.md`, and in the header one line each:
 
 ```yaml
 # yaml-language-server: $schema=https://ironflock.com/schemas/board-template/v1.yml
@@ -406,94 +186,11 @@ Answer these in `design/board.md`, and in the header one line each:
 # States: RUNNING green, IDLE grey, FAULT red, the same on every widget.
 ```
 
-### The route tree
-
-Decide the board's pages before you place the first widget. The entity model
-(app-architecture.md, "The entities") gives the tree its shape: which entities
-users open, and which one belongs to which. The brief decides the rest: what
-the home page answers, what each page shows, who needs which page, and where
-the actions go. Write the tree into `design/board.md`, one line per route with
-the page's name, what it shows and its main action, and its short form into
-the header. Then build the pages one by one, each answering its line.
-
-1. **Home answers the app's goal.** `/` is not a list of entities. It is the
-   summary the brief asks for (what runs, what needs attention, the latest
-   events), and its tiles lead to the entities' pages.
-2. **An entity users open gets a type segment and a key segment.** `/stream`
-   lists the streams, `/stream/<stream>` is one stream. Name the type segment
-   after the entity, in the same form on every level (`/stream` and
-   `/stream/<stream>/zone`, or `/streams` and `/streams/<stream>/zones`,
-   never a mix). The key segment is the entity's id (`stream_id`), never its
-   name: a name changes and need not be unique, so a route built from it
-   breaks when the asset is renamed (app-architecture.md, "The entities").
-   Menus, titles and breadcrumbs show the name.
-3. **A child's routes continue below its parent's key**, along the relations
-   of the entity model (except below a device, rule 6). A zone is drawn on a
-   stream, so a zone is
-   `/stream/<stream>/zone/<zone>`. Each entity's table carries the keys of all
-   entities above it (`zones` has `stream_id` and `zone_id`), so every row holds
-   its full route. A URL then reads as a path of typed keys, and each prefix of
-   it is a page of its own: the type segment below a key (`/stream/<stream>/zone`)
-   is that parent's list of those children, with its "New" button. The key of
-   the n-th level is always segment 2n, the number its `useRoute` filters take
-   (stream `'2'`, zone `'4'`). Never put two keys in a row (`/streams/*/*`):
-   nobody can tell which segment is which, and the first key gets a page that
-   is not the page of the entity it names.
-4. **Each entity has one page, where it sits in the tree.** Every link to a
-   stream, from home, from a list, from an event or from its device's page,
-   opens `/stream/<stream>`. No second route shows the same entity's page.
-5. **An entity that belongs to no other entity is a root**, even when many
-   others use it. A model that streams run gets its own branch (`/model`,
-   `/model/<model>`). The relation shows on both sides: the stream's page names
-   its model, and the model's page shows where it is used, such as whether it
-   is ready on each device.
-6. **The project's devices get a branch of their own, and what belongs to a
-   device starts its own branch.** Many apps have a table of the IronFlock
-   devices (the IPCs) in the project, usually `devices` or `gateways`, and
-   most of their other entities belong to a device: a stream runs on a device,
-   a connection is configured on a gateway. Yet the device is a technical
-   detail, not what users come for, so it does not head the tree. It gets its
-   own branch at the top (`/device`, `/device/<device>`) with its state, its
-   technical details and "Remove device", and each entity that belongs to a
-   device starts its own branch at the top instead of continuing below the
-   device's key: `/stream/<stream>/zone/<zone>`, never
-   `/device/<device>/stream/<stream>/zone/<zone>`. The relation shows on both
-   sides, as for a root: the table keeps the device's key as a column
-   (`streams.device_id`), the stream's page names its device and links to it,
-   and the device's page lists the streams that run on it, each opening
-   `/stream/<stream>`. The key segment must then identify the entity on its
-   own: a generated id or a serial number does, a bus address or a channel
-   number that repeats on every device does not, so the device writes a key
-   that includes its own (`<device_id>-<address>`). An app without such a
-   table, or whose entities do not belong to a device, skips this rule.
-7. **A nested type that users go to directly also gets a list at the top.**
-   When users think of "the zones" rather than of "this stream's zones", add
-   `/zone`, with all zones on all streams and "New zone" (with the stream as a
-   field of the form). Its items open the zones' pages below their streams. It
-   has no pages of its own below it.
-8. **An entity's aspects are pages below its key, named for what they hold.**
-   The entity's page shows what everyone needs to see of it: its live state,
-   its children, its recent events, and the action on the whole entity
-   ("Remove device"). The aspects go below it: `.../events` (its readings and
-   events over a time range), `.../settings` (its forms and "Delete"),
-   `.../details` (technical details for experts). What the brief says only some
-   users need goes one level down, never onto the entity's page. An aspect page
-   exists only where it applies: `/model/<model>/settings` only for the models
-   users can change.
-9. **Readings and events have no pages of their own.** They show on the page of
-   the entity that produces them (`.../events`) and, when users compare them
-   across all entities, on one view at the top (`/detections`).
-10. **Not every entity needs a route.** An entity that users see only as part of
-    its parent (the cameras a device detects, a stream's state) is shown on the
-    parent's page.
-11. **The routes at the top are the main menu**, in the order users need them,
-    not in the order of the tree: Streams before Devices when people come for
-    the streams.
-
-The route tree of a video analytics app (devices run streams, a stream has
-zones, a stream uses a model, detections are its events), as it stands in the
-header. The streams run on devices, but start their own branch (rule 6), and
-Devices comes last in the menu:
+Write the route tree (board-route-tree.md) into `design/board.md`, one line
+per route with the page's name, what it shows and its main action, and its
+short form into the header. Then build the pages one by one, each answering
+its line. The video analytics tree of board-route-tree.md, "An example", as it
+stands in the header:
 
 ```yaml
 # /                                  Now: summary strip, snapshot wall, streams needing attention, latest events
@@ -513,96 +210,10 @@ Devices comes last in the menu:
 # Route segments: stream, model and device '2', zone '4'.
 ```
 
-In `layout`, each type segment is a named page, and each `<key>` is a `*` page
-below it (`stream` → `'*'` → `zone` → `'*'`). Two things
-follow from how links resolve (Pages and navigation):
-
-- **An entity's aspects are its tabs.** A widget-navbar with absolute routes
-  that copy the keys from the current URL (`/stream/*/events`), titled
-  with the entity's name and linking to its page (pattern 4).
-- **A menu builds each item's absolute route from the keys in its row**
-  (patterns 2 and 3): `route: $str:/stream/{{stream}}/zone/{{zone}}` with
-  `variables` bound to `stream_id` and `zone_id`, never the key column alone.
-  This works at any depth and on every page the menu is on, for the list of
-  streams (`/stream/{{stream}}`), a stream's zones, a device's streams and the
-  list at the top of a nested type (`/zone`) alike, so every menu stays bound
-  to its entity table and follows new and deleted entities live.
-
-### What goes where
-
-- **States first, then the headline figure, then trends, then detail.** Readers
-  scan from the top left. The top band holds the states (widget-signal, or a
-  widget-table with a state column) and the headline figure (a widget-markdown
-  card, or widget-gauge when the figure only means something against limits). Trends
-  (widget-linechart, widget-statehistory) go below. Everything that has to be
-  read rather than seen (tables, forms, texts) goes on a page of its own.
-- **Size follows importance.** What people look for first is the biggest tile on
-  the page. Tiles of the same kind get the same size. A tile nobody can read from
-  where they stand (a table or a form on a wall screen) does not belong on that
-  page.
-- **Fewer, bigger tiles.** A wall screen carries six to nine tiles. A page read at
-  a desk carries up to about twelve. Beyond that, split the page by question and
-  link the pages (Pages and navigation). The grid is still filled completely.
-- **One widget per data shape.** Choose the widget from the data, with the
-  catalog: one figure, or figures that belong together → a widget-markdown card
-  (Figures as cards); a figure against limits → widget-gauge; a
-  state → widget-signal; change over time → widget-linechart; states over time →
-  widget-statehistory; several fields of many entities → widget-table; several
-  fields of one record (an asset's current settings, the selected machine) →
-  widget-markdown laid out in HTML (One record as a card); a text →
-  widget-label. Never show the same value twice on one page.
-- **One record is not a table.** Never use a widget-table for a result of one
-  row, such as a tableRef with `limit: 1` or a filter on the record's key. A single
-  row under a header line reads like a spreadsheet cell. Show the record as a
-  widget-markdown card instead, even when the user asked for "a table" of it.
-  validate.py warns about a widget-table whose every column yields one row.
-- **Figures are cards.** A KPI, one machine's current readings or a shift's output
-  next to its target go into a widget-markdown card laid out for what they mean,
-  not into widget-value tiles. widget-value is left for two cases: a figure that
-  is the average of its latest readings (`advanced.averageLatest`), and one
-  readout per distinct value of a column for however many there are
-  (`multiChart` with `pivot`).
-- **Repeat the same shape for the same thing.** One gauge per machine, all the
-  same size, in one row, in the same order as the machine list and the table.
-
-### One colour, one meaning
-
-Colour on a board carries state and nothing else. The board's chrome (the four
-style colours) is neutral, chart series take their colours from the theme, and a
-state colour appears only where it means something:
-
-- **Pick the four state colours once** (each preset in Style suggests a set) and
-  write the same value for the same meaning into every widget: widget-signal
-  `signals[].colorMap[].color`, widget-table `stateMap` (a string of pairs,
-  `$str:'RUNNING': '#22c55e', 'IDLE': '#94a3b8', 'FAULT': '#ef4444'`),
-  widget-statehistory `stateMap[].color`, widget-gauge
-  `sections.sectionLimits[].sectionColor`, and widget-toast's severity colours. A
-  fault that is red in the table and orange on the signal is two states to the
-  reader.
-- **Nothing else gets a state colour.** Text stays in the board's text colour (no
-  `fontColor`, `valueColor` or `labelColor` unless the colour is a state), tiles
-  keep the preset's tile colour (`custom_style` only on navigation, see Layout),
-  and decorative colours are left out. On a board where everything is coloured,
-  nothing is an alarm.
-- **Limits are shown, not told.** A figure that has limits is a gauge whose
-  sections carry the limits in the state colours. A legend such as "red = fault"
-  is only needed where a state has no widget of its own.
-- **Colours in markup are frozen.** HTML in widget-markdown keeps its colours on
-  every theme (Markdown and HTML), so a state colour goes in there only as a
-  bound column, never as a literal.
-
-### Pick a look
-
-Choose a preset from Style by the viewing situation in the brief: `control-room`
-for wall screens and HMIs, `office` for desks and laptops, `daylight` for tablets
-and bright halls. Copy its `style` block whole, and its state colours into the
-widgets. When the user names brand colours, give them to the tile border or the
-navigation band, never to a state, and keep the preset's text and tile colours so
-the board stays readable. When neither the request nor the app says where the
-board is looked at, take `office`: most boards are opened at a desk or on a
-laptop. Ask only when the app itself points at a wall screen or a tablet (an HMI
-next to a machine, an andon board, a shop-floor display) and the request does not
-say. Say in your report which preset you chose and why.
+In `layout`, each type segment is a named page under `subRoutes`, and each
+`<key>` is a `'*'` page below it (`stream` → `'*'` → `zone` → `'*'`).
+[board-navigation.md](board-navigation.md) has the patterns that turn the
+tree into menus and tab bars.
 
 ### Sketch it first, when there is a canvas
 
@@ -627,855 +238,7 @@ Show it, take the user's changes on the artboard, then transcribe the approved
 artboard tile by tile (`x = left / 15`, `w = width / 15`, rounded to whole cells)
 and the swatches into `style` and the widgets' colour keys. Without a canvas, or
 when the user did not ask to see the board first, write the band plan in text (as
-in Layout) and go on. The sketch never blocks the work.
-
-## Pages and navigation
-
-`layout` is a tree of pages:
-
-```yaml
-layout:                         # /
-    gridLayout: [...]
-    subRoutes:
-        machines:               # /machines
-            gridLayout: [...]
-            subRoutes:
-                '*':            # /machines/<anything>: one page for every machine
-                    gridLayout: [...]
-```
-
-- **Page names** use letters, digits, `.`, `_`, `-` and `*`. A `*` page matches any
-  segment, and the widgets on it read the segment with `useRoute` filters.
-- **Every page needs a `gridLayout`.**
-- **A widget is on a page** when that page's `gridLayout` has an entry whose `id`
-  is the widget's `layout_id`.
-- **Shared widgets:** to show the same widget on several pages (a menu, say), add
-  the same id to each page. Give it the same position on every page, because moving
-  it in the editor moves it everywhere.
-
-### Every page users see is reached by clicking
-
-People move through a board only by clicking: nobody types a route, and a kiosk
-screen has no address bar. So:
-
-- **Every page users see must be reachable from the home page** (`/`) through a
-  series of clicks, and **must lead back home.** A page that nothing links to
-  cannot be opened, and a page without a way back traps its user. The validator
-  follows every link from the home page the way the board does, and reports each
-  such page it cannot reach, and each page with no way back, as an error.
-- **A page that only holds the pages below it need not be reachable.** The route
-  `/devices/*` needs a `devices` page above it, but users may open each device
-  straight from a menu on another page and never see `/devices` itself. Give such
-  a transient page no widgets (`gridLayout: []`), and the validator skips it. A
-  page with widgets is one users see, so it must be reachable. If a link opens an
-  empty page after all, the validator warns, because users see a blank screen.
-  A data-driven menu's item routes are absolute, built from the key
-  (`route: $str:/devices/{{device}}`, pattern 2), so the menu reaches
-  `/devices/*` from any page: a relative route from `/` would open
-  `/<device_key>`.
-- **Only navigation widgets move between pages:** widget-navbar, widget-sidenav and
-  widget-navbutton. A widget-table `button` or `image` cell opens its link in a new
-  browser tab, so it cannot move inside the board. Use those cells for external
-  links only.
-- **Put the same menu on every page of one level, at the same position**, so it
-  reads as the board's menu.
-
-### How menu items are highlighted
-
-widget-navbar and widget-sidenav (version 1.0.26 and later) compare an item's
-route with the current route **segment by segment**, after filling in its
-`{{variables}}` and `*` segments, and of all items that match they highlight
-only **the most specific**:
-
-- **An absolute item matches its page and every page below it.** `/machines`
-  matches `/machines/press-1` too. An item for the home page (`/`) matches only
-  the home page.
-- **A relative item** (no leading `/`) matches a page whose route ends with it.
-  An item `press-1` matches `/machines/press-1`, but not its tab page
-  `/machines/press-1/history`, where the absolute item `/machines/press-1`
-  stays highlighted. That is one reason why data-driven menus use absolute item
-  routes (pattern 2).
-- **The most specific match wins.** An item that names the current page beats
-  one that names a section it is in, and a deeper section beats a shallower one.
-  On `/reports/daily`, only `/reports/daily` is highlighted, not `/reports`.
-  Segments are compared whole, so `/line` does not match `/lines`, and
-  `/line/LINE-1` does not match `/line/LINE-10`.
-- **Query parameters count.** An item route with `?state=open` matches only
-  while the URL carries that parameter with that value, and beats the same route
-  without it.
-- **Two items with the same route are always highlighted together.** The
-  validator warns about them.
-
-What follows for menus:
-
-1. **A Home item works.** It is highlighted on the home page only. The menu's
-   **title** links home as well (`title: $str:Machine Monitor`,
-   `route: $str:/`); the title is never highlighted.
-2. **An overview can sit next to its sections.** A tab bar may hold "Overview"
-   (`/line/*`) next to "Andon" (`/line/*/andon`): each is highlighted on its own
-   page.
-3. **A section's item stays highlighted on the pages below it**, as long as no
-   more specific item of the same menu matches there. Use that: give each
-   section one item, and connect the pages inside a section with their own links
-   (see the patterns below).
-
-**Versions before 1.0.26** compare by characters and highlight every item whose
-route starts the current route. On them, an item for `/` is highlighted on every
-page, `/reports` together with `/reports/daily`, `/line` on `/lines`, and the
-data-driven item `/line/LINE-1` on `LINE-10`'s pages. Pin 1.0.26 or later for
-the board's menus. Where a board keeps an older version, link home only from the
-title, keep a route that starts another item's route out of the same menu, and
-give data-driven ids the same number of digits (`LINE-01` … `LINE-24`). The
-validator checks the first two against the pinned version.
-
-widget-navbutton is never highlighted. That makes it the right widget for a single
-link such as "Home", "Back to the list" or "Manage documents".
-
-### How a link resolves
-
-- **`/machines` is absolute**, from the board's home.
-- **`press-2`, with no leading slash, replaces the last segment** of the current
-  URL. From `/machines/press-1` it goes to `/machines/press-2`. From
-  `/machines/press-1/history` it goes to `/machines/press-1/press-2`, which has
-  no page, so the board opens its home page. From `/machines` (no trailing
-  slash) it goes to `/press-2`; only from `/machines/` would it reach
-  `/machines/press-2`. A relative route therefore works only on the pages that
-  sit next to its target, which is why the items of a data-driven menu are
-  always absolute, built from the row's keys (pattern 2), and never the key
-  column alone. A trailing slash only changes where a relative link on that
-  page leads; link pages without one (`/machines`).
-- **A segment that is exactly `*`** is replaced by the current URL's segment at
-  that position, and `{{name}}` by the item's `variables` entry with `label: name`.
-  A `*` needs a segment at its position: on `/machines`, the route
-  `/machines/*/trend` has no second segment to copy, so the link opens
-  `/machines/trend`.
-- **A route that contains `*` loses its trailing slash.** `/line/*/andon/` opens
-  `/line/LINE-1/andon`, so relative links on that page lead next to it
-  (`/line/LINE-1/<id>`), never below it. Item routes built from the row's keys
-  (patterns 2 and 3) are not affected.
-
-### Navigation patterns
-
-1. **Sections.** One widget-navbar or widget-sidenav on every page. Its title links
-   home, and each item opens one section (`/machines`, `/alarms`, `/settings`).
-
-2. **A list and its detail pages** (`/machines` and `/machines/*`). A data-driven
-   menu lists one item per row. Build each item's absolute route in the item's
-   `format`: a constant route with a `{{label}}` placeholder for the key, and a
-   `variables` list that binds the placeholder to the key column of the row.
-   The widget puts each row's value in (URL-encoded), so the menu stays bound to
-   the entity table and is live:
-
-   ```yaml
-   navItems:
-       tableRef:
-           tablename: machines
-           format:
-               label: name                               # what users see
-               iconName: $str:precision_manufacturing    # Material icon name
-               route: $str:/machines/{{machine}}         # absolute: /machines/<id>
-               variables:
-                   - {label: $str:machine, value: machine_id}   # the generated id
-           queryParams:
-               limit: 50
-               filterAnd:
-                   - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
-   ```
-
-   Never bind `route` to the key column alone (`route: machine_id`). That is a
-   relative route, which replaces the last segment of the current address: it
-   works on `/machines/` and `/machines/press-1`, but on a tab page of the
-   machine (`/machines/press-1/history`) a click opens
-   `/machines/press-1/press-2`, which has no page, and no item is highlighted.
-   An absolute route works on every page, also when tab pages are added later.
-
-   Put this menu on `/machines`, on `/machines/*` and on the pages below it, and
-   link to the list as `/machines`, without `*`. On the `*` page, filter every
-   widget with `{column: machine_id, operator: '=', value: '2', dataType: string, useRoute: true}`.
-
-3. **Detail pages below a `*` page** (`/line/*/andon/*`), from a menu anywhere.
-   The route holds every key on the way, each with its own placeholder and
-   variable:
-
-   ```yaml
-   navItems:
-       tableRef:
-           tablename: andon_requests          # carries line_id and request_no
-           format:
-               label: request_no
-               route: $str:/line/{{line}}/andon/{{request}}
-               variables:
-                   - {label: $str:line, value: line_id}
-                   - {label: $str:request, value: request_no}
-           queryParams:
-               limit: 50
-               filterAnd:
-                   - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
-                   - {column: line_id, operator: '=', value: '2', dataType: string, useRoute: true}
-   ```
-
-   On a page below `/line/*`, the line's key is in the URL as well, so
-   `route: $str:/line/*/andon/{{request}}` with only the `request` variable
-   leads to the same pages. A menu that lists entities of several parents (all
-   andon requests of all lines) needs every key in the route as a variable. The
-   table has to carry the keys of all entities above it in the route
-   (app-architecture.md, "The entities"). Add a missing key column to the table
-   rather than computing the route in a transform: a transform follows new and
-   deleted entities only on its schedule tick or when the app's code refreshes
-   it, never by itself.
-
-4. **An entity with an overview and sections** (`/line/*`, with `/line/*/andon`,
-   `/line/*/reports` and so on below it). A widget-navbar is the entity's tab
-   bar. Its title is bound to the entity's name and links to the overview
-   (`route: $str:/line/*`), and its items open the sections
-   (`/line/*/andon`). An "Overview" item for `/line/*` may sit next to them
-   (rule 2; before version 1.0.26 leave it out, the title is the way there).
-   When the tab bar is the only menu on these pages, put a widget-navbutton next
-   to it as the way home (`title: $str:Home`, `iconName: $str:home`,
-   `route: $str:/`).
-
-5. **Pages within a section** (`/line/*/sop` and `/line/*/sop/manage`). Connect
-   them with widget-navbutton ("Manage documents", "Back to documents"). The
-   section's item stays highlighted on both.
-
-6. **Records that users create, edit and delete** (master data, settings). A
-   data-driven widget-sidenav lists the records (pattern 2 or 3) and opens one
-   page per record (`/settings/machines/*`). A "New" form
-   (`formButton: $bool:true`) sits as a floating action button on top of that
-   sidenav, and the list page itself shows an overview of all records, such as a
-   table (see [Boards that manage assets](#boards-that-manage-assets)).
-
-   Editing and deleting take two widget-forms. The **edit form** is prefilled
-   from the record (`preFilledValue` valueRefs with `{latest: true}`), and the
-   key itself is a `hiddenField`, so a save updates that record. The **delete
-   form** is a separate widget-form: from widget-form 2.0 on, a form has no
-   delete button or delete setting of its own (1.x had `deleteButton`,
-   `deleteFlagColumn` and `deleteNavigationRoute`; never use them). A delete form
-   is a form whose Submit says "Delete" and that writes exactly two hidden
-   fields: the record's key and `deleted: true`.
-
-   There are two equally good ways to offer them. Pick the one that suits the
-   board, or offer both:
-
-   - **Icons in the table that lists the records.** The overview table gets a
-     column of `type: $str:edit` with `styling.parameterKey: $str:edit` (a pen)
-     and one with `styling.parameterKey: $str:delete` and `styling.iconName:
-     $str:delete`, both bound to the key. A click writes the key into that URL
-     parameter. The edit form and the delete form each have `formButton:
-     $bool:true` and `openParameter: $str:edit` or `$str:delete`: on a board
-     they show no button, and their dialog is open while the URL carries the
-     parameter. Their valueRefs filter the key with `value: edit` (or `delete`)
-     and `useFilter: true`, and they need no `submitNavigationRoute`: the dialog
-     closes after a save or Cancel and drops the parameter. Their tiles stay
-     empty on a board: about 6 × 6 cells over a corner of the table (both may
-     share it), `z: 1`, with a transparent tile border and background.
-   - **On the record's page.** The edit form is shown in the tile
-     (`formButton: $bool:false`), its valueRefs filtered with `useRoute` on the
-     key. The delete form is a red button next to it that opens a confirmation
-     dialog and leads back to the list after the save. Give its tile about the
-     size of the button (some 12 × 5 cells), next to the edit form, not over it.
-
-   Never place a form button, such as the Delete button, at the bottom of the
-   screen (the last rows of the grid). Put it at the top of the record's area or
-   next to the content it acts on, such as the top-right corner beside the edit
-   form or the record's title.
-
-   The delete form on the record's page:
-
-   ```yaml
-   - layout_id: delete-machine
-     package_name: widget-form
-     version: 2.0.1                       # 2.0.0 or later
-     chartconfig:
-         title: $str:Delete this machine?
-         formButton: $bool:true
-         formButtonStyle:                  # a red "Delete" button, not a round one
-             fab: $bool:false
-             label: $str:Delete
-             iconName: $str:delete
-             bgColor: $str:#d32f2f
-         accentColor: $str:#d32f2f         # the dialog's Delete button
-         buttonLabels:
-             submitLabel: $str:Delete
-             cancelLabel: $str:Keep
-         submitNavigationRoute: $str:/settings/machines
-         formFields:                       # exactly these two, both hidden
-             - label: $str:Machine
-               type: $str:textfield
-               hiddenField: $bool:true
-               targetColumn: {tablename: machines, column: machine_id, dataType: string}
-               preFilledValue:
-                   valueRef:
-                       tablename: machines
-                       column: machine_id
-                       queryParams:
-                           limit: 1
-                           filterAnd:
-                               - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
-                               - {column: machine_id, operator: '=', value: '2', dataType: string, useRoute: true}
-             - label: $str:Deleted
-               type: $str:checkbox
-               hiddenField: $bool:true
-               defaultValueBoolean: $bool:true
-               targetColumn: {tablename: machines, column: deleted, dataType: boolean}
-   ```
-
-   In the table variant, the same delete form has `openParameter: $str:delete`
-   in place of `formButtonStyle` and `submitNavigationRoute`, and its key field
-   filters with `{column: machine_id, operator: '=', value: delete, dataType:
-   string, useFilter: true}` in place of the `useRoute` condition.
-
-   Rows written without the flag carry NULL, which the list filter below treats
-   as not deleted, so the "New" and edit forms need no field for it. To let
-   saving restore a deleted record, give the edit form a hidden checkbox on
-   `deleted` with `defaultValueBoolean: $bool:false`.
-
-   Bind the sidenav, the overview table and every other widget that shows the
-   records to the table itself, with `{latest: true}` and a filter on the
-   soft-delete column. They then show the current version of each record and
-   follow a save or a delete within a second. Hide deleted records by default,
-   and let users show them with a filter that is off until it is switched on
-   (see [Filters](#filters)). Never put a transform between the table and these
-   widgets to deduplicate or clean the records; it would only delay them.
-
-### Boards that manage assets
-
-Many boards let users inspect, create and change assets of a few types: machines,
-lines, sites, recipes. The asset types are the app's entities that users manage
-(app-architecture.md, "The entities"), so the entity model decides the menu,
-the lists and the forms. Build these boards the same way every time, so users
-find their way around without having to think about it:
-
-1. **The asset types are the main menu.** A widget-navbar (or widget-sidenav) has
-   one fixed item per route at the top of the route tree (see
-   [The route tree](#the-route-tree)): the asset types that belong to no other
-   (`/machines`, `/lines`, `/recipes`), and the views across all assets. Its
-   title links home, and it is on every page (pattern 1). Each item opens the
-   page of that asset type.
-2. **An asset type's page lists its assets in a widget-sidenav.** For assets that
-   users create and change, the list is a data-driven widget-sidenav with one item
-   per asset, whose route is absolute and built from the asset's key
-   (`route: $str:/machines/{{machine}}` with a variable bound to `machine_id`,
-   pattern 2). It is on the asset type's page and on every page of an
-   asset below it. Its title names the type ("Machines") and links to the type's
-   page (`/machines`). The type's page itself shows an overview of all its assets,
-   such as a widget-table of them or the fleet's KPIs, and never stays empty. The
-   sidenav and the table are bound to the entity table itself, with
-   `{latest: true}` and the filter on `deleted` (pattern 6), never to a
-   transform. They are the type's master list: an asset created with the
-   "New" form appears in it, and a deleted one disappears, in under a second.
-   A transform reaches the board only on its schedule tick or when the app's
-   code refreshes it, while the "New" and delete forms write the table
-   directly, so a list bound to one leaves users looking at an asset they just
-   deleted, or missing the one they just created. Bind the list to the table even when a view with more
-   columns exists.
-3. **"New" is a floating action button on top of the list.** A widget-form with
-   `formButton: $bool:true` opens the create form in a dialog, and it shows a round
-   floating action button unless `formButtonStyle.fab` is false. Lay it over the
-   top of the sidenav, in the sidenav's header next to its title: a small tile
-   (about 6 × 6 cells for the default button) inside the sidenav's columns, with
-   `z: 1` and a transparent tile border and background. Put it on every page that
-   has the sidenav, at the same position. Its fields are a hidden key field
-   with `generateId: $bool:true` (widget-form 2.2.0 or later), which saves a
-   new UUID as the asset's id (users never type or see it), the asset's name
-   (required) and what else a new asset needs. The edit and delete forms leave
-   `generateId` off and carry the id over from the record in their hidden key
-   field (`preFilledValue`), so a rename changes only the `name` column
-   (app-architecture.md, "The entities"):
-
-   ```yaml
-   formFields:
-       - label: $str:Machine ID
-         type: $str:textfield
-         hiddenField: $bool:true
-         generateId: $bool:true             # a new UUID on each "New"
-         targetColumn: {tablename: machines, column: machine_id, dataType: string}
-       - label: $str:Name
-         type: $str:textfield
-         required: $bool:true
-         targetColumn: {tablename: machines, column: name, dataType: string}
-   ```
-
-4. **Clicking an asset opens its detail page** (`/machines/*`). Users edit and
-   delete the asset either there, with an edit form and a red Delete button, or
-   from edit and delete icons in the overview table that open the forms as
-   dialogs; both are fine (pattern 6).
-5. **Other aspects of an asset get their own pages, behind tabs.** The selected
-   asset's history, KPIs or alarms live on pages below its detail page
-   (`/machines/*/history`, `/machines/*/kpis`). A widget-navbar above the detail
-   area works as the tab bar, with absolute item routes (`/machines/*/history`).
-   The sidenav stays on these pages, and its item for the asset stays highlighted
-   on all of them (rule 3), because its item routes are absolute (point 2): a
-   relative item would open `/machines/<asset>/<other asset>` from a tab page
-   and highlight nothing there. The tab bar's title is bound to the asset's name and
-   leads to its detail page (`route: $str:/machines/*`), and an "Overview" tab
-   for the same route may sit next to the others (pattern 4).
-6. **Sub-assets repeat the same structure one level down.** An asset's sub-assets
-   (the stations of a line) get their own data-driven widget-sidenav inside the
-   asset's detail area, with their own "New" button on top, and their own detail
-   pages and tabs (`/lines/*/stations/*`). The sub-asset table carries the
-   parent's key, so the sidenav builds each route from its row (pattern 3) and
-   reads the sub-asset table itself, live, like every other master list. The
-   same holds for the list at the top of a nested asset type (all stations of
-   all lines, see [The route tree](#the-route-tree)).
-7. **Hide a list when it costs more than it gives.** When nested sidenavs leave too
-   little room, or users should focus on one asset, an asset's pages may leave the
-   list out and use the full width. Then put a prominent back button in the
-   top-left corner: a widget-navbutton with `iconName: $str:arrow_back` whose route
-   leads to the page with the list (`/machines`, or the parent asset's page). Give
-   the button an explicit route. An empty route means "browser back", which leads
-   nowhere on a page opened from a link or bookmark, and the validator reads it as
-   a link home.
-
-An asset's tab page on a 96 × 64 grid:
-
-```text
-types   x=0  y=0  w=96 h=5   widget-navbar: Machines · Lines · Recipes (fixedHeight)
-list    x=0  y=5  w=16 h=59  widget-sidenav of the machines (fixedWidth)
-new     x=10 y=5  w=6  h=6   widget-form, floating action button, z: 1
-tabs    x=16 y=5  w=80 h=5   widget-navbar: title = machine name; History · KPIs
-content x=16 y=10 w=80 h=54  the tab's widgets
-```
-
-### Filter widgets
-
-Filter widgets set URL parameters for other widgets to read:
-
-- **widget-filter-dropdown:** set `parameterKey: $str:machine`. Each widget it
-  should filter needs a filter with `useFilter: true, value: machine`.
-- **widget-filter-calendar:** set `startKey` and `endKey`. Each widget it should
-  filter needs `timeStartParam` and `timeEndParam` with those names, plus a
-  complete time window, which serves as the default range.
-
-### Uploading files with a form
-
-A widget-form field with `type: $str:file` uploads one file into a FleetFiles
-namespace of the app and writes the stored file's key into its `targetColumn`, in
-the same save as the rest of the row (widget-form 1.0.38 and later):
-
-```yaml
-- label: $str:SOP document
-  type: $str:file
-  required: $bool:true
-  targetColumn: {tablename: sop_commands, column: file_key, dataType: string}
-  fileNamespace: $str:sop                    # a name from files.namespaces
-  acceptedFileTypes: $str:application/pdf    # MIME types; image/* works too
-  maxFileSizeMB: $num:6
-  fileSizeColumn: {tablename: sop_commands, column: size_bytes, dataType: bigint}
-```
-
-- The target is a string column. It gets the key within the namespace,
-  `<YYYY-MM-DD>/<random>/<file name>`: the last segment is the original file name,
-  extension included. The app's code reads the file with the SDK's files API under
-  that key and namespace.
-- `fileNamespace` must be in the app's `files.namespaces` in data-template.yml
-  (with none declared, only `default` exists). Keep `acceptedFileTypes` within the
-  namespace's `contentTypes` and `maxFileSizeMB` within its `maxObjectBytes`. The
-  validator checks all three.
-- Files up to 6 MB upload on every installation. Larger ones need a presigned
-  upload, which an appliance cannot issue, so a board that runs on an appliance
-  keeps `maxFileSizeMB` at 6 or below.
-- `fileNameColumn` (string), `fileSizeColumn` (bigint or numeric) and
-  `fileTypeColumn` (string) are optional, belong in the target column's table, and
-  are written only with a new file.
-- In an edit form (pattern 6), bind `preFilledValue` to the record's key column:
-  the form shows that file, and a save without a new file keeps it.
-- Uploading needs the Use right on the app, like every form write. It does not work on an
-  appliance opened through the cloud; there the form says to open the board on
-  the appliance itself.
-
-### Embedding a web UI the app serves
-
-A device's own web page (a live view, a machine's HMI) reaches the board through
-the remote-access tunnel of its port: the app writes the tunnel's URL into the
-device's row of an entity table (app-architecture.md, "Web UIs on the device"),
-and a widget-embed on the device's page reads it:
-
-```yaml
-webUrl:
-    valueRef:
-        tablename: devices                   # maintainLatestFlagFor: [device_id]
-        column: ui_url
-        queryParams:
-            limit: 1
-            filterAnd:
-                - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
-                - {column: device_id, operator: '=', value: '2', dataType: numeric, useRoute: true}
-```
-
-- Put it on the `*` page of a device list (pattern 2), whose items' routes are
-  built from `device_id` (app-architecture.md, "Devices that register themselves"). The starter app's board in `assets/app-template/` has this page.
-- Set `multiEmbed: $bool:false`. With `multiEmbed: $bool:true`, `data` takes a
-  tableRef with the format `{url: ui_url, title: device_name}` and shows every
-  device's page side by side, which suits a handful of devices.
-- A development run writes the URL of its own tunnel (its label ends in `-dev`),
-  which only users with the Develop privilege on the device can open.
-
-## Layout
-
-The grid is `style.columns` × `style.rows`, by default 96 × 64. Positions are given
-in cells: `x`, `y` from 0, and `w`, `h`. Without `overflow`, the whole grid is
-scaled onto the screen, so the grid is the screen. The exception is a widget with a
-fixed width or height (see below).
-
-- **Fill every page completely.** Any cell no widget covers shows as empty screen,
-  and users read that as unfinished. Plan bands whose heights add up to `rows` and
-  split each band into widths that add up to `columns`. On a 96 × 64 grid:
-
-  ```text
-  nav    x=0  y=0  w=16 h=64 │ gauges x=16 y=0  w=52 h=24 │ power  x=68 y=0  w=28 h=24
-                             │ trend  x=16 y=24 w=52 h=40 │ states x=68 y=24 w=28 h=40
-  ```
-
-- **Size for readability.** A chart below roughly 16 × 10 cells is too small to
-  read. With few widgets, make them bigger rather than leaving space.
-- **Give fixed-size widgets their size.** A widget whose catalog entry or
-  `widget.py` output has a **Layout** line keeps a fixed height or width (a
-  dropdown filter is about 48 px tall, a sidebar about 184 px wide). Set that
-  flag on its position, `fixedHeight: true` or `fixedWidth: true`, and give the
-  fixed axis `ceil((px + grid_gap) / cell_size)` cells; `widget.py` prints the
-  number for the default style. Without the flag the widget scales with the
-  screen: a sidebar grows wide on a large monitor and squeezes its labels on a
-  laptop. With it, every column or row it spans is `style.cell_size` pixels
-  (default 12) on any screen, and the other columns and rows share the rest.
-  Other widgets in those columns or rows get the same fixed size, which keeps a
-  button beside a navbar in line with it. The validator warns about a missing
-  flag or too few cells.
-
-  ```yaml
-  - {id: nav, x: 0, y: 0, w: 16, h: 64, fixedWidth: true}     # widget-sidenav, 184 px
-  - {id: site, x: 16, y: 0, w: 20, h: 5, fixedHeight: true}   # widget-filter-dropdown, 48 px
-  ```
-
-- **Let navigation blend in.** A widget-navbutton normally has no tile border, and
-  often no tile background either, so it reads as a button and not as a tile with
-  a button inside. Widgets in a top navbar band usually look better without a
-  border too. This is a default, not a strict rule:
-
-  ```yaml
-  custom_style:
-      tile_border_color: transparent
-      tile_background_color: transparent   # optional
-  ```
-
-- **Keep everything inside the grid:** `x + w <= columns` and `y + h <= rows`.
-- **Layering is allowed.** A small widget (a date picker, a button) may sit on top
-  of a big one. `z` orders them, higher in front.
-
-## Style
-
-`style` applies to the whole board. Every key is optional:
-
-```yaml
-style:
-    theme: {theme_name: light}   # --- light dark chalk essos halloween infographic macarons
-                                 # purple-passion roma shine vintage walden westeros wonderland
-    background_color: '#fefefe'
-    background_gradient_color: '#dfe6f5'   # optional: gradient from background_color to it
-    background_gradient_angle: 135         # degrees, 180 is top to bottom
-    text_color: '#334d5c'
-    tile_background_color: '#ffffff80'
-    tile_border_color: '#fefefe'
-    tile_border_radius: 8px
-    tile_style: outline          # frame of the tiles, see below
-    tile_style_strength: 50      # strength of its shadow, edge or glow, 0-100
-    grid_gap: 8                  # pixels between tiles
-    columns: 96
-    rows: 64
-```
-
-`tile_style` is what bounds the tiles:
-
-- `outline` (the default): a 1 px line in `tile_border_color`.
-- `shadow`: a faint hairline and a soft shadow below the tile, the card look of
-  current interfaces. Cards look best on a page that differs from them: an opaque
-  `tile_background_color` and a `background_color` a shade darker (lighter, on a
-  dark board), with a `tile_border_radius` of 12px or more and a `grid_gap` of 12
-  to 16.
-- `flat`: neither line nor shadow. A tile shows by its background alone.
-- `light-edge`: a line that is bright at the top and fades down the sides, as if
-  lit from above. Made for dark boards, where a shadow does not show.
-- `gradient-border`: a line in `tile_border_color` that is bright at the top
-  left and fades out diagonally.
-- `glow`: a line and a halo in `tile_border_color`. For dark boards; use it
-  sparingly, it suits single widgets (an alarm in red) better than a whole board.
-- `glass`: the tile blurs the board behind it and gets a bright edge and a soft
-  shadow. It only shows on a board with something behind the tiles, a
-  `background_gradient_color` or a `background_image`, and with a see-through
-  `tile_background_color` (about 25% alpha, e.g. `'#ffffff40'` or `'#1e202940'`).
-  The blur costs rendering time on every tile: leave it out for boards that run
-  on weak panel PCs.
-
-`tile_style_strength` sets how strong the shadow, the edge, the glow or the blur
-is, from 0 (faint) to 100 (strong); the default is 50. `shadow` and `light-edge` do not
-use `tile_border_color`; `gradient-border` and `glow` are drawn in it, so give it an
-accent colour that shows on the background. `shadow`, `glow` and `glass` reach
-beyond the tile: use them with grid snap on.
-
-`background_image` is the address of an image that covers the board, above the
-colour and the gradient. A template can only name an image that is already
-online (an `https://` address); uploading one is done in the board's style
-settings, and such an upload is served to signed-in members only. Keep
-`background_color` close to the image's overall tone: the text colour and the
-shadows are chosen against it.
-
-A widget can take another frame with `custom_style.tile_style`, and give it a
-strength of its own with `custom_style.tile_style_strength` (without one the
-board's applies). Without a `tile_style` of its own, a
-widget whose `custom_style` has its own `tile_border_color` stays an outline tile
-on any board, and one with a transparent `tile_background_color` has no frame. So
-the borderless buttons from "Let navigation blend in" look the same under every
-`tile_style`.
-
-`overflow: true` makes the board scroll (cells are then `cell_size` pixels) instead
-of scaling to the screen.
-
-A style that names only a theme takes its four colours from the theme (its
-background, title text and axis line colours), so `theme: {theme_name: dark}`
-alone renders dark tiles. Set all four colours anyway: then the board looks the
-same after a theme update, and the board editor stores all four on every save.
-Without `style`, the platform defaults apply: `#fefefe` background, `#1a1430`
-text, `#ffffff80` tiles with a `#fefefe` border.
-
-### Presets
-
-Each preset is a complete `style` block plus the four state colours for the
-widgets (Designing a board). Pick one by the viewing situation, copy it whole, and
-change it only when the user asks for brand colours.
-
-**control-room**: wall screens and HMIs, read from a distance, often under harsh
-light. Dark, few tiles, big numbers.
-
-```yaml
-style:
-    theme: {theme_name: dark}
-    background_color: '#0f172a'
-    text_color: '#e2e8f0'
-    tile_background_color: '#1e293b'
-    tile_border_color: '#334155'
-    tile_border_radius: 8px
-    grid_gap: 8
-    columns: 96
-    rows: 64
-# states: ok '#22c55e'  warning '#f59e0b'  alarm '#ef4444'  idle '#94a3b8'
-```
-
-**office**: desks and laptops, a supervisor's or manager's overview with more
-tiles and tables. Light, soft contrast.
-
-```yaml
-style:
-    theme: {theme_name: light}
-    background_color: '#f1f5f9'
-    text_color: '#1e293b'
-    tile_background_color: '#ffffff'
-    tile_border_color: '#e2e8f0'
-    tile_border_radius: 12px
-    grid_gap: 8
-    columns: 96
-    rows: 64
-# states: ok '#16a34a'  warning '#d97706'  alarm '#dc2626'  idle '#64748b'
-```
-
-**daylight**: tablets and panels next to the machine, bright halls, outdoors.
-Highest contrast, hard edges.
-
-```yaml
-style:
-    theme: {theme_name: light}
-    background_color: '#ffffff'
-    text_color: '#111827'
-    tile_background_color: '#f8fafc'
-    tile_border_color: '#9ca3af'
-    tile_border_radius: 4px
-    grid_gap: 8
-    columns: 96
-    rows: 64
-# states: ok '#15803d'  warning '#b45309'  alarm '#b91c1c'  idle '#4b5563'
-```
-
-In every preset the text reads at 11:1 or better against the tiles and each
-state colour at 3:1 or better, so they stay legible on cheap screens.
-
-## Markdown and HTML
-
-widget-markdown renders Markdown and HTML. A `{{name}}` placeholder shows the value
-of the `data` entry whose `label` is `name`:
-
-```yaml
-markdown: |
-    <div style="background:{{stateColor}};border-left:4px solid #58a6ff;padding:8px 12px">
-      <a href="/machines/{{machine}}">{{machine}}</a> is {{state}}
-    </div>
-
-    **Temperature:** {{temperature}} °C
-data:
-    - {label: $str:machine, value: $str:press-1}
-    - {label: $str:state, value: $str:running}
-    - label: $str:stateColor
-      value:
-          valueRef: {tablename: machine_status, column: state_color, queryParams: {limit: 1}}
-    - label: $str:temperature
-      value:
-          valueRef: {tablename: measurements, column: temperature, queryParams: {limit: 1}}
-```
-
-From widget-markdown 1.0.14 on, a placeholder works in text, code, link addresses
-and HTML attribute values (`style`, `class`, `href`, `src`), and in a `<style>`
-element:
-
-- **Values are plain text.** A value never becomes markup, so it cannot add a tag
-  or leave its attribute. Markup in a value shows literally. Every placeholder
-  needs a `data` entry with exactly its label, or it renders as nothing.
-- **In CSS, a value must be a plain CSS value**, such as `#22c55e`,
-  `rgb(34, 197, 94)`, `12px` or `bold`. This applies in a `style` attribute, a
-  `<style>` element and an SVG `fill` or `stroke`. A value with `;`, `:`, quotes,
-  braces or `url(` is left out. For a colour that follows the data, bind a column
-  that holds the colour, for example a transform column
-  `CASE state WHEN 'running' THEN '#22c55e' ELSE '#ef4444' END`.
-- **An address must be http(s), mailto, tel or relative.** Images can also take
-  `data:` images. Any other address is left out.
-- **The widget runs no code.** It removes `<script>`, event handlers (`onclick=…`)
-  and `javascript:` links. A placeholder can fill an attribute's value, but it
-  cannot name a tag or an attribute.
-
-Up to 1.0.13, a placeholder only worked in the text between tags. Inside a tag it
-broke the tag, and the rest of the tag showed on the board as text. On those
-versions, keep attributes fixed and use widget-signal or widget-label for colours
-that follow the data.
-
-For every version, HTML follows the rules of Markdown:
-
-- **An HTML block runs from a line that starts with a tag to the next blank line.**
-  Markdown inside the block is not parsed, so `**Status:**` keeps its asterisks.
-  Use HTML there (`<strong>`, `<ul><li>`), or put a blank line between the HTML
-  and the Markdown.
-- **After a blank line, a line indented by four spaces or more is a code block.**
-  This is also true inside a `<div>`, and the HTML of the line then shows as text.
-  Write HTML without blank lines, or indent it by less than four spaces.
-- **A `<style>` element styles only this widget.**
-
-validate.py checks the markup against the version the widget pins, or the latest
-version when it pins none.
-
-On colours, for information: text without a colour of its own is drawn in the
-board's text colour, so it suits light and dark boards alike. A colour written into
-the markup (`style="color:#333"`) stays the same on every theme. That suits text on
-a background the markup sets itself, such as a status badge, but on another theme it
-can be hard to read.
-
-### One record as a card
-
-The fields of one record, such as the current settings of the machine a detail
-page shows, go into a widget-markdown, never into a widget-table with one row.
-Bind each field with its own `data` entry, a valueRef with the filter the table
-would have had, and write HTML that suits what the record is: a settings card, a
-nameplate, a status panel. The name goes in a heading, units next to their values,
-related fields in groups, and fields the reader does not need are left out.
-
-```yaml
-markdown: |
-    <style>.rec dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;margin:0}.rec dt{opacity:.7}.rec dd{margin:0;font-weight:600}.rec .badge{display:inline-block;padding:2px 10px;border-radius:999px;color:#fff;background:{{stateColor}}}</style>
-    <div class="rec">
-    <h3>{{name}} <span class="badge">{{state}}</span></h3>
-    <dl><dt>Setpoint</dt><dd>{{setpoint}} °C</dd><dt>Speed</dt><dd>{{speed}} rpm</dd><dt>Recipe</dt><dd>{{recipe}}</dd></dl>
-    </div>
-data:
-    - label: $str:name
-      value:
-          valueRef:
-              tablename: machines              # maintainLatestFlagFor: [machine_id]
-              column: name
-              queryParams:
-                  limit: 1
-                  filterAnd:
-                      - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
-                      - {column: machine_id, operator: '=', value: '2', dataType: string, useRoute: true}
-    # state, stateColor, setpoint, speed and recipe the same way, each on its own column
-```
-
-- **No text colours of its own.** Labels are set apart by `opacity`, so the card
-  reads on light and dark boards. The badge sets its own background from a colour
-  column, so its white text stays readable.
-- **No blank lines inside the HTML**, so the Markdown rules above cannot turn a line
-  into a code block.
-- **Numbers get a format.** Give `setpoint` and `speed` `valueType: $str:number`
-  and their `precision` (How a value is shown).
-
-### How a value is shown
-
-From widget-markdown 1.1.0 on, each `data` entry says how its value is shown.
-validate.py rejects these keys on an older version.
-
-- **`valueType`**: `$str:text` (the default) shows the value as given.
-  `$str:number` rounds it to `precision` decimals (`$num:1` shows 23.456789 as
-  23.5; the default is 0). `$str:timestamp` shows epoch milliseconds or ISO 8601
-  as a date and time in the viewer's time zone and locale. A value that does not
-  fit is shown as given. Give every measured number `$str:number`: as text, a raw
-  reading shows all its decimals.
-- **`tsp` and `maxLatency`**: bind `tsp` to the `tsp` column of the value's row
-  (the same table and filter as the value) and set `maxLatency` in seconds, a
-  few times the interval the device sends at. An older reading is left out: it
-  shows as nothing, and a style or attribute that uses it is left out too, also
-  while no new data arrives.
-- **Text that follows the tile.** The widget is a size container, so CSS in a
-  `<style>` element can use container units: `font-size:38cqh` makes a figure a
-  third of the tile's height on every screen. Size the headline figure that way;
-  labels can stay in `em`. The widget pads the tile by `2cqh`, so a card that
-  fills it is `96cqh` high.
-
-### Figures as cards
-
-A figure goes into a widget-markdown card with its context: what it counts, the
-unit, the period, the target or the time of the reading. Several figures that
-belong together share one card.
-
-```yaml
-markdown: |
-    <style>.kpi{display:flex;flex-direction:column;justify-content:center;height:96cqh}.kpi .v{font-size:38cqh;font-weight:700;line-height:1}.kpi .u{font-size:14cqh;opacity:.7}.kpi .c{opacity:.7}</style>
-    <div class="kpi">
-    <div class="c">Power draw, press-1</div>
-    <div><span class="v">{{power}}</span> <span class="u">kW</span></div>
-    <div class="c">measured {{measured}}</div>
-    </div>
-data:
-    - label: $str:power
-      valueType: $str:number
-      precision: $num:1
-      maxLatency: $num:60
-      value:
-          valueRef:
-              tablename: measurements
-              column: power_kw
-              queryParams:
-                  limit: 1
-                  filterAnd:
-                      - {column: machine_id, operator: '=', value: press-1, dataType: string}
-      tsp:
-          valueRef:
-              tablename: measurements
-              column: tsp
-              queryParams:
-                  limit: 1
-                  filterAnd:
-                      - {column: machine_id, operator: '=', value: press-1, dataType: string}
-    - label: $str:measured
-      valueType: $str:timestamp
-      value:
-          valueRef:
-              tablename: measurements
-              column: tsp
-              queryParams:
-                  limit: 1
-                  filterAnd:
-                      - {column: machine_id, operator: '=', value: press-1, dataType: string}
-```
-
-- **widget-value only for averages and generated readouts.** Use it when the
-  figure must be the average of its latest readings (`advanced.averageLatest`),
-  or when one readout per machine is generated from a column for however many
-  machines there are (`multiChart` with `pivot`): a card has a fixed set of
-  entries.
+in board-layout-style.md, "Layout") and go on. The sketch never blocks the work.
 
 ## SCADA pages
 
@@ -1509,14 +272,15 @@ Some values only exist inside a running platform, and a template cannot know the
    `provider_app` in a consumed app), and the app's code actually publishes it.
 2. Every chartconfig key comes from the pinned widget version's schema, and every
    constant is prefixed.
-3. Bindings sit at the right kind of property (valueRef on single values, tableRef
+3. Bindings (board-bindings.md) sit at the right kind of property (valueRef on single values, tableRef
    on lists), each tableRef has a `limit` and a `format` shaped like its items, and
    aggregations have a complete window. Entity tables are bound with
    `{latest: true}`, and every list of a table with a delete flag (tables,
    sidenavs, navbar items, dropdown options, map markers) filters on that flag
    unless the user explicitly asked to see deleted entities. No transform
    deduplicates or cleans them.
-4. The header holds the route tree, and `layout` follows it: every key segment
+4. The header holds the route tree (board-route-tree.md), and `layout`
+   follows it (board-navigation.md): every key segment
    comes after a type segment, a child's pages sit below its parent's key, each
    entity has one page, and its aspects (events, settings, details) are pages
    below it. Every page fills the grid. Every page can be reached from the home
@@ -1528,17 +292,18 @@ Some values only exist inside a running platform, and a template cannot know the
    route starts another item's in the same menu.
 5. Every widget with a Layout line has its `fixedHeight` or `fixedWidth` and
    enough cells for it, and navbuttons have no tile border, unless there is a
-   reason to do otherwise.
+   reason to do otherwise (board-layout-style.md, "Layout").
 6. `design/board.md` holds the board's design and matches the board; the header
    says who looks at the board and where, and which look was chosen.
    `style` sets the theme and all four colours (a preset, or the user's brand
    colours on the preset's text and tile colours). Every state colour means one
-   thing on every widget, and nothing else is coloured.
-7. In widget-markdown, every `{{placeholder}}` has a `data` entry, values in CSS are
+   thing on every widget, and nothing else is coloured (board-design.md;
+   the `style` keys in board-layout-style.md).
+7. In widget-markdown (board-markdown.md), every `{{placeholder}}` has a `data` entry, values in CSS are
    plain CSS values, and the markup has no scripts or event handlers. HTML has no
    blank line followed by a line indented by four spaces or more. No widget-table
    shows a single record: one record is a widget-markdown card. Figures are
    widget-markdown cards with `valueType: $str:number` and a `precision`, live
    readings with `tsp` and `maxLatency`; widget-value only averages or generates
-   one readout per value of a column.
+   one readout per value of a column (board-design.md, "What goes where").
 8. `scripts/validate.py <app-dir>` (run it as SKILL.md shows) reports no errors.

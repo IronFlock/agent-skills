@@ -113,7 +113,7 @@ only what the request leaves open, and wait:
 - **The follow-ups the answers call for**, as far as they still matter:
   - who uses the app, where and on what (an operator at a wall screen, a
     technician on a tablet, a manager at a desk), which is the board's brief
-    in board-template.md;
+    in board-design.md;
   - where the data comes from: the machine, sensor or system, its protocol,
     the sample rate, what is read and what is computed;
   - what users set or change while the app runs, and what differs per device
@@ -197,8 +197,8 @@ it right before anything else, and keep it in `design/entities.md` as a table:
   column (`name`) that users can change like any other property. The app
   generates the id when the asset is created, and users never type or see
   it: the "New" form fills it with a new UUID in a hidden key field with
-  `generateId: $bool:true` (widget-form 2.2.0 or later; board-template.md,
-  "Boards that manage assets"), and code that creates an asset generates one itself (`uuid4()` in Python,
+  `generateId: $bool:true` (widget-form 2.2.0 or later; board-assets.md,
+  section 5), and code that creates an asset generates one itself (`uuid4()` in Python,
   `crypto.randomUUID()` in JavaScript, `uuid.NewString()` in Go). The edit and
   delete forms carry the id over from the record in a hidden field, so renaming
   an asset changes its `name` and nothing else. Everything that refers to the
@@ -227,7 +227,7 @@ it right before anything else, and keep it in `design/entities.md` as a table:
   and deleted by itself, and then with its own key and `deleted` flag like any
   entity users manage. A binding cannot join,
   so the board shows a relation by filtering the child's table on a key from
-  the route (pattern 2 in board-template.md), and builds the absolute route to
+  the route (pattern 2 in board-navigation.md), and builds the absolute route to
   each listed entity from the keys in its row (patterns 2 and 3). A transform
   joins only for what a filter cannot show.
 - **Readings and events carry the entity's key.** `detections` has `stream_id`
@@ -252,10 +252,9 @@ before any widget: a child's pages sit below its parent's key
 root (`/model/<model>`), and each entity has one page. The project's devices
 are the exception: they get a branch of their own (`/device/<device>`), and
 what belongs to a device starts its own branch (`/stream/<stream>`), with the
-device's key as a column. "The route tree" in
-board-template.md derives the pages from the model and the board's brief.
-Every entity users manage gets the shape of "Boards that manage assets" in
-board-template.md:
+device's key as a column. board-route-tree.md derives the pages from the
+model and the board's brief. Every entity users manage gets the shape that
+board-assets.md describes:
 
 | Users want to | Widget | Bound to |
 |---|---|---|
@@ -265,8 +264,8 @@ board-template.md:
 | delete one | a delete form: a widget-form whose Submit says "Delete", with a hidden key field and a hidden checkbox on `deleted` (default true); a red button on the detail page with `submitNavigationRoute` back to the list, or a dialog that a delete icon in the overview table opens | the same table |
 
 A form has no delete button or delete setting of its own (widget-form 2.0
-dropped them): deleting is always a separate delete form, board-template.md,
-pattern 6. Rows written without the flag carry NULL, which the lists' filter
+dropped them): deleting is always a separate delete form (board-assets.md,
+"Editing and deleting an asset"; board-forms.md has it in YAML). Rows written without the flag carry NULL, which the lists' filter
 counts as not deleted. The lists, and a detail page's view of one entity, are bound
 to the raw entity table with the two filters and never to a transform: a
 transform changes only on its schedule tick or when the app's code refreshes
@@ -406,7 +405,7 @@ current state at read time:
   writes a row with `deleted: true` (on the board a delete form does this: a
   widget-form with a hidden checkbox on the column, default true). An edit form
   with a hidden checkbox defaulting to false restores a record when it is saved. Readers filter on the column (the OR group in
-  board-template.md, "Filters", which also lets users show deleted records).
+  board-bindings.md, "Filters", which also lets users show deleted records).
   Every widget that lists the table's entities filters on it: tables,
   sidenavs, navbar items, dropdown options, map markers, any list. Only a list
   the user explicitly asks to include deleted entities leaves it out.
@@ -622,7 +621,7 @@ remote-access tunnel of its port:
    the Develop privilege on the device can open it. `ironflock` 1.11.0 and
    earlier give a development run the production install's URL instead.
 3. **Embed it in the board.** Bind widget-embed's `webUrl` to that column,
-   filtered to one device (board-template.md, "Embedding a web UI the app
+   filtered to one device (board-bindings.md, "Embedding a web UI the app
    serves").
 
 Rules for the page:
@@ -655,7 +654,7 @@ Rules for the page:
   (`route: $str:/devices/{{device}}` with
   `variables: [{label: $str:device, value: device_id}]`), and on the `*` page
   a filter `{column: device_id, operator: '=', value: '2', dataType: numeric, useRoute: true}`
-  (board-template.md, pattern 2); the device's readings filter `device_key`
+  (board-navigation.md, pattern 2); the device's readings filter `device_key`
   the same way, since it holds the same number. The starter's board does this.
 - **Settings per device or per machine**: key the settings table by a column
   that names the target (the board's rows have no `device_key`), and fill it in
@@ -676,7 +675,7 @@ network or scrapped, so neither the device nor the app can tell "offline" from
 - **Every self-registration table has a `deleted` column, and the board can
   delete each entry.** The device list gets a delete icon in its overview table
   or a "Delete" button on the device's page: the delete form of
-  board-template.md, pattern 6, writing the entry's key and `deleted: true`. The
+  board-assets.md, "Editing and deleting an asset", writing the entry's key and `deleted: true`. The
   lists filter on `deleted` as every entity list does. Not optional: without it,
   every device that ever ran the app stays in the lists forever.
 - **Never expire, hide or delete an entry automatically.** No "offline for 7
@@ -713,8 +712,7 @@ network or scrapped, so neither the device nor the app can tell "offline" from
    those keys, and every entity users manage has a list, a "New" form in a
    dialog, and a detail page with edit and delete on the board, bound to the
    table itself. The board's routes follow the entity tree, except that what
-   belongs to a device starts its own branch (board-template.md, "The route
-   tree"). Every table that devices or gateways register themselves
+   belongs to a device starts its own branch (board-route-tree.md, rule 6). Every table that devices or gateways register themselves
    in has a `deleted` column and a delete form on the board, is keyed by a
    column the device writes (not `device_key`), and its registration row writes
    `deleted: False`; nothing deletes an entry automatically.

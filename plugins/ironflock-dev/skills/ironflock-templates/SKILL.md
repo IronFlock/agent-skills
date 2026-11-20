@@ -93,19 +93,24 @@ in it is described.
    writers into `design/architecture.md`. For each table, decide whether users of the app should work with it
    directly. Mark tables that only hold the app's internal details
    `private: true` (app-templates.md explains when).
-5. **Design the board before you write it.** Read "Designing a board" in
-   [references/board-template.md](references/board-template.md). Decide who looks
+5. **Design the board before you write it.** Read
+   [references/board-design.md](references/board-design.md). Decide who looks
    at the board and where, what question each page answers, what people look for
-   first, and which look (a preset in its Style section) suits that viewing
+   first, and which look (one of its three presets) suits that viewing
    situation, `office` when nothing says otherwise. Then lay out the route tree
-   ("The route tree" there), before any page gets a widget: the pages follow
+   with [references/board-route-tree.md](references/board-route-tree.md), before
+   any page gets a widget: the pages follow
    the entity tree (a type segment and a key segment per entity, a child's
    pages below its parent's key, one page per entity, its events, settings and
    expert details as pages below it), and the brief decides what home answers
    and what each page shows. Write those decisions, the route tree one line per
    page, into `design/board.md`, and their short form into the board's comment
-   header. Every entity users manage gets the
-   shape of "Boards that manage assets" there: its list (a widget-sidenav as the way to
+   header ("Designing a board" in
+   [references/board-template.md](references/board-template.md) shows both).
+   Every entity users manage gets the shape that
+   [references/board-assets.md](references/board-assets.md) describes (read it
+   before a board gets a list, a form or a detail page of one): its list (a
+   widget-sidenav as the way to
    each one, a widget-table as the overview) bound to the entity table itself,
    a "New" form that opens in a dialog on top of the list, and a detail page
    with the edit form and delete. One record shown rather than edited (an
@@ -115,14 +120,32 @@ in it is described.
    readout per value of a column. When the user wants to see the board before
    it exists and your environment has a design canvas (in Claude Code, the
    Artifact tool's Design type), sketch the pages as wireframes there first, as
-   that section describes. Otherwise write the band plan in text and go on.
+   "Designing a board" in board-template.md describes. Otherwise write the band
+   plan in text and go on.
 6. **Write the file.** For the board, read
-   [references/board-template.md](references/board-template.md) and the complete
-   example [references/example-board.yml](references/example-board.yml) first,
-   choose widgets with [references/widget-catalog.md](references/widget-catalog.md),
-   and look up each chosen widget's exact properties (see below). For the other four
-   files and the app skills, read [references/app-templates.md](references/app-templates.md) and the
-   file's schema.
+   [references/board-template.md](references/board-template.md) (its anatomy,
+   literal values and checklist) and then only the references your task needs:
+
+   | Task | Read only |
+   |---|---|
+   | Build a board from scratch | in this order: board-design.md, board-route-tree.md, board-assets.md when users manage entities, "Designing a board" in board-template.md, [references/example-board.yml](references/example-board.yml), board-navigation.md, board-bindings.md, board-layout-style.md, board-markdown.md, and board-forms.md when users create, edit or delete records |
+   | Change what one widget shows (table, columns, filters, time window, aggregation) | board-bindings.md; for a widget-markdown also board-markdown.md |
+   | Add a widget to a page | board-design.md ("What goes where"), board-bindings.md, board-layout-style.md |
+   | Add a page or change a menu | board-route-tree.md, board-navigation.md, board-layout-style.md |
+   | Let users create, edit and delete records | board-assets.md, board-forms.md, board-navigation.md, board-bindings.md |
+   | Restyle or re-layout a board | board-design.md ("One colour, one meaning", "Pick a look"), board-layout-style.md |
+   | A card with several values, or one record shown | board-markdown.md, board-bindings.md |
+   | A SCADA page | "SCADA pages" in board-template.md, board-layout-style.md, board-bindings.md, board-navigation.md |
+   | A filter dropdown or a date range | board-bindings.md |
+   | Show a device's web UI | board-bindings.md ("Embedding a web UI the app serves"), board-navigation.md |
+
+   All of them are in `references/`; "Which file to read" in board-template.md
+   says what each one holds. Choose widgets with
+   [references/widget-catalog.md](references/widget-catalog.md), and look up
+   each chosen widget's exact properties (see below). For the other four files
+   and the app skills, read
+   [references/app-templates.md](references/app-templates.md) and the file's
+   schema.
 7. **Validate, fix and repeat until there are no errors:**
 
    ```bash
@@ -177,7 +200,8 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/widget.py widget-scada --when symbol=cylindr
 
 The outline marks `dataDrivenDisabled` (cannot be bound to data), enums, defaults and
 conditional fields. `--example` prints plain values. In a board template the same
-config needs the literal prefixes and data references described in board-template.md.
+config needs the literal prefixes described in board-template.md and the data
+references described in board-bindings.md.
 
 ## IronFlock documentation
 
@@ -278,8 +302,8 @@ complete reference.
 - **A list's item routes are absolute, built from the keys in its row.** Every
   data-driven menu builds each item's route from its row's keys
   (`route: $str:/stream/{{stream}}` or `$str:/stream/{{stream}}/zone/{{zone}}`
-  with `variables` bound to the key columns, board-template.md, patterns 2 and
-  3), never from the key column alone. A relative route replaces the last
+  with `variables` bound to the key columns, board-route-tree.md, and
+  board-navigation.md, patterns 2 and 3), never from the key column alone. A relative route replaces the last
   segment of the current address, so it only works on the type's page and the
   asset's own page: on an asset's tab page it opens a page that does not
   exist, and the list highlights nothing.
@@ -316,8 +340,8 @@ complete reference.
   and bind widget-embed to it. Never hard-code a device's address, port or URL.
 - **One colour, one meaning.** The chosen preset's four state colours mark ok,
   warning, alarm and idle, with the same value on every widget. The board's chrome
-  stays neutral and nothing else is coloured. board-template.md, "Designing a
-  board", has the rules and the key each widget takes its colours from.
+  stays neutral and nothing else is coloured. board-design.md, "One colour, one
+  meaning", has the rules and the key each widget takes its colours from.
 - **Bind, don't paste.** If a value lives in a table, bind the widget to it with a
   data reference. Pasted numbers go stale the moment the board is installed.
 - **The route tree follows the entity tree and the intended UX.** Decide the
@@ -333,7 +357,7 @@ complete reference.
   the exception: a technical detail, so they get their own branch
   (`/device/<device>`), and what belongs to a device starts its own branch
   (`/stream/<stream>`, never `/device/<device>/stream/<stream>`).
-  board-template.md, "The route tree", has the rules and an example.
+  board-route-tree.md has the rules and an example.
 - **Make every page users see reachable by clicking, and the way there obvious.**
   People only click through a board; nobody types a route. Every page with widgets
   must be reachable from the home page and lead back to it. A page that only holds
@@ -342,8 +366,7 @@ complete reference.
   widget-sidenav 1.0.26 or later: they highlight only the most specific matching
   item, so a Home item, and an overview next to its sections, are highlighted on
   their own pages only (older versions light up an item for `/` on every page).
-  board-template.md's
-  "Pages and navigation" section has the rules and the patterns (sections, list and
+  board-navigation.md has the rules and the patterns (sections, list and
   detail pages, records with edit pages), and the validator walks every link to
   check.
 - **Give boards that manage assets one familiar shape.** The asset types are the
@@ -352,7 +375,7 @@ complete reference.
   action button on top. An asset opens its detail page with settings and
   delete, and further aspects go on tab pages. Sub-assets repeat this one level
   down. A full-width asset page needs a prominent back button in the top-left
-  corner. board-template.md, "Boards that manage assets", has the details.
+  corner. board-assets.md has the details.
 - **Use only names that exist.** Every table, column and widget property you write
   must exist in data-template.yml or the widget's schema. The platform ignores unknown
   keys silently, so an invented key renders as nothing rather than as an error.

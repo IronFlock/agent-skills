@@ -401,7 +401,7 @@ layout:
                 - {id: settings-form, x: 16, y: 0, w: 80, h: 24}
                 - {id: settings-history, x: 16, y: 24, w: 80, h: 40}
                 - {id: errors, x: 56, y: 52, w: 40, h: 12, z: 1}
-style:                            # the office preset (board-template.md, Style)
+style:                            # the office preset (board-design.md, Pick a look)
     theme: {theme_name: light}
     background_color: '#f1f5f9'
     text_color: '#1e293b'
