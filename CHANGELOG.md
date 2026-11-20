@@ -6,7 +6,7 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
-## Unreleased
+## 1.1.0 - 2026-11-20
 
 - `ironflock-templates` keeps its board design rules in three references of
   their own: `board-design.md` (the brief, what goes where, one colour for one
