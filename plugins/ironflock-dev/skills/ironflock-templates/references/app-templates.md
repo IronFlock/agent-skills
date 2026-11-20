@@ -268,7 +268,10 @@ needs them, so they cost nothing until then.
   confirm first) and short facts in the prompt: an agent that never loads the
   skill must still keep them. Put knowledge that only some tasks need, long
   procedures (a diagnosis, a commissioning check) and domain reference (fault
-  codes, a machine's parameters) in skills.
+  codes, a machine's parameters) in skills. What a procedure works with (a
+  warning level, a limit, the steps) is written in the skill only: the prompt
+  says when to load the skill (`app/<name>`), and does not repeat its numbers,
+  because a value kept in both places goes stale in one of them.
 - **The description decides when the skill is loaded.** Until then it is all
   the agent sees. Say what the skill covers and the situations that call for
   it, in the words users and the data use (the state values, the symptoms, the

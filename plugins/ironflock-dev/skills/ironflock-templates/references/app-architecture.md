@@ -220,7 +220,12 @@ it right before anything else, and keep it in `design/entities.md` as a table:
   every entity above it (`streams` has `camera_id`; a zone drawn on a stream
   has `camera_id` and `stream_id` besides its own `zone_id`), an assignment is
   a column on the entity that gets assigned to (`streams.model_id`), and a
-  many-to-many is an entity of its own, keyed by both. A binding cannot join,
+  many-to-many is an entity of its own, keyed by both. What exists exactly
+  once per parent and has no life of its own (one stream per camera) is no
+  entity: its properties are columns of the parent (`cameras.model_id`). Give
+  it a table of its own only when a parent can have several or it is created
+  and deleted by itself, and then with its own key and `deleted` flag like any
+  entity users manage. A binding cannot join,
   so the board shows a relation by filtering the child's table on a key from
   the route (pattern 2 in board-template.md), and builds the absolute route to
   each listed entity from the keys in its row (patterns 2 and 3). A transform

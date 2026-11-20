@@ -271,7 +271,9 @@ complete reference.
   code refreshes it, while the board's forms write the table directly, so users
   would create or delete an asset without seeing it happen. This holds even when a
   view with more columns exists: bind other widgets to the view, never the
-  list. Nested lists are no exception: the table carries the keys of every
+  list. A status overview from a view (each asset's state and counts) is a
+  second widget next to the master list, never instead of it and never where
+  users open, edit or delete an asset. Nested lists are no exception: the table carries the keys of every
   entity above it.
 - **A list's item routes are absolute, built from the keys in its row.** Every
   data-driven menu builds each item's route from its row's keys

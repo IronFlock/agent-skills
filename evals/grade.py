@@ -403,6 +403,10 @@ def grade_entities(app: Path, errors, warnings):
         return candidates[0] if candidates else None
 
     found = {name: t for name, t in (("cameras", entity("camera")), ("models", entity("model")), ("streams", entity("stream"))) if t}
+    # One stream per camera, stored under the camera's key, is part of the
+    # camera and no entity users manage by itself.
+    if {"cameras", "streams"} <= set(found) and found["streams"].get("maintainLatestFlagFor") == found["cameras"].get("maintainLatestFlagFor"):
+        del found["streams"]
     managed_names = {str(t.get("tablename")) for t in found.values()}
     unflagged = sorted(name for name, t in found.items() if not flag_columns(t))
     detections = [
@@ -452,7 +456,9 @@ def grade_entities(app: Path, errors, warnings):
         check("the entities users manage have a boolean deleted column", found and not unflagged, f"without a flag: {unflagged}"),
         check("a detections table carries the stream's or camera's key and is no entity table", detections, f"detections tables {detections}"),
         check("every managed entity has a list bound to its table with the latest filter and a filter on the flag", found and not unlisted, f"lists {dict(lists)}, unlisted {unlisted}"),
-        check("no list is bound to a transform over an entity table", not via_transform, f"via transforms: {via_transform}"),
+        # A status overview from a view may stand next to the master lists;
+        # it must not be the only list of an entity.
+        check("no entity's only list is bound to a transform over an entity table", not (via_transform and unlisted), f"via transforms: {via_transform}, unlisted {unlisted}"),
         check("a form that opens in a dialog (formButton) creates a managed entity", creates, f"forms {creates}"),
         check("a delete form (hidden checkbox, default true) deletes a managed entity", deletes, f"forms {deletes}"),
     ]

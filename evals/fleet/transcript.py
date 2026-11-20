@@ -299,7 +299,15 @@ def sql_of(call: Call) -> str:
 
 
 def row_limit(call: Call) -> int:
-    """The rows a query can return: its LIMIT, the tool's limit, or 100."""
+    """The rows a query returned, when its answer says so (a summary view read
+    with SELECT * is one row, not a raw pull); else the rows it can return: its
+    LIMIT, the tool's limit, or 100."""
+    try:
+        returned = json.loads(call.result).get("row_count")
+    except (ValueError, AttributeError):
+        returned = None
+    if isinstance(returned, int):
+        return returned
     limits = [int(n) for n in LIMIT.findall(sql_of(call))]
     if isinstance(call.input.get("limit"), int):
         limits.append(call.input["limit"])

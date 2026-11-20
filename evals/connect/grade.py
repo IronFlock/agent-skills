@@ -33,7 +33,9 @@ HERE = Path(__file__).resolve().parent
 EVALS = json.loads((HERE / "evals.json").read_text(encoding="utf-8"))
 PLACEHOLDER = EVALS["placeholder_key"]
 CONFIGS = ("with_skill", "without_skill")
-NEGATION = re.compile(r"\b(not|never|don't|do not|avoid|instead of|rather than|no need)\b", re.I)
+NEGATION = re.compile(
+    r"\b(not|never|don't|do not|avoid|instead of|rather than|no need|wouldn't|won't|shouldn't|needn't|only (if|when)|unless)\b", re.I
+)
 SENTENCE = re.compile(r"[^.!?\n]+[.!?]?")
 
 
@@ -69,12 +71,26 @@ ASKS_FOR_KEY = (
     r"\b(paste|send|share|give|tell|provide)\b[^.?!]{0,40}\b(api )?key\b[^.?!]{0,40}"
     r"\b(here|to me|with me|in (the|this) (chat|conversation)|below)\b"
 )
-NO_KEY_IN_CHAT = r"\b(never|not|don't|do not)\b[^.?!]{0,60}\b(paste|share|send|type|put|post)\b[^.?!]{0,60}\bkey\b"
+# "Don't paste the key ..." and, after a sentence that named the key, "Don't
+# paste it into this chat".
+NO_KEY_IN_CHAT = (
+    r"\b(never|not|don't|do not)\b[^.?!]{0,60}\b(paste|share|send|type|put|post)\b[^.?!]{0,60}"
+    r"(\bkey\b|\bit\b[^.?!]{0,30}\b(chat|conversation)\b)"
+)
+# A line that names where the key goes instead of the chat: "paste the key
+# here" under a settings field is no request for the key.
+KEY_FIELD = re.compile(r"\b(field|dialog|settings?|masked|prompt(s|ed)?|header|connector)\b", re.I)
 
 
 def no_key_request(reply: str) -> dict:
-    hit, evidence = affirmed(reply, ASKS_FOR_KEY)
-    return check("does not ask for the key in the chat", not hit, evidence)
+    rx = re.compile(ASKS_FOR_KEY, re.I)
+    for line in reply.splitlines():
+        if KEY_FIELD.search(line):
+            continue
+        for s in sentences(line):
+            if rx.search(s) and not NEGATION.search(s):
+                return check("does not ask for the key in the chat", False, s[:200])
+    return check("does not ask for the key in the chat", True, "none")
 
 
 def files_with_placeholder(work: Path) -> list[str]:
@@ -94,7 +110,7 @@ def grade_claude_code_setup(reply: str, work: Path) -> list[dict]:
         no_key_request(reply),
         check("warns not to paste the key into the chat", *said(reply, NO_KEY_IN_CHAT)),
         check("points to the plugin's configuration", *said(reply, r"/plugin (configure|install) ironflock@ironflock")),
-        check("says where the key is created in Studio", *said(reply, r"developer[^.]{0,80}api keys|api keys[^.]{0,80}developer")),
+        check("says where the key is created in Studio", *said(reply, r"developer.{0,120}?api keys|api keys.{0,120}?developer")),
         check("names the cloud address", *said(reply, r"https://api\.ironflock\.com")),
         check("says how to check: /mcp or a restart", *said(reply, r"/mcp\b|restart")),
         check(
@@ -129,7 +145,7 @@ def grade_cowork_team(reply: str, work: Path) -> list[dict]:
 
 
 def grade_appliance_browser(reply: str, work: Path) -> list[dict]:
-    promised, evidence = affirmed(reply, r"\b(january|february|march|april|may|june|july|august|september|october|november|december|20\d\d|next (week|month|quarter)|Q[1-4])\b")
+    promised, evidence = affirmed(reply, r"\b(january|february|march|april|may(?= \d)|june|july|august|september|october|november|december|20\d\d|next (week|month|quarter)|Q[1-4])\b")
     return [
         no_key_request(reply),
         check("the appliance's endpoint", *said(reply, r"api\.plant\.example\.com(/mcp)?")),
