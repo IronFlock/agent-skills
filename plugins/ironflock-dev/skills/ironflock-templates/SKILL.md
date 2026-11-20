@@ -147,6 +147,20 @@ in it is described.
    side menu; the URL the app writes for the board is the run's own, ending in
    `-dev`.
 
+## Checking the app on a device
+
+This plugin comes with the `ironflock` plugin and its connection to IronFlock.
+When its tools are there, check an installed release of the app without leaving
+the session: `check_app_status` for its state on each device and whether its
+data arrives, then `get_app_logs` for the app's own log when it is not running
+or its data does not arrive, then `get_device_logs` when that log is empty,
+which means the container never started. Read the state before the logs, never
+show log lines to the user, and explain the cause in your own words.
+`get_app_logs` reads only installed releases, not the development run from the
+IDE; when a development run does not start, `get_device_logs` shows why. The
+log of a release build is not available through the connection: it is in
+Studio, on the app's releases.
+
 ## Widget schemas
 
 Every widget is an npm package whose `definition-schema.json` defines exactly what its

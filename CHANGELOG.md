@@ -8,6 +8,9 @@ abilities, a patch for fixes.
 
 ## Unreleased
 
+- `ironflock-templates` checks an installed release of the app on its devices
+  through the `ironflock` plugin's connection: its state, whether its data
+  arrives, the app's log and the device's log.
 - The `ironflock` plugin connects Claude Code to IronFlock: it declares
   IronFlock's MCP server and asks, when you install it, for the API address
   (`https://api.ironflock.com` by default, `https://api.<domain>` for an

@@ -16,12 +16,21 @@
    a badly formed results file. `ci` and `gate` refuse a release without an
    eval result for every skill changed since the last release tag, or
    without release notes in the changelog, and pass once they are there.
+3. evals/run.py, the parts that need no claude: the host check refuses every
+   address but a local test instance's; the placeholders file is written as a
+   template, then refused until every key has a value, then fills the
+   prompts; finished runs are skipped and unfinished ones found and reset;
+   the graders' totals, costs and durations are read back; an init event
+   that shows the skill to the run without it, misses it in the run with it,
+   or lists a foreign MCP server is refused; the commands and environments
+   load the plugins only with the skill and nothing personal.
 
 Offline, standard library only.
 """
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import shutil
 import subprocess
@@ -34,6 +43,10 @@ ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
 sys.path.insert(0, str(REPO / "tools"))
 import check_tools  # noqa: E402
+
+_spec = importlib.util.spec_from_file_location("eval_run", REPO / "evals/run.py")
+eval_run = sys.modules["eval_run"] = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(eval_run)
 
 CATALOGUE = {"list_devices", "get_app_logs", "check_app_status", "ping"}
 SKILL = """---
@@ -327,9 +340,186 @@ def check_release() -> tuple[int, list[str]]:
     return cases, problems
 
 
+def init_event(**changes) -> dict:
+    """A good init event of a with_skill templates run, changed by `changes`."""
+    event = {
+        "type": "system",
+        "subtype": "init",
+        "apiKeySource": "ANTHROPIC_API_KEY",
+        "model": "claude-test",
+        "plugins": [
+            {"name": "ironflock-dev", "path": str(REPO / "plugins/ironflock-dev")},
+            {"name": "ironflock", "path": str(REPO / "plugins/ironflock")},
+            {"name": "cc-plugin-telemetry", "path": "builtin"},
+        ],
+        "skills": ["ironflock-dev:ironflock-templates", "ironflock:ironflock-fleet", "dataviz"],
+        "mcp_servers": [],
+    }
+    event.update(changes)
+    return event
+
+
+def check_eval_runner() -> tuple[int, list[str]]:
+    problems = []
+    cases = 0
+    r = eval_run
+    suites = r.SUITES
+
+    def expect(label: str, ok: object, got: object = "") -> None:
+        nonlocal cases
+        cases += 1
+        if not ok:
+            problems.append(f"{label}: got {got!r}")
+
+    # The host of the eval instance.
+    for url in ("http://localhost:8080", "https://127.0.0.1", "http://[::1]:3000", "https://api.studio.localhost", "https://api.ironflock.test"):
+        expect(f"host {url} is local", r.host_problem(url, []) is None, r.host_problem(url, []))
+    for url in ("https://api.ironflock.com", "https://localhost.example.com", "http://notlocalhost", "ftp://localhost", "localhost:8080"):
+        expect(f"host {url} is refused", r.host_problem(url, []), "accepted")
+    expect("--allow-host accepts a named host", r.host_problem("https://eval.lan/x", ["EVAL.lan"]) is None)
+    expect("--allow-host names that host only", r.host_problem("https://other.lan", ["eval.lan"]))
+
+    # Placeholders: template, then refused while empty, then filled in.
+    instance = [suites["fleet"], suites["data"]]
+    keys = r.placeholder_keys(instance)
+    expect("placeholder keys of both suites", set(keys) == {"project", "device", "offline_device", "app", "quantity", "threshold"}, sorted(keys))
+    with tempfile.TemporaryDirectory() as tmp:
+        iteration = Path(tmp) / "it"
+        values, stop = r.check_placeholders(instance, iteration, write=False)
+        expect("no template on a dry run", stop and not (iteration / "placeholders.json").exists(), stop)
+        values, stop = r.check_placeholders(instance, iteration, write=True)
+        written = json.loads((iteration / "placeholders.json").read_text())
+        expect("a missing placeholders.json becomes a template", stop and written == {k: "" for k in keys}, written)
+        values, stop = r.check_placeholders(instance, iteration, write=True)
+        expect("empty values are refused", stop and "no value for" in stop[0], stop)
+        filled = {k: f"<{k}>" for k in keys}
+        (iteration / "placeholders.json").write_text(json.dumps(dict(filled, threshold=" ")))
+        values, stop = r.check_placeholders([suites["data"]], iteration, write=True)
+        expect("a blank value is refused", stop and "threshold" in stop[0], stop)
+        values, stop = r.check_placeholders([suites["fleet"]], iteration, write=True)
+        expect("fleet does not need data's keys", not stop, stop)
+        (iteration / "placeholders.json").write_text(json.dumps(filled))
+        values, stop = r.check_placeholders(instance, iteration, write=True)
+        prompts = [run.prompt for s in instance for run in r.plan(s, iteration, [], r.CONFIGS, values)]
+        expect("the prompts are filled in", not stop and not any("{" in p for p in prompts) and any("<project>" in p for p in prompts), stop)
+        expect("other suites need no placeholders", r.check_placeholders([suites["connect"]], iteration, write=True) == ({}, []))
+
+    # Skip and resume.
+    with tempfile.TemporaryDirectory() as tmp:
+        iteration = Path(tmp)
+        runs = r.plan(suites["templates"], iteration, ["overview-board", "new-app"], r.CONFIGS, {})
+        expect("--only plans the named evals in both configs", [x.label for x in runs] == [
+            "templates/overview-board/with_skill", "templates/overview-board/without_skill",
+            "templates/new-app/with_skill", "templates/new-app/without_skill"], [x.label for x in runs])
+        for run in runs:
+            r.reset(run)
+        finished = runs[0]
+        (finished.dir / "TRANSCRIPT.jsonl").write_text("{}\n")
+        expect("a finished run is skipped", r.to_run(runs, False) == runs[1:], [x.label for x in r.to_run(runs, False)])
+        expect("--force runs it again", r.to_run(runs, True) == runs)
+        unfinished = r.unfinished_dirs(iteration, suites["templates"])
+        expect("unfinished run folders are found, finished ones not", sorted(unfinished) == sorted(x.dir for x in runs[1:]), unfinished)
+        app = runs[1].cwd
+        expect("the fixture is copied", (app / ".ironflock/data-template.yml").is_file() and (app / "main.py").is_file(), sorted(p.name for p in app.iterdir()))
+        expect("a fixture-less eval starts in an empty app folder", runs[2].cwd.is_dir() and not any(runs[2].cwd.iterdir()))
+        (app / "board.yml").write_text("left over")
+        r.reset(runs[1])
+        expect("reset starts from a fresh copy", not (app / "board.yml").exists() and (app / "main.py").is_file())
+        expect("reset prepares the run's own configuration", (runs[1].state / "gitconfig").is_file() and (runs[1].state / "npmrc").read_text() == "")
+        expect("conversational evals get the answers as a second turn", len(runs[2].turns) == 2 and len(runs[0].turns) == 1)
+
+    # The graders' totals; cost and duration from the transcripts.
+    outputs = {
+        "templates": "overview-board  with_skill  9/9\nwith_skill: 31/31 = 100%\nwithout_skill: 24/31 = 77%\n",
+        "widgets": "\nwith_skill: 26/26 (100%)\nwithout_skill: 24/26 (92%)\n",
+    }
+    expect("totals with '='", r.parse_totals(outputs["templates"]) == {"with_skill": (31, 31), "without_skill": (24, 31)}, r.parse_totals(outputs["templates"]))
+    expect("totals with '('", r.parse_totals(outputs["widgets"]) == {"with_skill": (26, 26), "without_skill": (24, 26)}, r.parse_totals(outputs["widgets"]))
+    expect("no totals in a grader's error", r.parse_totals("Traceback ...\nKeyError: 'x'\n") == {})
+    with tempfile.TemporaryDirectory() as tmp:
+        transcript = Path(tmp) / "TRANSCRIPT.jsonl"
+        lines = [init_event(claude_code_version="2.1.0"), {"type": "result", "total_cost_usd": 1.25, "duration_ms": 60000},
+                 init_event(model="claude-other"), {"type": "result", "total_cost_usd": 0.5, "duration_ms": 30000}]
+        transcript.write_text("\n".join(json.dumps(x) for x in lines) + "\nnot json\n")
+        stats = r.transcript_stats(transcript)
+        expect("cost and duration summed over the turns", (round(stats["cost"], 2), stats["duration_ms"]) == (1.75, 90000), stats)
+        expect("models and version from the init events", stats["models"] == {"claude-test", "claude-other"} and stats["versions"] == {"2.1.0"}, stats)
+
+    # The init event of a run.
+    templates, fleet, connect = suites["templates"], suites["fleet"], suites["connect"]
+    expect("a good with_skill run", r.init_problems(init_event(), templates, "with_skill") == [], r.init_problems(init_event(), templates, "with_skill"))
+    bare = init_event(plugins=[{"name": "cc-plugin-telemetry", "path": "builtin"}], skills=["dataviz"])
+    expect("a good without_skill run", r.init_problems(bare, templates, "without_skill") == [], r.init_problems(bare, templates, "without_skill"))
+    expect("with_skill without the skill", r.init_problems(bare, templates, "with_skill"))
+    expect("without_skill that sees the plugin", r.init_problems(init_event(), templates, "without_skill"))
+    leaked = dict(bare, skills=["dataviz", "ironflock-templates"])
+    expect("without_skill that sees the skill as a user skill", r.init_problems(leaked, templates, "without_skill"))
+    cached = init_event(plugins=init_event()["plugins"] + [{"name": "posthog", "path": "/home/x/.claude/plugins/cache/p/posthog/1.0"}])
+    expect("an installed plugin", r.init_problems(cached, templates, "with_skill"))
+    expect("a login instead of the API key", r.init_problems(init_event(apiKeySource="/login managed key"), templates, "with_skill"))
+    server = {"name": "ironflock", "status": "connected"}
+    fleet_ok = init_event(skills=["ironflock:ironflock-fleet"], mcp_servers=[server])
+    expect("fleet with its server alone", r.init_problems(fleet_ok, fleet, "with_skill") == [], r.init_problems(fleet_ok, fleet, "with_skill"))
+    expect("fleet with a second server", r.init_problems(dict(fleet_ok, mcp_servers=[server, {"name": "plugin:ironflock:ironflock", "status": "connected"}]), fleet, "with_skill"))
+    expect("fleet whose server failed", r.init_problems(dict(fleet_ok, mcp_servers=[dict(server, status="failed")]), fleet, "with_skill"))
+    expect("fleet without its server", r.init_problems(dict(fleet_ok, mcp_servers=[]), fleet, "with_skill"))
+    expect("connect with any server", r.init_problems(dict(fleet_ok, skills=["ironflock:ironflock-connect"], mcp_servers=[server]), connect, "with_skill"))
+
+    retry = {"type": "system", "subtype": "api_retry", "error_status": 401, "error": "authentication_failed"}
+    expect("a refused key stops the runs", r.key_refused(retry))
+    expect("an overloaded API is retried", r.key_refused(dict(retry, error_status=529, error="overloaded")) is None)
+
+    # Commands and environments.
+    with tempfile.TemporaryDirectory() as tmp:
+        iteration = Path(tmp)
+
+        def command(suite: str, config: str, turn: int = 0, name: str | None = None) -> list[str]:
+            spec = next(s for s in suites[suite].evals["evals"] if name in (None, s["name"]))
+            return r.claude_command("claude", r.Run(suites[suite], spec, config, iteration, "prompt"), turn, "sid", None)
+
+        def flag(cmd: list[str], name: str) -> list[str]:
+            return [cmd[i + 1] for i, a in enumerate(cmd) if a == name]
+
+        with_cmd, without_cmd = command("templates", "with_skill"), command("templates", "without_skill")
+        expect("with_skill loads both plugins from the checkout", flag(with_cmd, "--plugin-dir") == [str(REPO / "plugins/ironflock-dev"), str(REPO / "plugins/ironflock")], with_cmd)
+        expect("without_skill loads no plugin", "--plugin-dir" not in without_cmd, without_cmd)
+        expect("every run is strict about MCP and reads user settings only", all(
+            "--strict-mcp-config" in c and flag(c, "--setting-sources") == ["user"] for c in (with_cmd, without_cmd, command("fleet", "with_skill"))))
+        expect("the prompt follows -p", with_cmd[1:3] == ["-p", "prompt"], with_cmd[:3])
+        fleet_cmd = command("fleet", "without_skill")
+        expect("fleet: the eval's MCP configuration and every tool allowed", flag(fleet_cmd, "--mcp-config") == [str(REPO / "evals/fleet/mcp.json")] and flag(fleet_cmd, "--permission-mode") == ["bypassPermissions"], fleet_cmd)
+        expect("templates: no bypassPermissions", flag(with_cmd, "--permission-mode") == ["acceptEdits"], with_cmd)
+        widget_cmd = command("widgets", "without_skill")
+        expect("widgets: told never to publish", "publish" in " ".join(flag(widget_cmd, "--append-system-prompt")) and "Bash(git push:*)" in " ".join(flag(widget_cmd, "--settings")), widget_cmd)
+        cli_cmd = command("cli", "with_skill")
+        cli_settings = json.loads(flag(cli_cmd, "--settings")[0])
+        expect("cli: the settings of evals.json, default mode", "Bash(curl:*)" in cli_settings["permissions"]["deny"] and flag(cli_cmd, "--permission-mode") == ["default"], cli_cmd)
+        second = command("templates", "with_skill", 1, "new-app")
+        expect("the answers resume the session", flag(second, "--resume") == ["sid"] and "--session-id" not in second and second[2] == suites["templates"].evals["evals"][3]["answers"], second[:8])
+
+        base = {"PATH": "/usr/bin", "HOME": "/home/x", "CLAUDECODE": "1", "CLAUDE_CODE_ENTRYPOINT": "cli", "ANTHROPIC_API_KEY": "k",
+                "ANTHROPIC_MODEL": "m", "GH_TOKEN": "t", "NPM_TOKEN": "t", "IRONFLOCK_EVAL_API_URL": "http://localhost", "IRONFLOCK_EVAL_API_KEY": "e", "IRONFLOCK_API_KEY": "real"}
+        spec = suites["connect"].evals["evals"][0]
+        env = r.run_env(r.Run(suites["connect"], spec, "with_skill", iteration), base)
+        gone = [k for k in ("CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "ANTHROPIC_MODEL", "GH_TOKEN", "NPM_TOKEN", "IRONFLOCK_EVAL_API_KEY", "IRONFLOCK_API_KEY") if k in env]
+        expect("nothing personal in a run's environment", not gone, gone)
+        expect("the API key and a configuration of the run's own", env.get("ANTHROPIC_API_KEY") == "k" and env["CLAUDE_CONFIG_DIR"].startswith(str(iteration / ".state")) and env["CLAUDE_CODE_DISABLE_CLAUDE_MDS"] == "1", env)
+        spec = suites["fleet"].evals["evals"][0]
+        env = r.run_env(r.Run(suites["fleet"], spec, "with_skill", iteration), base)
+        expect("fleet keeps the eval instance's variables only", env.get("IRONFLOCK_EVAL_API_KEY") == "e" and "IRONFLOCK_API_KEY" not in env, sorted(env))
+        login = next(s for s in suites["cli"].evals["evals"] if s["name"] == "login")
+        env = r.run_env(r.Run(suites["cli"], login, "with_skill", iteration), base)
+        expect("cli: the stand-in first on the PATH, logged out for login", env["PATH"].startswith(str(REPO / "evals/cli/fixtures/bin")) and "IRONFLOCK_EVAL_LOGGED_IN" not in env, env["PATH"])
+    return cases, problems
+
+
 def main() -> int:
     failed = 0
-    for label, run in (("MCP tool names", check_tool_names), ("version, changelog and eval results", check_release)):
+    for label, run in (
+        ("MCP tool names", check_tool_names),
+        ("version, changelog and eval results", check_release),
+        ("eval runner", check_eval_runner),
+    ):
         cases, problems = run()
         print(f"{'ok  ' if not problems else 'FAIL'} {label}: {cases} case(s)")
         for problem in problems:

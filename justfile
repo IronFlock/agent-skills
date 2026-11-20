@@ -18,7 +18,7 @@ lint:
 
 # The validator's regression tests and the starter app; the MCP tool names the
 # skills use against the API's tool catalogue; versions, changelog and eval
-# results; and the tests of those two checks.
+# results; and the tests of those two checks and of the eval runner.
 test:
     {{PY}} tests/run.py
     {{PY}} tools/check_tools.py

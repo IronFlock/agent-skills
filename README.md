@@ -74,10 +74,10 @@ the connection described above, not this skill.
 | Authentication | `Authorization: Bearer <API key>`; there is no sign-in through a browser |
 
 Create the key in IronFlock Studio: **Account Settings** > **Developer** >
-**API keys** > **Create API key**, then **Copy API key**. The key stays
-visible in that table to anyone signed in to the Studio account, and is valid
-for one year. Keys created today have every scope: with one, Claude may do
-whatever the key's owner may do in IronFlock. Treat the key like a password,
+**API keys** > **Create API key**: choose what the key may do (read only by
+default) and where, then **Copy API key**. Studio shows the key only once,
+and it is valid for one year. A key that may do everything in all projects
+lets Claude do whatever the key's owner may do in IronFlock. Treat the key like a password,
 and never paste it into a chat or a file.
 
 **Claude Code** (terminal, IDE extensions, the desktop app's Code tab): the
@@ -312,6 +312,7 @@ tools/check_tools.py                     checks the MCP tool names skills use; v
 tools/api/tools.json                     the API's tool catalogue (vendored), api-version.txt its version
 tools/release.py                         version, changelog and eval-result checks; writes the version
 tests/                                   validator, starter-app, widget-checker and repository-check tests
+evals/run.py                             runs the evals with and without the skills, grades them, writes SUMMARY.md
 evals/                                   test app, eval prompts and grader for ironflock-templates
 evals/widgets/                           eval prompts, fixtures and grader for ironflock-widgets
 evals/connect/                           eval prompts and grader for ironflock-connect
@@ -371,10 +372,11 @@ A major version when people have to change their setup (a skill moves to
 another plugin, a plugin is renamed), a minor one for a new skill or ability,
 a patch for fixes.
 
-**Eval results in the release.** Evals stay manual, because they cost model
-usage, but a release needs their result for every skill whose files changed
-since the last release tag. Run them as described below, then write
-`evals/results/<version>.md` with one section per changed skill:
+**Eval results in the release.** Evals do not run in CI, because they cost
+model usage, but a release needs their result for every skill whose files
+changed since the last release tag. Run them with `evals/run.py` (below), then
+write `evals/results/<version>.md` with one section per changed skill. The
+iteration's `SUMMARY.md` has the `Result:` line of each skill to start from:
 
 ```markdown
 # Evals for 1.2.0
@@ -457,18 +459,49 @@ import map or the widget list changes. Calibrate a checker change against the re
 widgets: in a checkout with all widget repos, every ERROR the checker reports on
 them must be a real defect.
 
+**Run the evals** with `evals/run.py`. It needs Python 3, uv, git, node and
+npm, Claude Code, and an Anthropic API key in the shell: the runs use the key,
+never your Claude login, and the runner stops without it. Put the iteration
+folder outside every git checkout, so that no agent sees this repository:
+
+```bash
+export ANTHROPIC_API_KEY=...
+python3 evals/run.py all ~/ironflock-evals/1.0.0
+```
+
+`all` runs every eval except cli once with its skill and once without, three
+at a time, grades each suite and prints the scores. Each suite gets a folder
+in the iteration, in the layout its grader reads (`<suite>/<eval>/<config>/`),
+with the grader's output in `GRADES.txt`. `SUMMARY.md` has the scores per
+skill, the model, the date, and the cost and run time from the runs' result
+events. `python3 evals/run.py <suite> <iteration-dir>` runs one suite
+(templates, widgets, connect, fleet, data, cli). `--only <eval>` and
+`--config with|without` run single runs, `--model` sets the model, `--jobs`
+the runs at a time, and `--dry-run` prints the commands without running them.
+A finished run is skipped, so the same command resumes an interrupted
+iteration; `--force` runs it again. A run that did not finish starts again
+from a fresh copy of its fixture.
+
+Each run is `claude -p` in its own folder, with a Claude configuration of its
+own: no CLAUDE.md, memory, hooks, settings, plugins or MCP servers of the
+person who runs it, and no npm, GitHub or git credentials. With the skill, it
+loads the skill's plugin from this checkout (`ironflock-dev` together with
+`ironflock`, which it needs); without, no plugin. The runner checks this in
+the init event of each run and stops a run that shows anything else. It does
+not use `claude --bare`: that mode leaves the agent only Bash, Edit and Read,
+without the Skill tool and the list of skills.
+
 **Evaluate the skill** after changing its instructions, and before every
-release that changes it: run each prompt in
-`evals/evals.json` against a fresh copy of `evals/fixtures/machine-monitor`, once
-with the skill and once without, then score the runs with
-`uv run evals/grade.py <iteration-dir>` (layout: `<eval-name>/<config>/app`). An
-eval with `"fixture": null` (`new-app`, `camera-app-interview`) starts in an
-empty `app` folder instead. An eval with an `answers` field is a conversation:
-when the agent asks its questions, answer them from that field and let it
-finish; for `camera-app-interview`, also save the agent's first reply as
-`QUESTIONS.md` next to `app`, because the grader reads it.
-Run the skill under test from its files, not from an installed copy of the
-plugin, and keep the agent without the skill away from both. On 2026-10-17, after
+release that changes it: `python3 evals/run.py templates <iteration-dir>`. It
+runs each prompt in `evals/evals.json` against a fresh copy of
+`evals/fixtures/machine-monitor`, once with the skill and once without, and
+scores the runs with `uv run evals/grade.py` (layout:
+`<eval-name>/<config>/app`). An eval with `"fixture": null` (`new-app`,
+`camera-app-interview`) starts in an empty `app` folder instead. An eval with
+an `answers` field is a conversation: the runner answers the agent's questions
+from that field in a second turn, and saves the agent's first reply as
+`QUESTIONS.md` next to `app`, which the grader reads for
+`camera-app-interview`. On 2026-10-17, after
 the architecture guide and the starter app were added, the skill scored 28/28
 (the three template evals 18/18 as before, `new-app` 10/10). Without the skill,
 `new-app` scored 9/10: the agent worked the architecture out from the SDK's
@@ -495,23 +528,23 @@ a machine in FAULT and instructions that name the app's tables and the warning
 level, while the confirmation rule for changing a speed stays in the system
 prompt and the prompt names the skill as `app/<name>`; it has not been run yet.
 
-**Evaluate the widget skill** the same way with `evals/widgets/`:
-`python3 evals/widgets/grade.py setup <iteration-dir>` clones the fixture widgets
-(pinned commits, no `origin` remote), you run each prompt of
-`evals/widgets/evals.json` in `<iteration-dir>/<eval>/<config>/` with and without the
-skill (telling the agent never to publish, release, commit or push) and save its
-report as `REPORT.md` there, and `python3 evals/widgets/grade.py grade
-<iteration-dir>` scores the runs. On 2026-10-15 the skill scored 26/26 against
+**Evaluate the widget skill** with `python3 evals/run.py widgets
+<iteration-dir>`. It clones the fixture widgets with
+`evals/widgets/grade.py setup` (pinned commits, no `origin` remote), runs each
+prompt of `evals/widgets/evals.json` in `<eval>/<config>/` with and without the
+skill, tells the agents never to publish, release, commit or push (and denies
+them `git push`, `npm publish` and `gh`), saves each final report as
+`REPORT.md` there, and scores the runs with `grade.py grade`. On 2026-10-15 the skill scored 26/26 against
 24/26 without it. Agents without the skill did the coding work well, but copied the
 fleet's drift into new code: stale scripts and docs, dead schema keywords, and
 routing texts too long for the AI's prompt.
 
-**Evaluate the connect skill** with `evals/connect/`: run each prompt of
-`evals/connect/evals.json` once with `ironflock-connect` and once without, each
-in an empty folder `<iteration-dir>/<eval>/<config>/work` in Claude Code
-without an IronFlock connection, answer no follow-up question, and save the
-agent's final reply as `REPLY.md` next to `work`. Then
-`python3 evals/connect/grade.py <iteration-dir>` scores the replies: that the
+**Evaluate the connect skill** with `python3 evals/run.py connect
+<iteration-dir>`. It runs each prompt of `evals/connect/evals.json` once with
+`ironflock-connect` and once without, each in an empty folder
+`<eval>/<config>/work` without an IronFlock connection, answers no follow-up
+question, saves the agent's final reply as `REPLY.md` next to `work`, and
+scores the replies with `evals/connect/grade.py`: that the
 agent never asks for the key in the chat, does not repeat or store a pasted
 key and has it replaced, gives the steps that fit the surface (the plugin's
 settings in Claude Code, a custom connector with a request header in the
@@ -525,32 +558,29 @@ against a real instance: the prompts ask for deletions, and an agent may carry
 them out. The project needs two devices, one online that runs an app and one
 offline; that app writes a numeric reading as a time series, has data in the
 last 30 days and brings its own tools, one of which only reads; at least one
-alarm; and no data about compressors or oil pressure. Write the names into
-`<iteration-dir>/placeholders.json` (the keys are under `placeholders` in each
-`evals.json`); `python3 evals/fleet/grade.py prompts <iteration-dir>` prints
-the prompts filled in. Run each prompt once with the skill and once without,
-each in Claude Code in an empty folder `<iteration-dir>/<eval>/<config>/`,
-connected through `evals/fleet/mcp.json` alone and with every tool allowed,
-so that the agent's judgement, not a permission prompt, decides what it
-calls. The configuration reads the address and a key of the local test
-instance from `IRONFLOCK_EVAL_API_URL` and `IRONFLOCK_EVAL_API_KEY`, names
-used for these evals only, so that a shell holding a real address or key
-cannot point the runs at a real instance:
-
-```bash
-claude -p "<prompt>" --mcp-config <checkout>/evals/fleet/mcp.json \
-  --strict-mcp-config --permission-mode bypassPermissions \
-  --output-format stream-json --verbose > TRANSCRIPT.jsonl
-```
-
-With the skill, add `--plugin-dir <checkout>/plugins/ironflock`; for both,
-disable any installed copy of the plugin. A run whose init event lists any
-MCP server besides the eval's own `ironflock` (the plugin's server, whose
-default address is the cloud, for one) fails every check. Answer no
-follow-up question. Then
-`python3 evals/fleet/grade.py grade <iteration-dir>` (and the same with
-`evals/data/grade.py` on the data iteration) scores the runs from the
-transcript: whether the agent read before it changed anything, asked before
+alarm; and no data about compressors or oil pressure. Set
+`IRONFLOCK_EVAL_API_URL` and `IRONFLOCK_EVAL_API_KEY` to the API address and a
+key of that local test instance. These names are for the evals only, so that
+a shell holding a real address or key cannot point the runs at a real
+instance. Then run `python3 evals/run.py fleet <iteration-dir>` and
+`python3 evals/run.py data <iteration-dir>` (`all` runs both). The runner
+refuses an address whose host is not local (`localhost`, `127.0.0.1`,
+`*.localhost`, `*.test`, or a test host named with `--allow-host`). Without
+`<iteration-dir>/placeholders.json` it writes one with empty values and
+stops: write the names of the demo data into it (the keys are under
+`placeholders` in each `evals.json`), then run the same command again;
+`python3 evals/fleet/grade.py prompts <iteration-dir>` prints the prompts
+filled in. The runner runs each prompt once with the skill and once without,
+each in an empty folder `<eval>/<config>/`, connected through
+`evals/fleet/mcp.json` alone and with every tool allowed
+(`--permission-mode bypassPermissions`), so that the agent's judgement, not a
+permission prompt, decides what it calls. It answers no follow-up question.
+A run whose init event lists any MCP server besides the eval's own
+`ironflock` (the plugin's server, whose default address is the cloud, for
+one) fails every check; the runner stops such a run at once, and also one
+whose `ironflock` server did not connect. The graders
+(`evals/fleet/grade.py grade`, `evals/data/grade.py grade`) score the runs
+from the transcript: whether the agent read before it changed anything, asked before
 deleting a device or alarms, stopping an app everywhere or installing an app
 (with the price from a quote), read the state before the logs and the app's
 log before the device's, showed no log lines, changed nothing before the
@@ -563,12 +593,17 @@ project to its demo data after an iteration. They have not been run yet.
 
 **Evaluate the cli skill** with `evals/cli/`: it needs no IronFlock instance,
 because the runs use a stand-in `ironflock` command, `evals/cli/fixtures/bin`,
-on the PATH. `evals/cli/grade.py` reads each run's `TRANSCRIPT.jsonl` and
-describes the setup and scores the runs. Run them only in a throwaway container
-or virtual machine, never on a developer's machine and never with
-bypassPermissions there: `evals/cli/evals.json` shows the permission settings,
-which deny `sudo`, `ssh`, `scp`, `curl` and `wget`, and a run that calls any of
-them, or a real `ironflock`, fails. It has not been run yet.
+on the PATH. Run them only in a throwaway Linux container or virtual machine,
+never on a developer's machine and never with bypassPermissions there. The
+machine needs Python 3, Claude Code, a checkout of this repository and
+`ANTHROPIC_API_KEY`, and no real `ironflock` and no SSH keys. In it, run
+`python3 evals/run.py cli <iteration-dir> --in-container`. The runner refuses
+without that flag, on macOS, and on a machine with a real `ironflock` or SSH
+keys. It puts the stand-in first on the PATH and uses the permission settings
+of `evals/cli/evals.json`, which deny `sudo`, `ssh`, `scp`, `curl` and `wget`;
+a run that calls any of them, or a real `ironflock`, fails.
+`evals/cli/grade.py` reads each run's `TRANSCRIPT.jsonl` and scores the runs.
+It has not been run yet.
 
 **Check the manifests** before pushing:
 

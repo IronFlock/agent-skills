@@ -26,9 +26,10 @@ API service it needs, under `metadata`:
       min-api-version: 2.0.0
 
 Every skill of the `ironflock` plugin (the operator skills) must have the list.
-In `ironflock-dev` it is optional: today's skills for building apps use no MCP
-tool, and the tool names they mention belong to the IronFlock assistant inside
-an app. The check reports
+In `ironflock-dev` it is optional: its skills for building apps mostly name the
+tools of the IronFlock assistant inside an app, some of which share their names
+with MCP tools (`execute_sql`), so a list there would mix the two. The check
+reports
 
 - a skill of `ironflock` without the list, or whose front matter cannot be read;
 - a skill of `ironflock` that lists tools without `min-api-version`, with one

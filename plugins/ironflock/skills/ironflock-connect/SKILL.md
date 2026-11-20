@@ -71,21 +71,26 @@ cloud):
 1. Open the account settings (**Account Settings**) from the account in the
    top bar.
 2. Choose **Developer**. The page has the section **API keys**.
-3. Choose **Create API key**, give it a name that says where it will be used
-   (for example "Claude Code on my laptop"), and create it.
-4. Choose **Copy API key**.
+3. Choose **Create API key** and give it a name that says where it will be
+   used (for example "Claude Code on my laptop"). Choose what the key may do
+   (**Read only** is the default) and where (all projects, some projects or
+   one app), see [What a key lets Claude do](#what-a-key-lets-claude-do), and
+   create it.
+4. Choose **Copy API key** and put the key into Claude's settings right away
+   (step 3 below): Studio shows a new key only once. A lost key is deleted
+   and replaced by a new one.
 
-The key stays visible in Studio's **API keys** table under
-**Account Settings > Developer**, so anyone signed in to that Studio account
-can read it: advise keeping the Studio session private. A key is valid for
-one year; after that Studio marks it **Expired**, and a new one is needed.
+A key is valid for one year; after that Studio marks it **Expired**, and a
+new one is needed. Studio versions before IronFlock 1.6.65 have no choice of
+scopes and keep the key visible in the **API keys** table: there, advise
+keeping the Studio session private.
 
 Advise one key per place it is used, so that one can be deleted without
 breaking the others, and deleting a key in Studio when it is no longer used.
 
-Keys created today have every scope and no restriction: Claude, with such a
-key, may do in IronFlock whatever the key's owner may do. See
-[What a key lets Claude do](#what-a-key-lets-claude-do).
+A key with every scope and no restriction (**Everything** in **All my
+projects**, and every key of older Studio versions) lets Claude do in
+IronFlock whatever the key's owner may do.
 
 ## 3. Connect
 
@@ -233,8 +238,7 @@ key allows, Claude never does more than the key's owner may do in IronFlock.
 The server offers Claude only the tools the key allows, and marks the tools
 that change or delete something, so that Claude asks before using them.
 
-Keys created today have every scope and no restriction. Once Studio offers
-scopes and restrictions, recommend the smallest key that does the job:
+Recommend the smallest key that does the job:
 
 - **Read only** (the five read scopes) for looking at a fleet: which devices
   are online, which apps run where and whether their data arrives, querying
