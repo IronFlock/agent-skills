@@ -8,6 +8,21 @@ abilities, a patch for fixes.
 
 ## Unreleased
 
+## 1.0.0 - 2026-11-20
+
+- Two plugins in the `ironflock` marketplace instead of one. `ironflock` is
+  for operating IronFlock: the connection to your instance and the skills
+  `ironflock-connect`, `ironflock-fleet`, `ironflock-data` and `ironflock-cli`,
+  plus `ironflock-dev-moved`, a short skill that tells people who build apps
+  to install `ironflock-dev`. `ironflock-dev` holds the skills
+  `ironflock-templates` and `ironflock-widgets` and needs `ironflock`, which
+  Claude Code installs with it.
+- If you had `ironflock@ironflock` enabled, install `ironflock-dev@ironflock`
+  to keep the two skills. They are now invoked as
+  `/ironflock-dev:ironflock-templates` and `/ironflock-dev:ironflock-widgets`.
+- The plugins have versions now. An installed plugin updates when a new
+  version is released. A new install gets the content of the main branch,
+  which may hold changes that are not released yet.
 - `ironflock-templates` checks an installed release of the app on its devices
   through the `ironflock` plugin's connection: its state, whether its data
   arrives, the app's log and the device's log.
@@ -42,19 +57,3 @@ abilities, a patch for fixes.
   before it installs the agent, deletes a device or works on another machine
   with `--host`, and never prints a `.flock` file, which holds a device's
   credentials. No other skill depends on it.
-
-## 1.0.0 - 2026-11-20
-
-- Two plugins in the `ironflock` marketplace instead of one. `ironflock` is
-  for operating IronFlock. For now it holds only `ironflock-dev-moved`, a
-  short skill that tells people who build apps to install `ironflock-dev`;
-  the release that brings the connection and the first operator skills
-  replaces it. `ironflock-dev` holds the
-  skills `ironflock-templates` and `ironflock-widgets`, unchanged, and needs
-  `ironflock`, which Claude Code installs with it.
-- If you had `ironflock@ironflock` enabled, install `ironflock-dev@ironflock`
-  to keep the two skills. They are now invoked as
-  `/ironflock-dev:ironflock-templates` and `/ironflock-dev:ironflock-widgets`.
-- The plugins have versions now. An installed plugin updates when a new
-  version is released. A new install gets the content of the main branch,
-  which may hold changes that are not released yet.
