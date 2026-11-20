@@ -24,7 +24,7 @@ from collections import defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS = ROOT / "plugins/ironflock/skills/ironflock-templates/scripts"
+SCRIPTS = ROOT / "plugins/ironflock-dev/skills/ironflock-templates/scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 import yaml  # noqa: E402

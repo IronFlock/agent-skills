@@ -45,7 +45,7 @@ from pathlib import Path
 from typing import Callable
 
 ROOT = Path(__file__).resolve().parent
-SKILL = ROOT.parent / "plugins/ironflock/skills/ironflock-templates"
+SKILL = ROOT.parent / "plugins/ironflock-dev/skills/ironflock-templates"
 VALIDATE = SKILL / "scripts/validate.py"
 EXAMPLE = SKILL / "references/example-board.yml"
 STARTER = SKILL / "assets/app-template"

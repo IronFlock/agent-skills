@@ -31,7 +31,7 @@ from pathlib import Path
 from typing import Callable
 
 ROOT = Path(__file__).resolve().parent
-SCRIPTS = ROOT.parent / "plugins/ironflock/skills/ironflock-widgets/scripts"
+SCRIPTS = ROOT.parent / "plugins/ironflock-dev/skills/ironflock-widgets/scripts"
 NEW_WIDGET = SCRIPTS / "new_widget.py"
 CHECK = SCRIPTS / "check_widget.py"
 FIXTURES = ROOT / "widgets"

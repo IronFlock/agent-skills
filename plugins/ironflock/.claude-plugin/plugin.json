@@ -1,21 +1,19 @@
 {
   "name": "ironflock",
-  "description": "Build on IronFlock: design and scaffold edge apps that keep their state in the app's tables and embed their devices' web UIs in the board, write and validate their .ironflock templates (boards and widgets, data tables, app parameters, remote-access ports, AI agents), and create, change and check the board widgets themselves (@ironflock/widget-* Lit components).",
+  "version": "1.0.0",
+  "description": "Operate IronFlock: the connection to your IronFlock instance, in the cloud or on an appliance, and the skills to work with its projects, devices, apps and data. For now it holds only a pointer to ironflock-dev, the plugin with the skills to build apps and widgets; the connection and the first operator skills come in a later release.",
   "author": {
     "name": "IronFlock",
     "url": "https://ironflock.com"
   },
-  "homepage": "https://ironflock.com/docs/app-development",
+  "homepage": "https://ironflock.com",
   "repository": "https://github.com/IronFlock/agent-skills",
   "keywords": [
     "ironflock",
     "iot",
     "edge",
-    "dashboard",
-    "widgets",
-    "templates",
-    "lit",
-    "web-components"
+    "devices",
+    "fleet"
   ],
   "license": "MIT"
 }

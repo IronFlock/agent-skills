@@ -1,0 +1,59 @@
+# Release: the merge of a release pull request (`just release-patch`: version
+# bump in VERSION, both plugin.json files and CHANGELOG.md, title
+# `release agent-skills v<version>`) checks the release and sets the tag
+# v<version>. The marketplace serves main: a new install gets main as it is,
+# released or not, and an installed plugin updates when its version changes,
+# that is, on the merge of a release pull request. The tag marks the release;
+# pinning the marketplace entries to these tags is the planned next step. Main accepts only pull requests whose required checks
+# (ci-ok, security / report) passed.
+# A no-release merge starts nothing: `paths` holds only the version file, and
+# when a no-release pull request touches it anyway the jobs below are skipped
+# by its merge title.
+# ci.yml calls it on release pull requests (workflow_call), and run by hand
+# (workflow_dispatch) it is a dry run: the check, no tag.
+name: release
+
+on:
+  push:
+    branches: [main]
+    paths: [VERSION]
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # The release notes in CHANGELOG.md, the eval results of every skill changed
+  # since the last release tag (evals/results/<version>.md), and the version
+  # in both plugins.
+  check:
+    if: github.event_name != 'push' || startsWith(github.event.head_commit.message, 'release ')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: release notes, eval results and versions
+        run: python3 -I tools/release.py ci
+
+  # The tag, only on the merge of a release pull request. Written with the
+  # release GitHub App's token from the `release` environment (deployments
+  # from main only).
+  tag:
+    needs: [check]
+    if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'release ')
+    uses: IronFlock/workflows/.github/workflows/release-tag.yml@v1
+    permissions:
+      contents: read
+    # The App key is a secret of the `release` environment; environment
+    # secrets reach a reusable workflow only through `secrets: inherit`.
+    secrets: inherit # zizmor: ignore[secrets-inherit]
+    with:
+      version-file: VERSION

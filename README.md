@@ -1,11 +1,33 @@
 # IronFlock agent skills
 
-A Claude Code plugin with two skills for building on the IronFlock IoT platform:
+A Claude Code marketplace, `ironflock`, with two plugins for the IronFlock IoT
+platform:
+
+| Plugin | For | Skills |
+|---|---|---|
+| `ironflock` | people who operate IronFlock: projects, devices, apps and their data | none yet (see below) |
+| `ironflock-dev` | people who build apps and widgets for IronFlock | `ironflock-templates`, `ironflock-widgets` |
+
+`ironflock-dev` needs `ironflock`. It says so in its `plugin.json`
+(`dependencies`), and Claude Code installs `ironflock` with it.
 
 | Skill | For |
 |---|---|
 | `ironflock-templates` | IronFlock apps: their architecture, a starter app, and the integration templates in the app's `.ironflock/` folder |
 | `ironflock-widgets` | the board widgets themselves: the `@ironflock/widget-*` Lit web components |
+
+## The ironflock plugin
+
+The plugin for operating IronFlock holds one skill for now,
+`ironflock-dev-moved`: when someone who has only this plugin asks to build an
+IronFlock app or widget, it tells them that the build skills moved to
+`ironflock-dev` and how to install it. The release that brings the connection
+and the first operator skills replaces it. Coming in later releases: the connection to an IronFlock instance, in the cloud or on an
+appliance, through the API's MCP endpoint and a key that you enter in
+Claude's own settings, so that it works without a shell; and skills to
+connect, to look after a fleet of devices and their apps, to query a
+project's data, and to use the `ironflock` command where Claude has a shell.
+The release-and-deploy loop for app developers will come to `ironflock-dev`.
 
 ## ironflock-templates
 
@@ -77,21 +99,29 @@ In Claude Code:
 
 ```text
 /plugin marketplace add IronFlock/agent-skills
-/plugin install ironflock@ironflock
+/plugin install ironflock-dev@ironflock
 ```
 
 Or from a shell:
 
 ```bash
 claude plugin marketplace add IronFlock/agent-skills
-claude plugin install ironflock@ironflock
+claude plugin install ironflock-dev@ironflock
 ```
+
+This installs `ironflock` as well. To operate IronFlock without building apps,
+install only `ironflock@ironflock`.
 
 Claude Code does not auto-update third-party plugins by default. Turn it on under
 `/plugin` → Marketplaces → `ironflock` → Enable auto-update, or pull changes with
-`claude plugin marketplace update ironflock`.
+`claude plugin marketplace update ironflock`. The plugins have versions.
+Claude Code serves the plugins from the main branch of this repository. A new
+install gets what is on main at that moment, including changes that are not
+released yet. An installed plugin updates only when its version changes, so
+it stays on its version until the next release.
+[CHANGELOG.md](CHANGELOG.md) says what each version changed.
 
-To make the plugin available to everyone working on an app, commit this to the
+To make the plugins available to everyone working on an app, commit this to the
 app's `.claude/settings.json`. It loads once a person trusts the folder:
 
 ```json
@@ -102,13 +132,31 @@ app's `.claude/settings.json`. It loads once a person trusts the folder:
       "autoUpdate": true
     }
   },
-  "enabledPlugins": { "ironflock@ironflock": true }
+  "enabledPlugins": {
+    "ironflock@ironflock": true,
+    "ironflock-dev@ironflock": true
+  }
 }
 ```
 
 The skills trigger on their own: `ironflock-templates` when you work on an
 IronFlock app, `ironflock-widgets` when you work on a widget. You can also invoke
-them directly as `/ironflock:ironflock-templates` and `/ironflock:ironflock-widgets`.
+them directly as `/ironflock-dev:ironflock-templates` and
+`/ironflock-dev:ironflock-widgets`.
+
+### If you had the plugin enabled before 1.0.0
+
+Until 1.0.0 there was one plugin, `ironflock`, with the two skills. They moved
+to `ironflock-dev`. After the update, `ironflock@ironflock` holds only a short
+skill that points to `ironflock-dev`, and you add one line to keep them:
+
+```bash
+claude plugin install ironflock-dev@ironflock
+```
+
+Or add `"ironflock-dev@ironflock": true` to `enabledPlugins` next to
+`"ironflock@ironflock": true`. The skills are now invoked as
+`/ironflock-dev:ironflock-templates` and `/ironflock-dev:ironflock-widgets`.
 
 ## Requirements
 
@@ -125,9 +173,14 @@ them directly as `/ironflock:ironflock-templates` and `/ironflock:ironflock-widg
 ## Layout
 
 ```text
-.claude-plugin/marketplace.json          marketplace "ironflock"
+.claude-plugin/marketplace.json          marketplace "ironflock", plugins "ironflock" and "ironflock-dev"
+VERSION                                  the version of the repository and both plugins
+CHANGELOG.md                             what each version changed
 plugins/ironflock/
 ├── .claude-plugin/plugin.json           plugin "ironflock"
+└── skills/ironflock-dev-moved/SKILL.md  points to ironflock-dev, until the operator skills come
+plugins/ironflock-dev/
+├── .claude-plugin/plugin.json           plugin "ironflock-dev", needs "ironflock"
 └── skills/
     ├── ironflock-templates/
     │   ├── SKILL.md                     workflow and principles
@@ -159,9 +212,13 @@ plugins/ironflock/
             ├── check_widget.py          checks a widget repository
             └── new_widget.py            scaffolds a widget from the template
 tools/build_widget_catalog.py            regenerates widget-catalog.md
-tests/                                   validator, starter-app and widget-checker regression tests
+tools/check_tools.py                     checks the MCP tool names skills use; vendors the catalogue
+tools/api/tools.json                     the API's tool catalogue (vendored), api-version.txt its version
+tools/release.py                         version, changelog and eval-result checks; writes the version
+tests/                                   validator, starter-app, widget-checker and repository-check tests
 evals/                                   test app, eval prompts and grader for ironflock-templates
 evals/widgets/                           eval prompts, fixtures and grader for ironflock-widgets
+evals/results/<version>.md               the eval results of each release
 ```
 
 ## Maintenance
@@ -178,9 +235,81 @@ script mirrors the widgets the platform registers. Widget property names are nev
 `widget.py` and the validator read them live from npm, so widget releases need no
 change here.
 
-**Updates reach users by commit.** `plugin.json` sets no `version` on purpose. Users
-then track the commit SHA, and every push becomes an update. If you add a `version`,
-you have to bump it on every change, or users keep the old copy.
+**Releases.** The repository has one semantic version, in `VERSION` and in
+the `version` of both plugins' `plugin.json` (never in `marketplace.json`).
+Claude Code serves the plugins from the main branch of this repository. A new
+install gets what is on main at that moment, including changes that are not
+released yet. An installed plugin updates only when its version changes, so it
+stays on its version until the next release.
+A merge without a release therefore reaches every new install at once, under
+the old version number, but no existing install; only a release reaches
+those. Pinning the marketplace entries to release tags, so that new installs
+get released versions only, is the planned next step once the release
+workflow sets the tags reliably. Every change goes through a pull request:
+
+- `just merge [TITLE]`: a pull request without a release. Write what changed
+  for users under `## Unreleased` in `CHANGELOG.md` in the same pull request.
+- `just release-patch` (`-minor`, `-major`): a release pull request. It
+  refuses unless `## Unreleased` in the committed `CHANGELOG.md` has content
+  and `evals/results/<version>.md` is committed with a result for every skill
+  changed since the last release (below). The release writes the version into
+  `VERSION`, both `plugin.json` files and the changelog heading. CI checks the
+  same on the pull request, and its merge sets the tag `v<version>`.
+
+**The first release.** Before 1.0.0, main has no `VERSION`, so `pr.sh` has no
+version to count from and `just merge` refuses the new file. The pull request
+that brings 1.0.0 is opened by hand with the title
+`release agent-skills v1.0.0` (`gh pr create --base main --title "release
+agent-skills v1.0.0"`, then `gh pr merge --squash --auto`). Before it can
+merge, it needs `evals/results/1.0.0.md` with the evals of every skill (there
+is no earlier release to compare with), and the repository needs its
+`release` environment and tag ruleset, as the other IronFlock repositories
+have them; without them the tag job of the release fails. After that, every
+release goes through `just release-patch` (`-minor`, `-major`).
+
+A major version when people have to change their setup (a skill moves to
+another plugin, a plugin is renamed), a minor one for a new skill or ability,
+a patch for fixes.
+
+**Eval results in the release.** Evals stay manual, because they cost model
+usage, but a release needs their result for every skill whose files changed
+since the last release tag. Run them as described below, then write
+`evals/results/<version>.md` with one section per changed skill:
+
+```markdown
+# Evals for 1.2.0
+
+## ironflock-templates
+
+Result: 31/31 with the skill, 24/31 without (2026-12-01, model and settings).
+
+What the runs showed, and anything that failed and why.
+```
+
+`<version>` is the version the release makes (`just release-patch` prints
+it). Each section needs a line that starts with `Result:`. `just test` checks
+the format of every results file, and the release checks that every changed
+skill has its section.
+
+**MCP tool names.** A skill that uses tools of the IronFlock MCP server lists
+them in its front matter, under `metadata`:
+
+```yaml
+metadata:
+  mcp-tools: list_devices check_app_status get_app_logs
+```
+
+`just test` (`tools/check_tools.py`) fails on a listed tool that is not in the
+API's tool catalogue, and, in a skill with that list, on a tool of the
+catalogue that the skill's Markdown names in backticks but the list leaves out.
+List every tool a skill mentions. Today's skills list none and are not checked.
+The catalogue is vendored in `tools/api/tools.json` with the API version it
+came from in `tools/api/api-version.txt`. After an API release, run
+`just vendor-tools` in a checkout of this repository next to a checkout of the
+API service at that release (or `just vendor-tools <path>`). It takes the
+catalogue of the release tag named by the API's `VERSION`, writes both files
+and runs the check. Commit them; a renamed or removed tool then fails CI until
+the skills follow.
 
 **Test the validator** after changing `validate.py`, `board_checks.py` or
 `skill_checks.py`: `just test` (or `python3 tests/run.py`). It requires the
@@ -225,7 +354,8 @@ import map or the widget list changes. Calibrate a checker change against the re
 widgets: in a checkout with all widget repos, every ERROR the checker reports on
 them must be a real defect.
 
-**Evaluate the skill** after changing its instructions: run each prompt in
+**Evaluate the skill** after changing its instructions, and before every
+release that changes it: run each prompt in
 `evals/evals.json` against a fresh copy of `evals/fixtures/machine-monitor`, once
 with the skill and once without, then score the runs with
 `uv run evals/grade.py <iteration-dir>` (layout: `<eval-name>/<config>/app`). An
@@ -278,7 +408,15 @@ routing texts too long for the AI's prompt.
 ```bash
 claude plugin validate .
 claude plugin validate plugins/ironflock
+claude plugin validate plugins/ironflock-dev
 ```
+
+To try both plugins from a checkout, add it as a marketplace:
+`claude plugin marketplace add <path to this checkout>`, then
+`claude plugin install ironflock-dev@ironflock`. A marketplace added from a
+local path loads the files in place, so edits show after `/reload-plugins`.
+Remove it again with `claude plugin marketplace remove ironflock`, and add the
+GitHub one back.
 
 ## License
 

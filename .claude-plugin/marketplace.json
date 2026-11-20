@@ -4,12 +4,25 @@
     "name": "IronFlock",
     "url": "https://ironflock.com"
   },
-  "description": "Claude Code plugins for building apps on the IronFlock IoT platform.",
+  "description": "Claude Code plugins for the IronFlock IoT platform: operate it, and build apps and widgets on it.",
   "plugins": [
     {
       "name": "ironflock",
       "source": "./plugins/ironflock",
-      "description": "Build on IronFlock: design and scaffold edge apps that keep their state in the app's tables and embed their devices' web UIs in the board, write and validate their .ironflock templates (boards and widgets, data tables, app parameters, remote-access ports, AI agents), and create, change and check the board widgets themselves (@ironflock/widget-* Lit components).",
+      "description": "Operate IronFlock: the connection to your IronFlock instance, in the cloud or on an appliance, and the skills to work with its projects, devices, apps and data. For now it holds only a pointer to ironflock-dev, the plugin with the skills to build apps and widgets; the connection and the first operator skills come in a later release.",
+      "category": "productivity",
+      "keywords": [
+        "ironflock",
+        "iot",
+        "edge",
+        "devices",
+        "fleet"
+      ]
+    },
+    {
+      "name": "ironflock-dev",
+      "source": "./plugins/ironflock-dev",
+      "description": "Build on IronFlock: design and scaffold edge apps that keep their state in the app's tables and embed their devices' web UIs in the board, write and validate their .ironflock templates (boards and widgets, data tables, app parameters, remote-access ports, AI agents), and create, change and check the board widgets themselves (@ironflock/widget-* Lit components). Needs the ironflock plugin, which Claude Code installs with it.",
       "category": "development",
       "keywords": [
         "ironflock",
