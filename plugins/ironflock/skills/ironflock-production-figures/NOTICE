@@ -1,0 +1,43 @@
+ironflock-production-figures
+Copyright 2026 Record Evolution GmbH
+
+This skill incorporates material adapted from the claude-for-manufacturing
+plugin, version 1.0.0, by Anthropic, licensed under the Apache License,
+Version 2.0. The full licence text is in LICENSE-APACHE-2.0.txt in this
+folder and at https://www.apache.org/licenses/LICENSE-2.0.
+
+Files adapted from that plugin, and under the Apache License, Version 2.0:
+
+  references/oee.md
+  references/downtime-losses.md
+  references/root-cause-checks.md
+
+Each of them states this at its top. The other files of this skill
+(SKILL.md, references/machine-data-sql.md) are original work of Record
+Evolution GmbH under the MIT License of the repository.
+
+What was changed, by Record Evolution GmbH in 2026:
+
+- The text is new wording throughout, written for machine data kept in
+  SQL tables (PostgreSQL with TimescaleDB) as IronFlock projects and apps
+  hold it. One sentence is kept as in the original: the lockout line in
+  references/root-cause-checks.md.
+- Left out: the connectors to ERP and maintenance systems, file exports and
+  their freshness checks, scripts, plant profiles, report files and pages,
+  approval workflows, 8D drafting, supplier flags and the other skills of
+  the plugin.
+- Kept and condensed: the definitions of OEE and its three parts, shown
+  apart; never substituting a default for a missing input; values over 100%
+  reported, not capped; ranking stops by minutes and by frequency, with the
+  share of stops without a reason stated first; pricing losses only with a
+  named rate; safety before any diagnosis; the pattern checks (drift,
+  clustering against a base rate, changes before the event, recurrence);
+  ranked candidate causes with evidence for and against and the test that
+  separates them.
+- Added: TEEP, micro-stops as a performance loss, availability as distinct
+  from device uptime, combining figures across machines and periods,
+  losses expressed in minutes, MTBF, stops at the edges of a period, a
+  drift query, German terms and worked examples.
+
+The adapted files are distributed on an "AS IS" BASIS, WITHOUT WARRANTIES
+OR CONDITIONS OF ANY KIND, as the licence states.

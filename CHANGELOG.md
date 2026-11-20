@@ -6,6 +6,23 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
+## 1.1.1 - 2026-11-20
+
+- New skill `ironflock-production-figures` in the `ironflock` plugin: OEE
+  with availability, performance and quality always shown apart, TEEP,
+  stops and downtime ranked by minutes and by count, MTTR, MTBF and losses,
+  computed in SQL from the rows machines write, and the checks that find
+  out why a machine or line stopped, slowed down or made scrap (safety
+  first, drift, clustering against a base rate, what changed before, ranked
+  causes). Claude asks for what the data does not hold, such as the planned
+  time or the ideal cycle time, instead of assuming it, and reports each
+  figure with its inputs and period. It works for questions to an instance
+  and for an app's transforms and board; `ironflock-data` and
+  `ironflock-templates` point to it. Its domain knowledge incorporates
+  material adapted from Anthropic's claude-for-manufacturing plugin
+  (Apache License 2.0; the three adapted references carry the notice, and
+  the licence text travels with the skill).
+
 ## 1.1.0 - 2026-11-20
 
 - `ironflock-templates` keeps its board design rules in three references of
