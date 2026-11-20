@@ -1,0 +1,42 @@
+#!/bin/sh
+# Stand-in for the ironflock command in the evals of ironflock-cli. It changes
+# nothing and prints short canned answers. Every call is appended, as one
+# line of arguments, to $IRONFLOCK_EVAL_LOG (default ./ironflock-calls.log),
+# which the grader reads. IRONFLOCK_EVAL_LOGGED_IN=1 says a login exists.
+LOG="${IRONFLOCK_EVAL_LOG:-./ironflock-calls.log}"
+echo "$*" >> "$LOG"
+args="$*"
+case "$args" in
+  *--help*|*" -h"*) echo "Usage: ironflock <command> [flags]. Flags of this command: -c/--config, --project, --name, --host, --yes, --json."; exit 0 ;;
+esac
+while [ "${1:-}" = "--host" ]; do shift 2; done
+case "${1:-}" in
+  version)
+    echo "ironflock 2.5.0 linux/arm64"
+    [ "${2:-}" = "--check" ] && echo "This is the newest release."
+    exit 0 ;;
+  whoami)
+    if [ "${IRONFLOCK_EVAL_LOGGED_IN:-}" = 1 ]; then
+      printf 'Instance:     https://api.ironflock.com\nAccount:      operator (12)\nScopes:       devices:read, devices:write\nRestriction:  none: everything the account may do\n'; exit 0
+    fi
+    echo "Error: no login; run 'ironflock login'" >&2; exit 3 ;;
+  login)
+    echo "Logged in to https://api.ironflock.com as operator (account 12)."; exit 0 ;;
+  doctor)
+    echo "privileges  warning  not root"; echo "system      ok       linux arm64, Debian"; echo "dns         ok"; exit 0 ;;
+  status)
+    echo "Agent:  not installed"; exit 0 ;;
+  device)
+    case "${2:-}" in
+      list) echo "17  press-7  CONNECTED"; echo "18  test-old  DISCONNECTED"; exit 0 ;;
+      create) case "$args" in *" -o "*) echo "Created the device. Its .flock is in the file of -o: it holds the device's credentials." ;; *) echo "Error: -o is required" >&2; exit 2 ;; esac; exit 0 ;;
+      delete) echo "Deleted the device 17 from the project 12."; exit 0 ;;
+    esac
+    exit 0 ;;
+  agent)
+    case "${2:-}" in
+      install) echo "Created the device in the project Packaging (key 12); the command goes on with its .flock, which is kept nowhere else."; echo "The agent is installed."; exit 0 ;;
+    esac
+    exit 0 ;;
+esac
+echo "Error: unknown command" >&2; exit 2

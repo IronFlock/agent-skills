@@ -20,6 +20,25 @@ abilities, a patch for fixes.
   what to do when it fails; and what a key lets Claude do.
 - The README has a section "Connect to IronFlock" with the same steps in
   short.
+- New skill `ironflock-fleet`: look after a fleet through IronFlock's MCP
+  tools. It shows which devices are online and which apps run where, finds out
+  why a device or an app does not work in a fixed order and reports the cause in
+  plain words, and covers alarms, the apps' own tools and installing, updating,
+  stopping and removing apps. Claude reads before it changes anything and asks
+  before every change.
+- New skill `ironflock-data`: answer questions from a project's data. Claude
+  reads the project's tables first, queries with a time range and aggregates in
+  SQL, reads the files apps store, and saves a custom transform for a board
+  only after you agreed.
+- `ironflock-fleet` and `ironflock-data` need version 2.0.0 or later of the
+  IronFlock API service.
+- New skill `ironflock-cli`: machine work with the `ironflock` command, in a
+  client that has a shell (Claude Code). It connects a machine as a new device,
+  logs in with an API key from a file or a pipe (never on a command line or in
+  the chat), and checks a machine with `status` and `doctor`. Claude asks
+  before it installs the agent, deletes a device or works on another machine
+  with `--host`, and never prints a `.flock` file, which holds a device's
+  credentials. No other skill depends on it.
 
 ## 1.0.0 - 2026-11-20
 

@@ -5,7 +5,7 @@ platform:
 
 | Plugin | For | Skills |
 |---|---|---|
-| `ironflock` | people who operate IronFlock: projects, devices, apps and their data | `ironflock-connect` (and `ironflock-dev-moved`, see below) |
+| `ironflock` | people who operate IronFlock: projects, devices, apps and their data | `ironflock-connect`, `ironflock-fleet`, `ironflock-data`, `ironflock-cli` (and `ironflock-dev-moved`, see below) |
 | `ironflock-dev` | people who build apps and widgets for IronFlock | `ironflock-templates`, `ironflock-widgets` |
 
 `ironflock-dev` needs `ironflock`. It says so in its `plugin.json`
@@ -14,6 +14,9 @@ platform:
 | Skill | For |
 |---|---|
 | `ironflock-connect` | connecting Claude to IronFlock in the cloud or on an appliance, checking the connection, and what an API key lets Claude do |
+| `ironflock-fleet` | devices, the apps on them, alarms, logs and the audit log: what runs where, why something does not work, and changing apps, devices and alarms with the person's agreement |
+| `ironflock-data` | a project's data: finding its tables, read-only SQL on the project database, the files apps store, and custom transforms for boards |
+| `ironflock-cli` | machine work with the `ironflock` command in a shell: install the agent, connect a machine as a new device, log in, check a machine (`status`, `doctor`), work on another machine with `--host`; needs a shell, so Claude Code |
 | `ironflock-templates` | IronFlock apps: their architecture, a starter app, and the integration templates in the app's `.ironflock/` folder |
 | `ironflock-widgets` | the board widgets themselves: the `@ironflock/widget-*` Lit web components |
 
@@ -32,10 +35,35 @@ It also holds `ironflock-dev-moved`: when someone who has only this plugin
 asks to build an IronFlock app or widget, it tells them that the build skills
 moved to `ironflock-dev` and how to install it.
 
-Coming in later releases: skills to look after a fleet of devices and their
-apps, to query a project's data, and to use the `ironflock` command where
-Claude has a shell. The release-and-deploy loop for app developers will come
-to `ironflock-dev`.
+`ironflock-fleet` looks after the devices and apps of a project: which devices
+are online and what runs where, why a device or an app does not work (the
+device, then the app's state and data, then its log, the device's log and the
+audit log), alarms, the apps' own tools, and changes to apps, devices and
+alarms. `ironflock-data` answers questions from a project's data: it reads the
+project's tables first, queries the project database (PostgreSQL with
+TimescaleDB) read-only with a time range and aggregation, reads the files
+apps store, and saves custom transforms for boards. Both read before they
+change anything and ask before every change, deletions and paid installs
+included. Both need version 2.0.0 or later of the IronFlock API service.
+
+`ironflock-cli` is for machines: where Claude has a shell, it uses the
+`ironflock` command to connect a machine as a device and to check it.
+
+Still to come: the release-and-deploy loop for app developers, in
+`ironflock-dev`.
+
+## Connect a machine as a device
+
+The `ironflock-cli` skill is for machines, not fleets: it needs a shell on
+your own computer or on the machine to set up, so it works in Claude Code
+(terminal, IDE extension, Code tab). A sandbox shell in the Claude app or in
+Cowork is not that machine. Ask Claude to "connect this machine as
+a new device in project X". It checks the machine and your login, tells you
+what it is about to do and waits for your yes before it installs anything.
+You log in with an API key saved in a file only you can read; the key is
+never typed into the chat or onto a command line. For work on the fleet
+from anywhere (apps, data, logs, alarms) Claude uses the IronFlock tools of
+the connection described above, not this skill.
 
 ## Connect to IronFlock
 
@@ -197,9 +225,14 @@ app's `.claude/settings.json`. It loads once a person trusts the folder:
 ```
 
 The skills trigger on their own: `ironflock-connect` when you connect Claude
-to IronFlock or the connection fails, `ironflock-templates` when you work on an
-IronFlock app, `ironflock-widgets` when you work on a widget. You can also invoke
-them directly as `/ironflock:ironflock-connect`,
+to IronFlock or the connection fails, `ironflock-fleet` when you ask about
+devices, apps, alarms or logs, or why something does not work,
+`ironflock-data` when you ask about a project's data or transforms,
+`ironflock-cli` when you connect a machine as a device or use the `ironflock`
+command, `ironflock-templates` when you work on an IronFlock app,
+`ironflock-widgets` when you work on a widget. You can also invoke them
+directly as `/ironflock:ironflock-connect`, `/ironflock:ironflock-fleet`,
+`/ironflock:ironflock-data`, `/ironflock:ironflock-cli`,
 `/ironflock-dev:ironflock-templates` and `/ironflock-dev:ironflock-widgets`.
 
 ### If you had the plugin enabled before 1.0.0
@@ -238,6 +271,9 @@ plugins/ironflock/
 ├── .claude-plugin/plugin.json           plugin "ironflock": its settings (API address, key) and the MCP server
 └── skills/
     ├── ironflock-connect/SKILL.md       connect, check, what a key lets Claude do
+    ├── ironflock-fleet/SKILL.md         devices, apps, alarms, logs, diagnosis, the apps' own tools
+    ├── ironflock-data/SKILL.md          tables, read-only SQL, files, transforms
+    ├── ironflock-cli/SKILL.md           machine work with the ironflock command
     └── ironflock-dev-moved/SKILL.md     points to ironflock-dev
 plugins/ironflock-dev/
 ├── .claude-plugin/plugin.json           plugin "ironflock-dev", needs "ironflock"
@@ -279,6 +315,9 @@ tests/                                   validator, starter-app, widget-checker 
 evals/                                   test app, eval prompts and grader for ironflock-templates
 evals/widgets/                           eval prompts, fixtures and grader for ironflock-widgets
 evals/connect/                           eval prompts and grader for ironflock-connect
+evals/fleet/                             eval prompts and grader for ironflock-fleet, the MCP configuration of the eval runs, transcript.py (shared with evals/data)
+evals/data/                              eval prompts and grader for ironflock-data
+evals/cli/                               eval prompts and grader for ironflock-cli, and the stand-in command in fixtures/bin
 evals/results/<version>.md               the eval results of each release
 ```
 
@@ -479,6 +518,57 @@ settings in Claude Code, a custom connector with a request header in the
 Claude app and Cowork, an appliance only reachable inside a network), and
 reads a 401 and a 429 right. The checks are patterns on the reply; read the
 replies too. It has not been run yet.
+
+**Evaluate the fleet and data skills** with `evals/fleet/` and `evals/data/`,
+against a local IronFlock test instance with its demo data. Never run them
+against a real instance: the prompts ask for deletions, and an agent may carry
+them out. The project needs two devices, one online that runs an app and one
+offline; that app writes a numeric reading as a time series, has data in the
+last 30 days and brings its own tools, one of which only reads; at least one
+alarm; and no data about compressors or oil pressure. Write the names into
+`<iteration-dir>/placeholders.json` (the keys are under `placeholders` in each
+`evals.json`); `python3 evals/fleet/grade.py prompts <iteration-dir>` prints
+the prompts filled in. Run each prompt once with the skill and once without,
+each in Claude Code in an empty folder `<iteration-dir>/<eval>/<config>/`,
+connected through `evals/fleet/mcp.json` alone and with every tool allowed,
+so that the agent's judgement, not a permission prompt, decides what it
+calls. The configuration reads the address and a key of the local test
+instance from `IRONFLOCK_EVAL_API_URL` and `IRONFLOCK_EVAL_API_KEY`, names
+used for these evals only, so that a shell holding a real address or key
+cannot point the runs at a real instance:
+
+```bash
+claude -p "<prompt>" --mcp-config <checkout>/evals/fleet/mcp.json \
+  --strict-mcp-config --permission-mode bypassPermissions \
+  --output-format stream-json --verbose > TRANSCRIPT.jsonl
+```
+
+With the skill, add `--plugin-dir <checkout>/plugins/ironflock`; for both,
+disable any installed copy of the plugin. A run whose init event lists any
+MCP server besides the eval's own `ironflock` (the plugin's server, whose
+default address is the cloud, for one) fails every check. Answer no
+follow-up question. Then
+`python3 evals/fleet/grade.py grade <iteration-dir>` (and the same with
+`evals/data/grade.py` on the data iteration) scores the runs from the
+transcript: whether the agent read before it changed anything, asked before
+deleting a device or alarms, stopping an app everywhere or installing an app
+(with the price from a quote), read the state before the logs and the app's
+log before the device's, showed no log lines, changed nothing before the
+person's yes, and used the audit log for history; for the data skill, whether it read the schema first, queried only
+tables a tool had listed, bounded every query in time, aggregated in SQL,
+did not page through history, and chose a query, a widget setting or a
+transform as the question needed, asking before it saved one. The checks are
+patterns on the tool calls and the reply; read the replies too. Reset the
+project to its demo data after an iteration. They have not been run yet.
+
+**Evaluate the cli skill** with `evals/cli/`: it needs no IronFlock instance,
+because the runs use a stand-in `ironflock` command, `evals/cli/fixtures/bin`,
+on the PATH. `evals/cli/grade.py` reads each run's `TRANSCRIPT.jsonl` and
+describes the setup and scores the runs. Run them only in a throwaway container
+or virtual machine, never on a developer's machine and never with
+bypassPermissions there: `evals/cli/evals.json` shows the permission settings,
+which deny `sudo`, `ssh`, `scp`, `curl` and `wget`, and a run that calls any of
+them, or a real `ironflock`, fails. It has not been run yet.
 
 **Check the manifests** before pushing:
 

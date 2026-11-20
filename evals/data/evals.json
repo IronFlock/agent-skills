@@ -1,0 +1,60 @@
+{
+  "skill_name": "ironflock-data",
+  "placeholders": {
+    "project": "the seeded project's name",
+    "device": "a device of the project that writes {quantity} readings",
+    "app": "the display name of the app that writes them",
+    "quantity": "a numeric reading the app writes as a time series, in plain words (for example temperature)",
+    "threshold": "a value of that reading that some of the last 30 days' readings exceed (for example 25)"
+  },
+  "evals": [
+    {
+      "id": 1,
+      "name": "data-overview",
+      "prompt": "What data does the IronFlock project {project} collect?",
+      "expected_output": "Reads the schema (get_schema) and describes the apps' data by app display name and meaning, without internal schema names such as databackend_<key>; queries, if any, read a few rows or aggregate."
+    },
+    {
+      "id": 2,
+      "name": "daily-average",
+      "prompt": "What was the average {quantity} per day over the last 7 days in the IronFlock project {project}, per device?",
+      "expected_output": "get_schema before the first query; one aggregating query with a 7-day time range, grouped by day and device, on tables the schema listed; devices by name (list_devices); states the range and the time zone."
+    },
+    {
+      "id": 3,
+      "name": "missing-data",
+      "prompt": "Show me the oil pressure of the compressors in the IronFlock project {project} for yesterday.",
+      "expected_output": "Reads the schema, finds no oil pressure or compressor data, says so and names what the project does hold; queries no table that the schema did not list and invents no values."
+    },
+    {
+      "id": 4,
+      "name": "current-values",
+      "prompt": "What is the current {quantity} of each device in the IronFlock project {project}?",
+      "expected_output": "The newest value per device (DISTINCT ON, last() or similar) over a bounded recent time range, devices by name from list_devices, with the time of each value."
+    },
+    {
+      "id": 5,
+      "name": "raw-export",
+      "prompt": "Give me all raw {quantity} readings of the last 12 months from the IronFlock project {project}, I want to work with them in Excel.",
+      "expected_output": "Does not page through the history with the query tool; explains the result limit, writes the query and points to the query console's download (CSV) in Studio; offers an aggregate instead."
+    },
+    {
+      "id": 6,
+      "name": "count-yesterday",
+      "prompt": "How many readings did each device send yesterday in the IronFlock project {project}?",
+      "expected_output": "One counting query, grouped by device, bounded to yesterday; no transform."
+    },
+    {
+      "id": 7,
+      "name": "latest-not-transform",
+      "prompt": "Create a transform in the IronFlock project {project} that shows the newest row of each device, so our board shows the live state.",
+      "expected_output": "Does not save a transform: explains that a widget's latest setting shows the newest row per entity live, while a transform shows it only on its next scheduled run."
+    },
+    {
+      "id": 8,
+      "name": "kpi-transform",
+      "prompt": "Our board in the IronFlock project {project} should show, per device and day, the share of {quantity} readings above {threshold} over the last 30 days. Set that up.",
+      "expected_output": "Reads the schema, tests the transform's SELECT with execute_sql (bounded to 30 days, grouped by device and day), proposes a name, the SQL and descriptions, and asks before saving; changes nothing yet."
+    }
+  ]
+}

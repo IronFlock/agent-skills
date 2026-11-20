@@ -1,7 +1,7 @@
 {
   "name": "ironflock",
   "version": "1.0.0",
-  "description": "Operate IronFlock: connects Claude to your IronFlock instance, in the cloud or on an appliance, through IronFlock's MCP endpoint and an API key that you enter in Claude's settings, with the skill to set up and check that connection. More skills to operate IronFlock come in later releases; the skills to build apps and widgets are in ironflock-dev.",
+  "description": "Operate IronFlock: connects Claude to your IronFlock instance, in the cloud or on an appliance, through IronFlock's MCP endpoint and an API key that you enter in Claude's settings, looks after its devices, apps, alarms and logs and answers questions from its data, and, where Claude has a shell, also works on machines with the ironflock command. The skills to build apps and widgets are in ironflock-dev.",
   "author": {
     "name": "IronFlock",
     "url": "https://ironflock.com"
