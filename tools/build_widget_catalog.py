@@ -21,7 +21,7 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-SKILL = REPO / "plugins/ironflock/skills/ironflock-templates"
+SKILL = REPO / "plugins/ironflock-dev/skills/ironflock-templates"
 OUT = SKILL / "references/widget-catalog.md"
 
 sys.path.insert(0, str(SKILL / "scripts"))

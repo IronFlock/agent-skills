@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "ironflock": {
+      "type": "http",
+      "url": "${IRONFLOCK_EVAL_API_URL}/mcp",
+      "headers": {
+        "Authorization": "Bearer ${IRONFLOCK_EVAL_API_KEY}"
+      }
+    }
+  }
+}

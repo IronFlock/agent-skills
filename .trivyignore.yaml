@@ -6,7 +6,7 @@ vulnerabilities: []
 misconfigurations:
   - id: DS-0002
     paths:
-      - plugins/ironflock/skills/ironflock-templates/assets/app-template/Dockerfile
+      - plugins/ironflock-dev/skills/ironflock-templates/assets/app-template/Dockerfile
       - evals/fixtures/machine-monitor/Dockerfile
     statement: >-
       The starter app template (and the eval fixture built from it) is copied

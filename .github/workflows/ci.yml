@@ -1,7 +1,8 @@
-# Gate (ruff, the validator's regression tests) and workflow lint from the
-# shared IronFlock CI harness. No build job: the plugin ships as files.
+# Gate (ruff; the validator's regression tests, the MCP tool-name check and
+# the version check: `just test`) and workflow lint from the shared IronFlock
+# CI harness. No build job: the plugins ship as files.
 # Pull requests into main only: the ruleset lets nothing reach main without
-# ci-ok, and the marketplace serves main, so a merge is the publication.
+# ci-ok. The release intent decides whether the merge releases.
 name: ci
 
 on:
@@ -26,17 +27,38 @@ jobs:
   workflows:
     uses: IronFlock/workflows/.github/workflows/workflows-lint.yml@v1
 
+  # The version decides: a bump makes a release PR (`just release-patch`,
+  # title `release agent-skills v<version>`), an unchanged version a
+  # no-release PR (`just merge`) whose merge releases nothing.
+  intent:
+    uses: IronFlock/workflows/.github/workflows/release-intent.yml@v1
+    with:
+      version-file: VERSION
+
+  # Release pull requests only: release.yml as a dry run (release notes, eval
+  # results, versions; no tag), so a release without them never reaches main.
+  release-check:
+    needs: [intent]
+    if: needs.intent.outputs.kind == 'release'
+    uses: ./.github/workflows/release.yml
+    permissions:
+      contents: read
+
   # The required check of the main-branch ruleset: green only when every job
-  # above succeeded (skipped or cancelled counts as failed).
+  # above succeeded (skipped or cancelled counts as failed; release-check may
+  # be skipped, on a no-release pull request).
   ci-ok:
     if: ${{ always() }}
-    needs: [gate, workflows]
+    needs: [gate, workflows, intent, release-check]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: all ci jobs succeeded
         env:
-          RESULTS: ${{ join(needs.*.result, ' ') }}
+          REQUIRED: ${{ needs.gate.result }} ${{ needs.workflows.result }} ${{ needs.intent.result }}
+          RELEASE_CHECK: ${{ needs.release-check.result }}
+          KIND: ${{ needs.intent.outputs.kind }}
         run: |
-          echo "results: $RESULTS"
-          for r in $RESULTS; do [ "$r" = success ] || exit 1; done
+          echo "required: $REQUIRED, release-check: $RELEASE_CHECK ($KIND)"
+          for r in $REQUIRED; do [ "$r" = success ] || exit 1; done
+          if [ "$KIND" = release ]; then [ "$RELEASE_CHECK" = success ]; else [ "$RELEASE_CHECK" = skipped ]; fi

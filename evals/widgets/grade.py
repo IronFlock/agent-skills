@@ -33,7 +33,7 @@ from typing import Any
 
 HERE = Path(__file__).resolve().parent
 EVALS = json.loads((HERE / "evals.json").read_text())
-SCRIPTS = HERE.parent.parent / "plugins/ironflock/skills/ironflock-widgets/scripts"
+SCRIPTS = HERE.parent.parent / "plugins/ironflock-dev/skills/ironflock-widgets/scripts"
 CHECK = SCRIPTS / "check_widget.py"
 CONFIGS = ("with_skill", "without_skill")
 FINDING = re.compile(r"^(ERROR|WARN)\s+(\S+) (\S+): (.*)$")

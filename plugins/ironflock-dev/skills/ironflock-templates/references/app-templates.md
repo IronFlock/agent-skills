@@ -139,8 +139,9 @@ read them.
     reason: Reads the PLC over the serial port /dev/ttyUSB0
   ```
 
-  The user grants privileged access at install or update and can revoke it in
-  the app's project settings. A Compose app declares it exactly when its
+  Privileged access is granted per device, at install or update, by a user
+  with the right to maintain that device, and can be revoked per device in the
+  app's project settings. A Compose app declares it exactly when its
   docker-compose.yml uses privileged settings, and the validator checks both
   directions, as the publish does. A single-image app declares it to run
   privileged with the device's `/dev`; without the declaration it publishes
@@ -267,7 +268,10 @@ needs them, so they cost nothing until then.
   confirm first) and short facts in the prompt: an agent that never loads the
   skill must still keep them. Put knowledge that only some tasks need, long
   procedures (a diagnosis, a commissioning check) and domain reference (fault
-  codes, a machine's parameters) in skills.
+  codes, a machine's parameters) in skills. What a procedure works with (a
+  warning level, a limit, the steps) is written in the skill only: the prompt
+  says when to load the skill (`app/<name>`), and does not repeat its numbers,
+  because a value kept in both places goes stale in one of them.
 - **The description decides when the skill is loaded.** Until then it is all
   the agent sees. Say what the skill covers and the situations that call for
   it, in the words users and the data use (the state values, the symptoms, the
