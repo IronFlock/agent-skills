@@ -282,7 +282,15 @@ plugins/ironflock-dev/
     │   ├── SKILL.md                     workflow and principles
     │   ├── references/
     │   │   ├── app-architecture.md      how an app is built: the interview, entities, state, data flow, containers, web UIs
-    │   │   ├── board-template.md        board format, data bindings, pages, layout
+    │   │   ├── board-template.md        board format basics, which board reference to read for which task, checklist
+    │   │   ├── board-design.md          the brief, what goes where, colours, the look and its presets
+    │   │   ├── board-route-tree.md      the pages and routes, following the entities
+    │   │   ├── board-assets.md          boards that manage assets: lists, forms, detail pages
+    │   │   ├── board-bindings.md        data bindings: valueRef, tableRef, filters, aggregation
+    │   │   ├── board-navigation.md      page tree, reachability, menus, links, navigation patterns
+    │   │   ├── board-forms.md           delete forms and file uploads in the file
+    │   │   ├── board-layout-style.md    the grid and the board's style
+    │   │   ├── board-markdown.md        widget-markdown cards and HTML
     │   │   ├── example-board.yml        a complete, valid three-page board
     │   │   ├── widget-catalog.md        which widget for which data (generated)
     │   │   └── app-templates.md         data, env, port and ai templates, app skills
@@ -310,7 +318,7 @@ plugins/ironflock-dev/
 tools/build_widget_catalog.py            regenerates widget-catalog.md
 tools/check_tools.py                     checks the MCP tool names skills use; vendors the catalogue
 tools/api/tools.json                     the API's tool catalogue (vendored), api-version.txt its version
-tools/release.py                         version, changelog and eval-result checks; writes the version
+tools/release.py                         version, changelog and results-file checks; writes the version
 tests/                                   validator, starter-app, widget-checker and repository-check tests
 evals/run.py                             runs the evals with and without the skills, grades them, writes SUMMARY.md
 evals/                                   test app, eval prompts and grader for ironflock-templates
@@ -319,7 +327,7 @@ evals/connect/                           eval prompts and grader for ironflock-c
 evals/fleet/                             eval prompts and grader for ironflock-fleet, the MCP configuration of the eval runs, transcript.py (shared with evals/data)
 evals/data/                              eval prompts and grader for ironflock-data
 evals/cli/                               eval prompts and grader for ironflock-cli, and the stand-in command in fixtures/bin
-evals/results/<version>.md               the eval results of each release
+evals/results/<version>.md               eval results, recorded when someone ran the evals for a version
 ```
 
 ## Maintenance
@@ -351,9 +359,9 @@ workflow sets the tags reliably. Every change goes through a pull request:
 - `just merge [TITLE]`: a pull request without a release. Write what changed
   for users under `## Unreleased` in `CHANGELOG.md` in the same pull request.
 - `just release-patch` (`-minor`, `-major`): a release pull request. It
-  refuses unless `## Unreleased` in the committed `CHANGELOG.md` has content
-  and `evals/results/<version>.md` is committed with a result for every skill
-  changed since the last release (below). The release writes the version into
+  refuses unless `## Unreleased` in the committed `CHANGELOG.md` has content.
+  It needs no eval results; if `evals/results/<version>.md` was recorded, it
+  must be well formed (below). The release writes the version into
   `VERSION`, both `plugin.json` files and the changelog heading. CI checks the
   same on the pull request, and its merge sets the tag `v<version>`.
 
@@ -362,8 +370,7 @@ version to count from and `just merge` refuses the new file. The pull request
 that brings 1.0.0 is opened by hand with the title
 `release agent-skills v1.0.0` (`gh pr create --base main --title "release
 agent-skills v1.0.0"`, then `gh pr merge --squash --auto`). Before it can
-merge, it needs `evals/results/1.0.0.md` with the evals of every skill (there
-is no earlier release to compare with), and the repository needs its
+merge, the repository needs its
 `release` environment and tag ruleset, as the other IronFlock repositories
 have them; without them the tag job of the release fails. After that, every
 release goes through `just release-patch` (`-minor`, `-major`).
@@ -372,10 +379,10 @@ A major version when people have to change their setup (a skill moves to
 another plugin, a plugin is renamed), a minor one for a new skill or ability,
 a patch for fixes.
 
-**Eval results in the release.** Evals do not run in CI, because they cost
-model usage, but a release needs their result for every skill whose files
-changed since the last release tag. Run them with `evals/run.py` (below), then
-write `evals/results/<version>.md` with one section per changed skill. The
+**Eval results, on demand.** Evals do not run in CI or for every release,
+because they cost model usage: run them when you want to measure a change to a
+skill. To record a run, write `evals/results/<version>.md` with one section per
+skill you evaluated and commit it with the release (or later). The
 iteration's `SUMMARY.md` has the `Result:` line of each skill to start from:
 
 ```markdown
@@ -388,10 +395,10 @@ Result: 31/31 with the skill, 24/31 without (2026-12-01, model and settings).
 What the runs showed, and anything that failed and why.
 ```
 
-`<version>` is the version the release makes (`just release-patch` prints
-it). Each section needs a line that starts with `Result:`. `just test` checks
-the format of every results file, and the release checks that every changed
-skill has its section.
+`<version>` is the version the results belong to (`just release-patch` prints
+the one it makes). Each section needs a line that starts with `Result:`.
+`just test` and the release check the format of every results file; neither
+requires one.
 
 **MCP tool names.** A skill that uses tools of the IronFlock MCP server lists
 them in its front matter, under `metadata`:
@@ -491,8 +498,8 @@ the init event of each run and stops a run that shows anything else. It does
 not use `claude --bare`: that mode leaves the agent only Bash, Edit and Read,
 without the Skill tool and the list of skills.
 
-**Evaluate the skill** after changing its instructions, and before every
-release that changes it: `python3 evals/run.py templates <iteration-dir>`. It
+**Evaluate the skill** on demand, when you want to measure a change to its
+instructions: `python3 evals/run.py templates <iteration-dir>`. It
 runs each prompt in `evals/evals.json` against a fresh copy of
 `evals/fixtures/machine-monitor`, once with the skill and once without, and
 scores the runs with `uv run evals/grade.py` (layout:

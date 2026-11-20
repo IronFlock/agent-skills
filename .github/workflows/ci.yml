@@ -35,8 +35,8 @@ jobs:
     with:
       version-file: VERSION
 
-  # Release pull requests only: release.yml as a dry run (release notes, eval
-  # results, versions; no tag), so a release without them never reaches main.
+  # Release pull requests only: release.yml as a dry run (release notes,
+  # versions; no tag), so a release without them never reaches main.
   release-check:
     needs: [intent]
     if: needs.intent.outputs.kind == 'release'

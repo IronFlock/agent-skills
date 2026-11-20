@@ -13,9 +13,10 @@
 2. tools/release.py in a throwaway git repository: `check` passes on a
    consistent copy and reports a plugin whose version differs from VERSION, a
    version in a marketplace entry, a version without a changelog section and
-   a badly formed results file. `ci` and `gate` refuse a release without an
-   eval result for every skill changed since the last release tag, or
-   without release notes in the changelog, and pass once they are there.
+   a badly formed results file. `ci` and `gate` pass a release with changed
+   skills and no eval results (evals run on demand), refuse one whose
+   recorded results file is badly formed or that has no release notes in the
+   changelog, and pass once the notes are there.
 3. evals/run.py, the parts that need no claude: the host check refuses every
    address but a local test instance's; the placeholders file is written as a
    template, then refused until every key has a value, then fills the
@@ -288,33 +289,38 @@ def check_release() -> tuple[int, list[str]]:
             "'## gamma' is not a skill",
         )
 
-        # The first release: no tag yet, so every skill needs its result.
-        expect("first release without results", ("ci",), repo, False, "run the evals of alpha, beta")
-        write_results(repo, "1.0.0", "# Evals\n\n## alpha\n\nResult: 4/4 with the skill, 2/4 without.\n")
-        expect("first release, beta missing", ("ci",), repo, False, "no section for beta")
+        # Evals run on demand: a release needs no results file, even when
+        # every skill is new (the first release, no tag yet).
+        expect("first release without results", ("ci",), repo, True, "release 1.0.0")
+        # A results file that was recorded must be well formed, but need not
+        # cover every skill.
         write_results(repo, "1.0.0", "## alpha\n\nResult: 4/4\n\n## beta\n\nResult: TODO\n")
         expect("first release, beta TODO", ("ci",), repo, False, "'## beta' has a TODO")
-        write_results(repo, "1.0.0", "## alpha\n\nResult: 4/4\n\n## beta\n\nResult: 3/3\n")
-        expect("first release", ("ci",), repo, True)
+        write_results(repo, "1.0.0", "## alpha\n\nRan it.\n")
+        expect("first release, no result line", ("ci",), repo, False, "'## alpha' has no line 'Result: ...'")
+        write_results(repo, "1.0.0", "# Evals\n\n## alpha\n\nResult: 4/4 with the skill, 2/4 without.\n")
+        expect("first release, alpha recorded only", ("ci",), repo, True)
         git(repo, "tag", "v1.0.0")
 
-        # The next release changes beta only: only beta needs a result.
+        # The next release changes beta: it needs no result for beta either.
         (repo / "plugins/b/skills/beta/SKILL.md").write_text("---\nname: beta\n---\n\nChanged.\n")
         (repo / "CHANGELOG.md").write_text("# Changelog\n\n## Unreleased\n\n- Beta.\n\n## 1.0.0 - 2026-01-01\n\n- First.\n")
         git(repo, "add", "-A")
         git(repo, "commit", "--quiet", "-m", "beta")
         git(repo, "update-ref", "refs/remotes/origin/main", "v1.0.0")
-        expect("gate without results", ("gate", "patch"), repo, False, "run the evals of beta, changed since v1.0.0")
+        expect("gate without results", ("gate", "patch"), repo, True, "release 1.0.1 (main has 1.0.0)")
+        expect("gate for minor without results", ("gate", "minor"), repo, True, "release 1.1.0 (main has 1.0.0)")
+        write_results(repo, "1.0.1", "## gamma\n\nResult: 3/3\n")
+        expect("gate with results of an unknown skill", ("gate", "patch"), repo, False, "'## gamma' is not a skill")
         write_results(repo, "1.0.1", "## beta\n\nResult: 3/3\n")
-        expect("gate", ("gate", "patch"), repo, True, "release 1.0.1 (main has 1.0.0)")
-        expect("gate for minor", ("gate", "minor"), repo, False, "evals/results/1.1.0.md is missing")
+        expect("gate with results", ("gate", "patch"), repo, True, "release 1.0.1 (main has 1.0.0)")
         (repo / "CHANGELOG.md").write_text("# Changelog\n\n## Unreleased\n\n## 1.0.0 - 2026-01-01\n\n- First.\n")
         git(repo, "commit", "--quiet", "-am", "empty notes")
         expect("gate without notes", ("gate", "patch"), repo, False, "no section '## Unreleased' with content")
         git(repo, "reset", "--quiet", "--hard", "HEAD~1")
 
-        # A skill deleted since the last release needs no eval, and the
-        # results of that release may still name it.
+        # The results of an earlier release may name a skill that was deleted
+        # since.
         with tempfile.TemporaryDirectory() as tmp2:
             copy = Path(tmp2) / "repo"
             shutil.copytree(repo, copy)

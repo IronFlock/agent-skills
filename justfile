@@ -17,8 +17,9 @@ lint:
     uvx ruff@0.14.0 check .
 
 # The validator's regression tests and the starter app; the MCP tool names the
-# skills use against the API's tool catalogue; versions, changelog and eval
-# results; and the tests of those two checks and of the eval runner.
+# skills use against the API's tool catalogue; versions, changelog and the
+# form of recorded eval results; and the tests of those two checks and of the
+# eval runner.
 test:
     {{PY}} tests/run.py
     {{PY}} tools/check_tools.py
@@ -62,18 +63,19 @@ refresh-plugin:
 #                        from main's version on top of this branch (or on a
 #                        new branch release/v<x> from an up-to-date main). It
 #                        refuses without release notes under `## Unreleased`
-#                        in CHANGELOG.md and without evals/results/<version>.md
-#                        for every skill changed since the last release. Its
-#                        merge runs .github/workflows/release.yml, which checks
-#                        the same and sets the tag.
+#                        in CHANGELOG.md, or with a badly formed
+#                        evals/results/<version>.md. Eval results are not
+#                        required: evals run on demand. Its merge runs
+#                        .github/workflows/release.yml, which checks the same
+#                        and sets the tag.
 
 # Writes the version (called by pr.sh with the next version); the release
 # commit holds exactly VERSION_FILES.
 _write-version version:
     python3 -I tools/release.py write {{version}}
 
-# Refuses a release without release notes or without the eval results of the
-# skills that changed since the last release (tools/release.py).
+# Refuses a release without release notes, or with a badly formed eval results
+# file for the version (tools/release.py). Eval results are optional.
 _require-release level:
     git fetch --quiet origin main
     git fetch --quiet --tags origin

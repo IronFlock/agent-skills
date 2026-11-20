@@ -58,10 +58,15 @@ Otherwise find out two things, and ask when you cannot tell:
    - **An appliance**, IronFlock installed on the company's own server: the
      API address is `https://api.` followed by the appliance's domain, the MCP
      endpoint that address with `/mcp` at the end. The appliance's
-     administrator knows the domain. An appliance offers this only once it
-     runs the IronFlock API service, which comes with a later appliance
-     release. Until then its Studio has no API keys, and its API address does
-     not answer at `/mcp`. Say so plainly; do not promise a date.
+     administrator knows the domain; the appliance's own Studio shows both
+     addresses on its **Developer** page. An appliance offers this from
+     IronFlock 1.6.66 on; an older one has no API keys in its Studio, and its
+     API address does not answer at `/mcp`, until it is updated. The keys of
+     an appliance are created in that appliance's own Studio, not in the
+     cloud's. The computer Claude Code runs on must trust the appliance's
+     certificate: an appliance with a certificate of its own company
+     authority is reached only from a computer that has that authority
+     installed.
 
 ## 2. Create an API key in Studio
 
@@ -127,6 +132,11 @@ server's status. Do not run commands that print a server's configuration
 
 The desktop app's Code tab and the IDE extensions run Claude Code, with the
 same plugins and settings as the terminal on that computer.
+
+The plugin connects to one IronFlock at a time. To switch between the cloud
+and an appliance, or between two appliances, the person runs
+`/plugin configure ironflock@ironflock`, enters the other API address and a
+key of that instance, and restarts Claude Code.
 
 ### The Claude app: chat (web, desktop, phone) and Cowork
 
@@ -212,7 +222,8 @@ project and device counts.
 | HTTP 504 "The platform did not answer in time. Try again shortly." | IronFlock is busy | The same. |
 | HTTP 403 | Something between Claude and IronFlock refuses the request: a company proxy or firewall | Ask the network's administrator to allow the API address. |
 | Not reachable, timeout, connection refused, name not found | Wrong address; an appliance that cannot be reached from where Claude connects (see above); no network | Check the address (`https://api.…`, without `/mcp` and without a slash at the end in the Claude Code setting); for an appliance, check from a browser on the same computer that its Studio opens. |
-| HTTP 404 at `/mcp` | `/mcp` twice or `//mcp` in the address, or an instance without the MCP endpoint (an appliance that does not run the IronFlock API service yet, or an API service older than 2.0.0) | Fix the address; otherwise tell the person that this instance does not offer the connection yet. |
+| Certificate error (not trusted, unknown authority, self-signed) | The appliance's certificate comes from a company authority that this computer does not trust | Install the company's authority on this computer, as the administrator describes, then restart Claude Code. |
+| HTTP 404 at `/mcp` | `/mcp` twice or `//mcp` in the address, or an instance without the MCP endpoint (an appliance older than IronFlock 1.6.66, or an API service older than 2.0.0) | Fix the address; otherwise tell the person that this instance does not offer the connection yet; an appliance gets it with an update. |
 | In Claude Code, the server is missing from `/mcp` | The key is not set yet, or the plugin is not enabled | `/plugin configure ironflock@ironflock`, then restart. |
 | IronFlock appears twice | Claude Code treats the plugin's server and a connector of the Claude app with the same address as one server, so two show only when the addresses differ (another host, or a slash at the end) | Use the same address in both, or remove one. |
 | Connected, but a tool you expected is missing | The key's scopes or its restriction leave it out, or the API service is older | Explain which; a key with the needed scope, or an update of the instance, brings it. |
