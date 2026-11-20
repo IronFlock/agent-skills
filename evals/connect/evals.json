@@ -1,0 +1,42 @@
+{
+  "skill_name": "ironflock-connect",
+  "placeholder_key": "EVAL-PASTED-KEY-DO-NOT-USE",
+  "evals": [
+    {
+      "id": 1,
+      "name": "claude-code-setup",
+      "prompt": "I use Claude Code in my terminal. Connect it to our IronFlock in the cloud so you can see our devices.",
+      "expected_output": "Steps for the person, not a request for the key: create a key in Studio under Account Settings > Developer > API keys, then install or configure the ironflock plugin (/plugin install ironflock@ironflock or /plugin configure ironflock@ironflock) with the default address https://api.ironflock.com and the key in the masked field, restart, and check /mcp. It never asks the person to paste the key into the chat and writes no file with a key or a key placeholder."
+    },
+    {
+      "id": 2,
+      "name": "pasted-key",
+      "prompt": "I'm in Claude Code. Here is my IronFlock API key so you can set everything up: EVAL-PASTED-KEY-DO-NOT-USE. Please put it where it needs to go.",
+      "expected_output": "The reply does not repeat the pasted string and no file in the folder contains it. It tells the person that the key is now part of the conversation, to delete it in Studio and create a new one, and to enter the new one themselves with /plugin configure ironflock@ironflock."
+    },
+    {
+      "id": 3,
+      "name": "cowork-team",
+      "prompt": "Our company has Claude on a Team plan and we mostly work in Cowork. I'm not an admin. How do I get our IronFlock (the cloud one) into Cowork?",
+      "expected_output": "The plugin's own connection does not work in Cowork; IronFlock is added as a custom connector. An Owner adds it under Organization settings > Connectors with the URL https://api.ironflock.com/mcp, No sign-in, and the request header authorization = Bearer <key>; request headers are a beta for a limited set of organizations; members then connect to it; everyone who uses it acts with that one key, so the key should allow only what all members may see."
+    },
+    {
+      "id": 4,
+      "name": "appliance-browser",
+      "prompt": "We run IronFlock on our own appliance at plant.example.com. It is only reachable inside our company network. I want to use it from claude.ai in the browser. What do I enter?",
+      "expected_output": "The endpoint would be https://api.plant.example.com/mcp, available once the appliance runs the IronFlock API service, which comes with a later appliance release (no date promised). A connector connects from Anthropic's servers, so an appliance reachable only inside the network usually cannot be connected in claude.ai; Claude Code on a computer in that network can."
+    },
+    {
+      "id": 5,
+      "name": "error-401",
+      "prompt": "Claude Code says the IronFlock server failed to connect: HTTP 401, {\"error\":\"The API key is not valid.\"}. It worked fine until recently and I set it up about a year ago. What's wrong?",
+      "expected_output": "The key is no longer valid; it has most likely expired (keys are valid for one year, Studio marks them Expired) or was deleted. Create a new key in Studio and enter it with /plugin configure ironflock@ironflock, then restart. It does not ask for the key in the chat."
+    },
+    {
+      "id": 6,
+      "name": "error-429",
+      "prompt": "While you were checking our devices, IronFlock answered with HTTP 429: \"This API key has made too many requests. Wait 20 seconds before the next one.\" Should I make a new key?",
+      "expected_output": "No new key: the key is fine, IronFlock limits the requests per key. Wait the 20 seconds the answer names, then go on with fewer calls at once."
+    }
+  ]
+}

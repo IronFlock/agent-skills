@@ -5,7 +5,7 @@ platform:
 
 | Plugin | For | Skills |
 |---|---|---|
-| `ironflock` | people who operate IronFlock: projects, devices, apps and their data | none yet (see below) |
+| `ironflock` | people who operate IronFlock: projects, devices, apps and their data | `ironflock-connect` (and `ironflock-dev-moved`, see below) |
 | `ironflock-dev` | people who build apps and widgets for IronFlock | `ironflock-templates`, `ironflock-widgets` |
 
 `ironflock-dev` needs `ironflock`. It says so in its `plugin.json`
@@ -13,21 +13,77 @@ platform:
 
 | Skill | For |
 |---|---|
+| `ironflock-connect` | connecting Claude to IronFlock in the cloud or on an appliance, checking the connection, and what an API key lets Claude do |
 | `ironflock-templates` | IronFlock apps: their architecture, a starter app, and the integration templates in the app's `.ironflock/` folder |
 | `ironflock-widgets` | the board widgets themselves: the `@ironflock/widget-*` Lit web components |
 
 ## The ironflock plugin
 
-The plugin for operating IronFlock holds one skill for now,
-`ironflock-dev-moved`: when someone who has only this plugin asks to build an
-IronFlock app or widget, it tells them that the build skills moved to
-`ironflock-dev` and how to install it. The release that brings the connection
-and the first operator skills replaces it. Coming in later releases: the connection to an IronFlock instance, in the cloud or on an
-appliance, through the API's MCP endpoint and a key that you enter in
-Claude's own settings, so that it works without a shell; and skills to
-connect, to look after a fleet of devices and their apps, to query a
-project's data, and to use the `ironflock` command where Claude has a shell.
-The release-and-deploy loop for app developers will come to `ironflock-dev`.
+The plugin for operating IronFlock connects Claude to an IronFlock instance,
+in the cloud or on an appliance, through IronFlock's MCP endpoint and an API
+key, and works without the `ironflock` command and without a shell. Its skill
+`ironflock-connect` walks a person through the connection on each of Claude's
+surfaces, checks it with a first read, and explains what a key lets Claude
+do. It states the lowest version of the IronFlock API service it needs
+(2.0.0, the first with the MCP endpoint; the API service's own version, not
+the IronFlock release).
+
+It also holds `ironflock-dev-moved`: when someone who has only this plugin
+asks to build an IronFlock app or widget, it tells them that the build skills
+moved to `ironflock-dev` and how to install it.
+
+Coming in later releases: skills to look after a fleet of devices and their
+apps, to query a project's data, and to use the `ironflock` command where
+Claude has a shell. The release-and-deploy loop for app developers will come
+to `ironflock-dev`.
+
+## Connect to IronFlock
+
+| | |
+|---|---|
+| MCP endpoint, cloud | `https://api.ironflock.com/mcp` |
+| MCP endpoint, appliance | `https://api.<your appliance's domain>/mcp`, once the appliance runs the IronFlock API service, which comes with a later appliance release |
+| Authentication | `Authorization: Bearer <API key>`; there is no sign-in through a browser |
+
+Create the key in IronFlock Studio: **Account Settings** > **Developer** >
+**API keys** > **Create API key**, then **Copy API key**. The key stays
+visible in that table to anyone signed in to the Studio account, and is valid
+for one year. Keys created today have every scope: with one, Claude may do
+whatever the key's owner may do in IronFlock. Treat the key like a password,
+and never paste it into a chat or a file.
+
+**Claude Code** (terminal, IDE extensions, the desktop app's Code tab): the
+`ironflock` plugin declares the MCP server. Installing it with
+`/plugin install ironflock@ironflock` opens a dialog with two settings: the
+API address (`https://api.ironflock.com` by default; for an appliance
+`https://api.<its domain>`, without `/mcp` and without a slash at the end)
+and the API key, which Claude Code
+keeps in the system's secure credential store. Change them later with
+`/plugin configure ironflock@ironflock` and restart Claude Code. `/mcp` then
+shows `plugin:ironflock:ironflock` as connected. Until the key is set, the
+server does not start. An install from a shell (`claude plugin install`) does
+not ask; complete it with `/plugin configure ironflock@ironflock` in a
+session.
+
+**The Claude app** (chat on claude.ai, in the desktop app and on a phone, and
+Cowork): the plugin's own connection works only in Claude Code, so add
+IronFlock as a custom connector under **Customize > Connectors** > **Add** >
+**Add custom connector**: the MCP endpoint as the URL, authentication
+**No sign-in**, and under **Request headers** the header `authorization` with
+the value `Bearer <your API key>`. Request headers on custom connectors are a
+beta that is available to a limited set of organizations; without them the
+Claude app cannot connect to IronFlock. On Team and Enterprise plans an Owner
+(on Enterprise also a member whose role includes managing the organization's
+libraries) adds the connector under **Organization settings > Connectors**,
+and every member then uses that one key. The connector connects from
+Anthropic's servers, so the address must be reachable from the internet; an
+appliance that only a company network reaches usually cannot be connected
+there. For that case Anthropic offers MCP tunnels to Enterprise organizations,
+as a research preview on request
+([custom connectors](https://claude.com/docs/connectors/custom/add-unlisted)).
+
+Then ask Claude to list your IronFlock projects and a project's devices.
+`ironflock-connect` has the details, and what to do when it does not work.
 
 ## ironflock-templates
 
@@ -110,7 +166,8 @@ claude plugin install ironflock-dev@ironflock
 ```
 
 This installs `ironflock` as well. To operate IronFlock without building apps,
-install only `ironflock@ironflock`.
+install only `ironflock@ironflock`. Claude Code then asks for the IronFlock
+API address and key (see [Connect to IronFlock](#connect-to-ironflock)).
 
 Claude Code does not auto-update third-party plugins by default. Turn it on under
 `/plugin` → Marketplaces → `ironflock` → Enable auto-update, or pull changes with
@@ -139,10 +196,11 @@ app's `.claude/settings.json`. It loads once a person trusts the folder:
 }
 ```
 
-The skills trigger on their own: `ironflock-templates` when you work on an
+The skills trigger on their own: `ironflock-connect` when you connect Claude
+to IronFlock or the connection fails, `ironflock-templates` when you work on an
 IronFlock app, `ironflock-widgets` when you work on a widget. You can also invoke
-them directly as `/ironflock-dev:ironflock-templates` and
-`/ironflock-dev:ironflock-widgets`.
+them directly as `/ironflock:ironflock-connect`,
+`/ironflock-dev:ironflock-templates` and `/ironflock-dev:ironflock-widgets`.
 
 ### If you had the plugin enabled before 1.0.0
 
@@ -177,8 +235,10 @@ Or add `"ironflock-dev@ironflock": true` to `enabledPlugins` next to
 VERSION                                  the version of the repository and both plugins
 CHANGELOG.md                             what each version changed
 plugins/ironflock/
-├── .claude-plugin/plugin.json           plugin "ironflock"
-└── skills/ironflock-dev-moved/SKILL.md  points to ironflock-dev, until the operator skills come
+├── .claude-plugin/plugin.json           plugin "ironflock": its settings (API address, key) and the MCP server
+└── skills/
+    ├── ironflock-connect/SKILL.md       connect, check, what a key lets Claude do
+    └── ironflock-dev-moved/SKILL.md     points to ironflock-dev
 plugins/ironflock-dev/
 ├── .claude-plugin/plugin.json           plugin "ironflock-dev", needs "ironflock"
 └── skills/
@@ -218,6 +278,7 @@ tools/release.py                         version, changelog and eval-result chec
 tests/                                   validator, starter-app, widget-checker and repository-check tests
 evals/                                   test app, eval prompts and grader for ironflock-templates
 evals/widgets/                           eval prompts, fixtures and grader for ironflock-widgets
+evals/connect/                           eval prompts and grader for ironflock-connect
 evals/results/<version>.md               the eval results of each release
 ```
 
@@ -302,7 +363,10 @@ metadata:
 `just test` (`tools/check_tools.py`) fails on a listed tool that is not in the
 API's tool catalogue, and, in a skill with that list, on a tool of the
 catalogue that the skill's Markdown names in backticks but the list leaves out.
-List every tool a skill mentions. Today's skills list none and are not checked.
+List every tool a skill mentions. A skill of `ironflock` that uses tools also
+states the lowest version of the API service it needs, as
+`min-api-version: 2.0.0` under `metadata`; the check fails without it, on a
+value that is not a version, and on one newer than the vendored catalogue's.
 The catalogue is vendored in `tools/api/tools.json` with the API version it
 came from in `tools/api/api-version.txt`. After an API release, run
 `just vendor-tools` in a checkout of this repository next to a checkout of the
@@ -402,6 +466,19 @@ report as `REPORT.md` there, and `python3 evals/widgets/grade.py grade
 24/26 without it. Agents without the skill did the coding work well, but copied the
 fleet's drift into new code: stale scripts and docs, dead schema keywords, and
 routing texts too long for the AI's prompt.
+
+**Evaluate the connect skill** with `evals/connect/`: run each prompt of
+`evals/connect/evals.json` once with `ironflock-connect` and once without, each
+in an empty folder `<iteration-dir>/<eval>/<config>/work` in Claude Code
+without an IronFlock connection, answer no follow-up question, and save the
+agent's final reply as `REPLY.md` next to `work`. Then
+`python3 evals/connect/grade.py <iteration-dir>` scores the replies: that the
+agent never asks for the key in the chat, does not repeat or store a pasted
+key and has it replaced, gives the steps that fit the surface (the plugin's
+settings in Claude Code, a custom connector with a request header in the
+Claude app and Cowork, an appliance only reachable inside a network), and
+reads a 401 and a 429 right. The checks are patterns on the reply; read the
+replies too. It has not been run yet.
 
 **Check the manifests** before pushing:
 

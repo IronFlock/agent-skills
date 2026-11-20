@@ -6,8 +6,10 @@
 1. tools/check_tools.py: a skill whose metadata.mcp-tools lists only tools of
    the catalogue passes; each case below plants one mistake (a tool the
    catalogue lacks, a name that is not a tool name, an empty list, a tool
-   named in the text but not listed) and must be reported. A tool named in a
-   skill without the list, or in its assets, is not.
+   named in the text but not listed, a skill of `ironflock` that uses tools
+   without a valid min-api-version or with one newer than the catalogue) and
+   must be reported. A tool named in a skill without the list, or in its
+   assets, is not.
 2. tools/release.py in a throwaway git repository: `check` passes on a
    consistent copy and reports a plugin whose version differs from VERSION, a
    version in a marketplace entry, a version without a changelog section and
@@ -62,7 +64,7 @@ TOOL_CASES: list[tuple[str, str, str, str, str | None]] = [
     ("none, but a tool named", "ironflock", "metadata:\n  mcp-tools: none\n", "Call `ping`.", "names the tool 'ping'"),
     ("unknown tool", "ironflock-dev", "metadata:\n  mcp-tools: list_devices get_device_log\n", "", "'get_device_log' is not in the API's tool catalogue"),
     ("not a name", "ironflock-dev", "metadata:\n  mcp-tools: List-Devices\n", "", "'List-Devices' is not in the API's tool catalogue"),
-    ("name without underscore", "ironflock", "metadata:\n  mcp-tools: ping\n", "Call `ping`.", None),
+    ("name without underscore", "ironflock", "metadata:\n  mcp-tools: ping\n  min-api-version: 2.0.0\n", "Call `ping`.", None),
     ("empty list", "ironflock-dev", "metadata:\n  mcp-tools:\n", "", "metadata.mcp-tools is empty"),
     ("unlisted in inline code", "ironflock-dev", LISTED, "Then `get_app_logs`.", "names the tool 'get_app_logs'"),
     ("unlisted in a code block", "ironflock-dev", LISTED, "```text\nthen get_app_logs with since=1h\n```", "names the tool 'get_app_logs'"),
@@ -73,7 +75,12 @@ TOOL_CASES: list[tuple[str, str, str, str, str | None]] = [
     ("quoted list", "ironflock-dev", "metadata:\n  mcp-tools: \"list_devices\"\n", "", None),
     ("flow list", "ironflock-dev", "metadata:\n  mcp-tools: [list_devices, get_app_log]\n", "", "'get_app_log' is not in"),
     ("yaml list", "ironflock-dev", "metadata:\n  mcp-tools:\n    - list_devices\n    - get_app_log\n", "", "'get_app_log' is not in"),
-    ("yaml list, known", "ironflock", "metadata:\n  mcp-tools:\n    - list_devices\n    - ping\nlicense: MIT\n", "Call `ping`.", None),
+    ("yaml list, known", "ironflock", "metadata:\n  mcp-tools:\n    - list_devices\n    - ping\n  min-api-version: \"2.0.0\"\nlicense: MIT\n", "Call `ping`.", None),
+    ("no min-api-version in ironflock", "ironflock", "metadata:\n  mcp-tools: ping\n", "Call `ping`.", "states the lowest API version it needs"),
+    ("min-api-version outside metadata", "ironflock", "min-api-version: 2.0.0\nmetadata:\n  mcp-tools: ping\n", "Call `ping`.", "states the lowest API version it needs"),
+    ("min-api-version not a version", "ironflock", "metadata:\n  mcp-tools: ping\n  min-api-version: 2.0\n", "Call `ping`.", "'2.0' is not a version"),
+    ("no min-api-version with none", "ironflock", "metadata:\n  mcp-tools: none\n", "Nothing.", None),
+    ("no min-api-version in ironflock-dev", "ironflock-dev", LISTED, "Call `list_devices`.", None),
     ("other key", "ironflock-dev", "metadata:\n  owner: list_devices\n", "Then `get_app_logs`.", None),
 ]
 
@@ -129,6 +136,18 @@ def check_tool_names() -> tuple[int, list[str]]:
     found = run_tool_case("ironflock-dev", "", "", raw)
     if not any("'get_app_log' is not in" in f for f in found):
         problems.append(f"closing --- with spaces: expected the unknown tool, got {found}")
+    # A skill cannot need an API newer than the vendored catalogue; the same
+    # version passes.
+    for minimum, expected in (("2.1.0", "is newer than the catalogue's API 2.0.1"), ("2.0.1", None)):
+        cases += 1
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_skill(root, "ironflock", "s", f"metadata:\n  mcp-tools: ping\n  min-api-version: {minimum}\n", "Call `ping`.")
+            found = check_tools.check(root, CATALOGUE, "2.0.1")
+        if expected is None and found:
+            problems.append(f"min-api-version {minimum}: unexpected {found}")
+        elif expected is not None and not any(expected in f for f in found):
+            problems.append(f"min-api-version {minimum}: expected '{expected}', got {found}")
     # Front matter that cannot be read fails a skill that must have the list.
     cases += 1
     found = run_tool_case("ironflock", "", "", "---\nname: s\nmetadata:\n  mcp-tools: ping\n\nBody.\n")

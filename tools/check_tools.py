@@ -18,12 +18,22 @@ A skill names the MCP tools it uses in its SKILL.md front matter, under
 
 `mcp-tools: none` says that the skill uses no tool.
 
+A skill of `ironflock` that uses tools also states the lowest version of the
+API service it needs, under `metadata`:
+
+    metadata:
+      mcp-tools: list_devices
+      min-api-version: 2.0.0
+
 Every skill of the `ironflock` plugin (the operator skills) must have the list.
 In `ironflock-dev` it is optional: today's skills for building apps use no MCP
 tool, and the tool names they mention belong to the IronFlock assistant inside
 an app. The check reports
 
 - a skill of `ironflock` without the list, or whose front matter cannot be read;
+- a skill of `ironflock` that lists tools without `min-api-version`, with one
+  that is not a version (x.y.z), or with one newer than the vendored
+  catalogue's API version (a skill cannot need an API that is not released);
 - a listed name that is not in the catalogue (a tool that was renamed or
   removed, or a typo);
 - in a skill with the list: a tool of the catalogue that its Markdown names but
@@ -55,6 +65,7 @@ CATALOGUE_VERSION = REPO / "tools/api/api-version.txt"
 REQUIRED_PLUGINS = {"ironflock"}
 VERSION = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 MCP_TOOLS = re.compile(r"^(\s+)mcp-tools:(.*)$")
+MIN_API = re.compile(r"^\s+min-api-version:(.*)$")
 LIST_ITEM = re.compile(r"^\s+-\s*(.*)$")
 FENCE = re.compile(r"^\s*(```|~~~)")
 INLINE_CODE = re.compile(r"`([^`\n]+)`")
@@ -124,6 +135,19 @@ def declared_tools(skill_md: Path) -> list[str] | None:
     return None
 
 
+def declared_min_api(skill_md: Path) -> str | None:
+    """The value of metadata.min-api-version, or None without the key."""
+    in_metadata = False
+    for line in front_matter_lines(skill_md):
+        if line.strip() and not line.startswith((" ", "\t")):
+            in_metadata = line.rstrip() == "metadata:"
+            continue
+        match = MIN_API.match(line)
+        if in_metadata and match:
+            return unquote(match[1].split(" #")[0])
+    return None
+
+
 def skill_dirs(root: Path) -> list[Path]:
     return sorted(p.parent for p in root.glob("plugins/*/skills/*/SKILL.md"))
 
@@ -156,8 +180,10 @@ def mentions(text: str, names: set[str]) -> list[tuple[int, str, bool]]:
     return found
 
 
-def check(root: Path, names: set[str]) -> list[str]:
-    """Findings for every skill under root/plugins, as 'path: message'."""
+def check(root: Path, names: set[str], api_version: str | None = None) -> list[str]:
+    """Findings for every skill under root/plugins, as 'path: message'.
+
+    api_version, the vendored catalogue's version, bounds min-api-version."""
     findings: list[str] = []
     for skill in skill_dirs(root):
         rel = skill.relative_to(root)
@@ -174,6 +200,18 @@ def check(root: Path, names: set[str]) -> list[str]:
                     f"{rel}/SKILL.md: a skill of the {rel.parts[1]} plugin lists its MCP tools in metadata.mcp-tools (or `none`)"
                 )
             continue
+        if required and declared:
+            minimum = declared_min_api(skill / "SKILL.md")
+            if minimum is None:
+                findings.append(
+                    f"{rel}/SKILL.md: a skill of the {rel.parts[1]} plugin that uses tools states the lowest API version it needs in metadata.min-api-version"
+                )
+            elif not VERSION.match(minimum):
+                findings.append(f"{rel}/SKILL.md: metadata.min-api-version: '{minimum}' is not a version (x.y.z)")
+            elif api_version and VERSION.match(api_version) and version_key(minimum) > version_key(api_version):
+                findings.append(
+                    f"{rel}/SKILL.md: metadata.min-api-version: {minimum} is newer than the catalogue's API {api_version}"
+                )
         for name in declared:
             if name not in names:
                 findings.append(f"{rel}/SKILL.md: metadata.mcp-tools: '{name}' is not in the API's tool catalogue")
@@ -194,6 +232,10 @@ def git(api_dir: Path, *args: str) -> str:
     if done.returncode != 0:
         sys.exit(f"git {' '.join(args)} in {api_dir} failed: {done.stderr.strip()}")
     return done.stdout
+
+
+def version_key(version: str) -> tuple[int, ...]:
+    return tuple(int(p) for p in VERSION.match(version).groups())
 
 
 def key(version: str) -> tuple[int, ...]:
@@ -230,7 +272,7 @@ def main(argv: list[str]) -> int:
         sys.exit(__doc__)
     names = catalogue_names(CATALOGUE)
     version = CATALOGUE_VERSION.read_text(encoding="utf-8").strip()
-    findings = check(REPO, names)
+    findings = check(REPO, names, version)
     for finding in findings:
         print(f"ERROR {finding}")
     print(f"{'ok  ' if not findings else 'FAIL'} MCP tool names: {len(skill_dirs(REPO))} skill(s), catalogue of API {version}")

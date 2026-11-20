@@ -1,7 +1,7 @@
 {
   "name": "ironflock",
   "version": "1.0.0",
-  "description": "Operate IronFlock: the connection to your IronFlock instance, in the cloud or on an appliance, and the skills to work with its projects, devices, apps and data. For now it holds only a pointer to ironflock-dev, the plugin with the skills to build apps and widgets; the connection and the first operator skills come in a later release.",
+  "description": "Operate IronFlock: connects Claude to your IronFlock instance, in the cloud or on an appliance, through IronFlock's MCP endpoint and an API key that you enter in Claude's settings, with the skill to set up and check that connection. More skills to operate IronFlock come in later releases; the skills to build apps and widgets are in ironflock-dev.",
   "author": {
     "name": "IronFlock",
     "url": "https://ironflock.com"
@@ -15,5 +15,29 @@
     "devices",
     "fleet"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "userConfig": {
+    "api_url": {
+      "type": "string",
+      "title": "IronFlock API address",
+      "description": "The address of your IronFlock instance's API, without /mcp at the end. Keep https://api.ironflock.com for IronFlock in the cloud. For an appliance, enter https://api.<your appliance's domain>.",
+      "default": "https://api.ironflock.com"
+    },
+    "api_key": {
+      "type": "string",
+      "title": "IronFlock API key",
+      "description": "An API key you created in IronFlock Studio under Account Settings > Developer > API keys. It is kept in your system's secure credential store, not in a settings file.",
+      "sensitive": true,
+      "required": true
+    }
+  },
+  "mcpServers": {
+    "ironflock": {
+      "type": "http",
+      "url": "${user_config.api_url}/mcp",
+      "headers": {
+        "Authorization": "Bearer ${user_config.api_key}"
+      }
+    }
+  }
 }
