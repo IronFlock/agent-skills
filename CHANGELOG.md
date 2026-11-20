@@ -6,7 +6,7 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
-## Unreleased
+## 1.1.1 - 2026-11-20
 
 - New skill `ironflock-production-figures` in the `ironflock` plugin: OEE
   with availability, performance and quality always shown apart, TEEP,
