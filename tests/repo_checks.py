@@ -469,6 +469,32 @@ def check_eval_runner() -> tuple[int, list[str]]:
     expect("a refused key stops the runs", r.key_refused(retry))
     expect("an overloaded API is retried", r.key_refused(dict(retry, error_status=529, error="overloaded")) is None)
 
+    # A run without the skill that fetches it anyway.
+    def tool(name: str, **tool_input) -> dict:
+        return {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": name, "input": tool_input}]}}
+
+    with tempfile.TemporaryDirectory() as tmp:
+        transcript = Path(tmp) / "TRANSCRIPT.jsonl"
+
+        def lookups(*calls: dict) -> list[str]:
+            transcript.write_text("".join(json.dumps(c) + "\n" for c in calls), encoding="utf-8")
+            return r.skill_lookups(transcript)
+
+        for label, call in (
+            ("a clone of the repository", tool("Bash", command="git clone -q https://github.com/IronFlock/agent-skills.git /tmp/x")),
+            ("a raw file of a skill", tool("WebFetch", url="https://raw.githubusercontent.com/IronFlock/x/main/plugins/ironflock/skills/ironflock-templates/SKILL.md")),
+            ("the installed plugins", tool("Bash", command="find ~/.claude/plugins -name '*.md'")),
+            ("the home folder spelled out", tool("Read", file_path="/Users/someone/.claude/plugins/cache/ironflock/x/SKILL.md")),
+        ):
+            expect(f"found: {label}", lookups(call), call)
+        clean = lookups(
+            tool("Write", file_path="/run/app/.ironflock/skills/fault-procedure/SKILL.md", content="# Fault"),
+            tool("Bash", command="cd ironflock-widgets/widget-gauge && npm run build"),
+            tool("WebFetch", url="https://ironflock.com/docs/app-development/ai-template/"),
+            {"type": "user", "message": {"content": [{"type": "tool_result", "content": "see github.com/IronFlock/agent-skills"}]}},
+        )
+        expect("an app skill, the widget fixtures, the docs and a tool result are no lookup", clean == [], clean)
+
     # Commands and environments.
     with tempfile.TemporaryDirectory() as tmp:
         iteration = Path(tmp)
@@ -491,6 +517,12 @@ def check_eval_runner() -> tuple[int, list[str]]:
         expect("templates: no bypassPermissions", flag(with_cmd, "--permission-mode") == ["acceptEdits"], with_cmd)
         widget_cmd = command("widgets", "without_skill")
         expect("widgets: told never to publish", "publish" in " ".join(flag(widget_cmd, "--append-system-prompt")) and "Bash(git push:*)" in " ".join(flag(widget_cmd, "--settings")), widget_cmd)
+        skill_rules = ["Skill", f"Read(/{REPO / 'plugins'}/**)"]
+        for suite in ("templates", "widgets", "connect", "cli"):
+            for config in r.CONFIGS:
+                allow = json.loads(flag(command(suite, config), "--settings")[0])["permissions"]["allow"]
+                expect(f"{suite}/{config}: the Skill tool and reading the plugins allowed", all(rule in allow for rule in skill_rules), allow)
+        expect("the suite's own settings stay unchanged", "Skill" not in r.DEV_SETTINGS["permissions"]["allow"], r.DEV_SETTINGS)
         cli_cmd = command("cli", "with_skill")
         cli_settings = json.loads(flag(cli_cmd, "--settings")[0])
         expect("cli: the settings of evals.json, default mode", "Bash(curl:*)" in cli_settings["permissions"]["deny"] and flag(cli_cmd, "--permission-mode") == ["default"], cli_cmd)

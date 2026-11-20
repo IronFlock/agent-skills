@@ -32,10 +32,13 @@ from validate import Yaml12Loader  # noqa: E402
 
 
 def load(path: Path):
+    """A template file's top-level mapping; None if it is missing, broken or not a mapping
+    (validate.py reports the broken shape, the checks here then see nothing)."""
     try:
-        return yaml.load(path.read_text(), Loader=Yaml12Loader) if path.exists() else None
+        value = yaml.load(path.read_text(), Loader=Yaml12Loader) if path.exists() else None
     except yaml.YAMLError:
         return None
+    return value if isinstance(value, dict) else None
 
 
 def walk(value, path=()):

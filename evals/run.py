@@ -252,6 +252,38 @@ def transcript_stats(path: Path) -> dict:
     return stats
 
 
+# What a run without the skill reaches for when it looks for the skill itself:
+# this repository (GitHub, raw.githubusercontent.com, a clone), a skill folder
+# of it, or the plugins installed in the home folder. Bash and the web are
+# allowed, so this is found after the run, not prevented.
+SKILL_SOURCE = re.compile(r"agent-skills|skills/ironflock-|(?:~|\$HOME|\$\{HOME\}|/(?:Users|home)/[^/\s\"']+)/\.claude\b", re.I)
+
+
+def skill_lookups(transcript: Path) -> list[str]:
+    """The tool calls of a run that reach for the skill's source, each as
+    "<tool> <input>" (shortened)."""
+    found = []
+    for event in events(transcript):
+        if event.get("type") != "assistant":
+            continue
+        for part in (event.get("message") or {}).get("content") or []:
+            if isinstance(part, dict) and part.get("type") == "tool_use":
+                text = json.dumps(part.get("input"), ensure_ascii=False)
+                if SKILL_SOURCE.search(text):
+                    found.append(f"{part.get('name')} {text[:200]}")
+    return found
+
+
+def tainted_runs(iteration: Path, suite: str) -> dict[str, list[str]]:
+    """The without_skill runs of a suite that reached for the skill, by eval."""
+    tainted = {}
+    for meta_file in sorted((iteration / suite).glob("*/without_skill/RUN.json")):
+        lookups = json.loads(meta_file.read_text(encoding="utf-8")).get("skill_lookups") or []
+        if lookups:
+            tainted[meta_file.parent.parent.name] = lookups
+    return tainted
+
+
 def init_problems(event: dict, suite: Suite, config: str) -> list[str]:
     """What is wrong with a run's init event: anything the run may not see,
     or the plugin it must see missing."""
@@ -335,6 +367,20 @@ def run_env(run: Run, base: dict[str, str]) -> dict[str, str]:
     return env
 
 
+def with_skill_access(settings: dict | None) -> dict:
+    """The suite's settings plus the Skill tool and reading the skills' files in
+    this checkout. With --permission-prompts none, anything not allowed is
+    denied, so without these the with_skill agent cannot load the skill or its
+    references. Both configurations get them, so the plugin stays the only
+    difference. Read only: the agent must not edit the skill it is graded on."""
+    settings = json.loads(json.dumps(settings or {}))
+    allow = settings.setdefault("permissions", {}).setdefault("allow", [])
+    for rule in ("Skill", f"Read(/{PLUGINS}/**)"):
+        if rule not in allow:
+            allow.append(rule)
+    return settings
+
+
 def claude_command(claude: str, run: Run, turn: int, session: str, model: str | None) -> list[str]:
     suite = run.suite
     cmd = [claude, "-p", run.turns[turn], "--output-format", "stream-json", "--verbose"]
@@ -343,8 +389,7 @@ def claude_command(claude: str, run: Run, turn: int, session: str, model: str | 
     if suite.mcp:
         cmd += ["--mcp-config", str(suite.mcp)]
     settings = cli_settings(suite.evals) if suite.name == "cli" else suite.settings
-    if settings:
-        cmd += ["--settings", json.dumps(settings, separators=(",", ":"))]
+    cmd += ["--settings", json.dumps(with_skill_access(settings), separators=(",", ":"))]
     if suite.system:
         cmd += ["--append-system-prompt", suite.system]
     if run.config == "with_skill":
@@ -604,6 +649,11 @@ def execute(run: Run, claude: str, args, control: Control, total: int) -> bool:
         "turns": sum(int(r.get("num_turns") or 0) for r in results),
         "permission_denials": [d for r in results for d in r.get("permission_denials") or []],
     }
+    if run.config == "without_skill":
+        meta["skill_lookups"] = skill_lookups(run.state / (FINISHED + ".part"))
+        if meta["skill_lookups"]:
+            control.say(f"WARNING {run.label} reached for the skill ({len(meta['skill_lookups'])} tool calls), "
+                        f"its score is not a baseline: {meta['skill_lookups'][0][:160]}")
     (run.dir / "RUN.json").write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
     shutil.move(str(run.state / (FINISHED + ".part")), str(run.dir / FINISHED))
     with control.lock:
@@ -642,11 +692,11 @@ def all_grades(iteration: Path) -> dict[str, dict[str, tuple[int, int]]]:
     }
 
 
-def score(totals: dict, config: str) -> str:
+def score(totals: dict, config: str, tainted: int = 0) -> str:
     if config not in totals:
         return "-"
     p, t = totals[config]
-    return f"{p}/{t}"
+    return f"{p}/{t}" + (f" ({tainted} read the skill)" if tainted and config == "without_skill" else "")
 
 
 def minutes(ms: float) -> str:
@@ -655,10 +705,12 @@ def minutes(ms: float) -> str:
 
 
 def summary(iteration: Path, graded: dict[str, dict], model_flag: str | None) -> str:
-    rows, models, versions = [], set(), set()
+    rows, models, versions, tainted = [], set(), set(), []
     cost = duration = runs = 0
     for name, totals in graded.items():
         suite = SUITES[name]
+        suite_tainted = tainted_runs(iteration, name)
+        tainted += [(f"{name}/{e}", lookups) for e, lookups in suite_tainted.items()]
         s_cost = s_ms = s_runs = 0
         for transcript in sorted((iteration / name).glob(f"*/*/{FINISHED}")):
             stats = transcript_stats(transcript)
@@ -668,7 +720,7 @@ def summary(iteration: Path, graded: dict[str, dict], model_flag: str | None) ->
             models |= stats["models"]
             versions |= stats["versions"]
         cost, duration, runs = cost + s_cost, duration + s_ms, runs + s_runs
-        rows.append((name, suite.skill, score(totals, "with_skill"), score(totals, "without_skill"), s_runs, s_cost, s_ms))
+        rows.append((name, suite.skill, score(totals, "with_skill"), score(totals, "without_skill", len(suite_tainted)), s_runs, s_cost, s_ms))
     today = date.today().isoformat()
     model = ", ".join(sorted(models)) or (model_flag or "claude's default")
     version = ", ".join(sorted(versions)) or "unknown"
@@ -689,6 +741,19 @@ def summary(iteration: Path, graded: dict[str, dict], model_flag: str | None) ->
         "With the skill it loaded the plugin from the checkout with --plugin-dir; without, no plugin. "
         "The grader output of each suite is in <suite>/GRADES.txt.",
         "",
+    ]
+    if tainted:
+        lines += [
+            "## Runs without the skill that read it",
+            "",
+            "These agents fetched the skill themselves (from GitHub, a clone or the installed plugins), so their "
+            "scores are no baseline. They are still counted in the Without column; the tool calls are in each "
+            "run's RUN.json (skill_lookups).",
+            "",
+        ]
+        lines += [f"- {label}: {len(lookups)} tool calls, first: `{lookups[0][:160]}`" for label, lookups in tainted]
+        lines.append("")
+    lines += [
         "The sections for evals/results/<version>.md:",
         "",
     ]
@@ -700,7 +765,8 @@ def summary(iteration: Path, graded: dict[str, dict], model_flag: str | None) ->
 def print_table(iteration: Path, graded: dict[str, dict]) -> None:
     print(f"\n{'Suite':10} {'With the skill':15} {'Without':10}")
     for name, totals in graded.items():
-        print(f"{name:10} {score(totals, 'with_skill'):15} {score(totals, 'without_skill'):10}")
+        without = score(totals, "without_skill", len(tainted_runs(iteration, name)))
+        print(f"{name:10} {score(totals, 'with_skill'):15} {without:10}")
     print(f"\nSummary: {iteration / 'SUMMARY.md'}")
 
 
