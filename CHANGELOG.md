@@ -6,7 +6,7 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
-## Unreleased
+## 1.1.4 - 2026-11-21
 
 - Both plugins have an icon, and `ironflock` names IronFlock's privacy
   notice, in its README and as `privacyPolicyUrl`.
