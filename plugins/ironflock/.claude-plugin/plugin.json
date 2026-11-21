@@ -8,6 +8,7 @@
     "url": "https://ironflock.com"
   },
   "homepage": "https://ironflock.com",
+  "privacyPolicyUrl": "https://ironflock.com/en/company-legal/terms-privacy/",
   "repository": "https://github.com/IronFlock/agent-skills",
   "keywords": [
     "ironflock",

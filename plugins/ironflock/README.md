@@ -138,6 +138,8 @@ What the plugin sends, runs and fetches:
 - [IronFlock documentation](https://ironflock.com/docs/)
 - [Questions and problems](https://github.com/IronFlock/agent-skills/issues)
 - [What each version changed](https://github.com/IronFlock/agent-skills/blob/main/CHANGELOG.md)
+- [Privacy](https://ironflock.com/en/company-legal/terms-privacy/): IronFlock's
+  terms and privacy notice
 
 ## License
 
