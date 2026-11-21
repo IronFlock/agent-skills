@@ -6,7 +6,7 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
-## Unreleased
+## 1.1.2 - 2026-11-21
 
 - `ironflock-production-figures` computes its figures correctly in cases
   where it reported wrong ones with confidence: OEE pooled over machines or
