@@ -284,6 +284,7 @@ VERSION                                  the version of the repository and both 
 CHANGELOG.md                             what each version changed
 plugins/ironflock/
 ├── .claude-plugin/plugin.json           plugin "ironflock": its settings (API address, key) and the MCP server
+├── .claude-plugin/icon.png              the plugin's icon where it is listed
 ├── README.md                            what the plugin does, its setup and its data; shown where the plugin is listed
 └── skills/
     ├── ironflock-connect/SKILL.md       connect, check, what a key lets Claude do
@@ -302,6 +303,7 @@ plugins/ironflock/
     └── ironflock-dev-moved/SKILL.md     points to ironflock-dev
 plugins/ironflock-dev/
 ├── .claude-plugin/plugin.json           plugin "ironflock-dev", needs "ironflock"
+├── .claude-plugin/icon.png              the plugin's icon where it is listed
 ├── README.md                            what the plugin does, its setup and its data; shown where the plugin is listed
 └── skills/
     ├── ironflock-templates/
