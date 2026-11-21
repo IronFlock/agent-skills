@@ -6,6 +6,47 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
+## Unreleased
+
+- `ironflock-production-figures` computes its figures correctly in cases
+  where it reported wrong ones with confidence: OEE pooled over machines or
+  products with different ideal cycle times (quality is now weighted by
+  ideal cycle time, so the three parts multiply to the OEE); a machine
+  without data or without an input no longer stays in a pooled sum; run
+  time, stops and parts count only inside the planned production time, so
+  a machine that runs through a break no longer looks better; micro-stops
+  are counted as run time as the text says; stops of different stop states
+  in a row are one stop, a gap in the data ends a stop, and a stop across
+  the start of a period keeps its true start and is counted once; a part
+  counter no longer counts an operator's correction, a small jitter, a NULL
+  reading or two readings at one time as parts, and a jump to a preset value
+  is flagged instead of counted; ratios of whole seconds are no longer 0;
+  two states at one time stamp are found and the stop keeps the time; a
+  machine stopped for longer than a month still shows as stopped. The German
+  term for run time is Hauptnutzungszeit (not Betriebszeit), the ideal cycle
+  time is the ideale or theoretische Zykluszeit (a "Soll" value is asked
+  about, since it is often the planned one).
+- More of the same: a shift in which a machine stood still all the time
+  counts as zero parts instead of making the day's OEE not computable; all
+  parts and OEE are computed over the planned time that has state data, and
+  the time left out is reported beside them; a stop that begins just before
+  the end of a period is judged by its whole length, not taken for a
+  micro-stop; a shift plan with overlapping shifts or a break outside its
+  shift is reported before any figure, and running outside the plan is
+  reported apart; quality is still given (by count, said so) when the ideal
+  cycle time is missing; a part counter's doubtful steps (a reset, a
+  correction, a burst) are counted both ways and reported as a range to ask
+  about; a transform refreshed every few minutes no longer reads the whole
+  history.
+- And: the state at the start of a period is looked for a week back, longer
+  than a weekend, so a machine stopped since Friday no longer shows a
+  Monday availability of 100%, and a check says when the look-back was too
+  short; pooled figures, TEEP and the loss ladder all use the planned time
+  that has state data, as the single figures do; parts counted while the
+  state was unknown are kept out of performance and reported apart; pooled
+  quality falls back to good / total for one product, flagged; a shift whose
+  state values are all unmapped is named as such, not as missing data.
+
 ## 1.1.1 - 2026-11-20
 
 - New skill `ironflock-production-figures` in the `ironflock` plugin: OEE

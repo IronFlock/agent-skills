@@ -46,19 +46,27 @@ before, same product), both only while the machine ran: readings taken
 while stopped or warming up look like drift. (In the example the readings
 carry the state; otherwise keep only readings that fall inside the run
 intervals derived as in `machine-data-sql.md`.) Report the slope per hour, the
-shift of the mean, and the hours whose mean lies outside the baseline's
-range of hourly means. A reading that climbed for hours without reaching its
-alarm limit is exactly what a threshold misses.
+shift of the mean, and the hours whose mean lies outside the 1st to 99th
+percentile of the baseline's hourly means; an hour with few readings is left
+out. A reading that climbed for hours without reaching its alarm limit is
+exactly what a threshold misses.
 
 ```sql
-WITH hourly AS (
-  SELECT time_bucket('1 hour', tsp) AS h, avg(temperature) AS v,
-         tsp < timestamptz '2026-11-19 06:00 Europe/Berlin' AS baseline
+WITH marked AS (
+  SELECT tsp, temperature, state,
+         max(tsp) FILTER (WHERE state <> 'RUN') OVER (ORDER BY tsp) AS last_stop
   FROM readings
-  WHERE machine_id = 'P-3' AND state = 'RUN'
+  WHERE machine_id = 'P-3'
     AND tsp >= timestamptz '2026-11-12 06:00 Europe/Berlin'
     AND tsp <  timestamptz '2026-11-19 12:00 Europe/Berlin'   -- the event
+),
+hourly AS (     -- running, not in the first 30 minutes after a stop (warm-up)
+  SELECT time_bucket('1 hour', tsp, 'Europe/Berlin') AS h, avg(temperature) AS v,
+         tsp < timestamptz '2026-11-19 06:00 Europe/Berlin' AS baseline
+  FROM marked
+  WHERE state = 'RUN' AND (last_stop IS NULL OR tsp >= last_stop + interval '30 minutes')
   GROUP BY 1, 3
+  HAVING count(*) >= 6       -- at least half the readings of an hour (every 5 minutes here)
 ),
 band AS (
   SELECT percentile_cont(0.01) WITHIN GROUP (ORDER BY v) AS lo,

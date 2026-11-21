@@ -13,23 +13,25 @@ such rows is in `machine-data-sql.md`; stop and loss rankings are in
 
 | Input | Meaning | German |
 | --- | --- | --- |
-| Planned production time | The time the machine was meant to produce in the period: shift time minus planned stops (breaks, planned maintenance, and only if the plant says so planned changeovers or time without orders). A definition of the plant, not a measurement. | geplante Produktionszeit, Planbelegungszeit |
-| Run time | Planned production time minus the stops in it. | Laufzeit, Betriebszeit |
-| Ideal cycle time | The fastest time per part the machine is designed or proven to reach, per product (or its inverse, the ideal rate). | ideale Taktzeit, Zykluszeit |
+| Planned production time | The time the machine was meant to produce in the period: shift time minus planned stops (breaks, planned maintenance, and only if the plant says so planned changeovers or time without orders). A definition of the plant, not a measurement. | Planbelegungszeit, geplante Produktionszeit |
+| Run time | Planned production time minus the stops in it. | Hauptnutzungszeit, Laufzeit; "Betriebszeit" often means operating or planned time, so ask |
+| Ideal cycle time | The fastest time per part the machine is designed or proven to reach, per product (or its inverse, the ideal rate). | ideale or theoretische Zykluszeit; a "Soll" value is often the planned or standard one: ask |
 | Total count | Every part made in the period, good or not. | Gesamtmenge |
 | Good count | Parts right the first time: neither scrap nor rework. | Gutmenge, Gutteile |
 
 ## Formulas
 
 ```text
-Availability = run time / planned production time
+Known time   = planned production time with usable state data = run time + stop time
+Availability = run time / known time
 Performance  = ideal cycle time x total count / run time
                (several products: sum of ideal cycle time x count, per product)
 Quality      = good count / total count
+               (several products: sum of ideal cycle time x good / sum of ideal cycle time x count)
 OEE          = Availability x Performance x Quality
-Check (one product): OEE = ideal cycle time x good count / planned production time
-TEEP         = ideal cycle time x good count / calendar time
-             = OEE x planned production time / calendar time
+             = ideal cycle time x good count / known time (exactly)
+TEEP         = ideal cycle time x good count / calendar time with usable state data
+             = OEE x known time / that calendar time
 ```
 
 Calendar time is all the time in the period, 24 hours a day. OEE is the
@@ -47,7 +49,9 @@ OEE 76.0% = 342/450.
   sending data or the machine being powered on is not run time. A machine
   that is powered and waits for material, an operator or a part is stopped.
 - **A planned stop is not downtime.** A break or planned maintenance leaves
-  planned production time; it is no availability loss. Changeovers are an
+  planned production time; it is no availability loss. Run time, stops and
+  parts all count inside the planned windows only; production during a
+  planned stop is outside OEE and reported apart. Changeovers are an
   availability loss unless the plant counts planned changeovers as planned
   stops; state which.
 - **A micro-stop is a performance loss.** Stops shorter than a threshold the
@@ -75,21 +79,26 @@ board the three parts are separate figures beside OEE.
 
 - Compute per machine, or per line measured at its output, and per period;
   name both.
-- To combine machines or periods, sum the inputs, then divide:
-  availability = sum of run time / sum of planned time, performance = sum of
-  (ideal cycle time x total) / sum of run time, quality = sum of good / sum
-  of total, OEE = their product. Never average percentages: machines at 76%
-  (450 planned minutes) and 56% (240 minutes) pool to 69%, not 66%.
-- With products of different ideal cycle times, A x P x Q and ideal cycle
-  time x good / planned time differ slightly (quality counts parts, not
-  time). That is expected; say which one is shown.
+- To combine machines, products or periods, sum the inputs, then divide:
+  availability = sum of run time / sum of known time, performance = sum of
+  (ideal cycle time x total) / sum of run time, quality = sum of (ideal
+  cycle time x good) / sum of (ideal cycle time x total), OEE = their
+  product = sum of (ideal cycle time x good) / sum of known time. Quality
+  weights each part by its ideal cycle time; good / total is the quality of
+  one product and may be shown beside it. Machines at 76% (the example
+  above) and 56% (240 planned minutes, run 200, ideal 0.4 min, 400 parts,
+  336 good) pool to 69.0%: not their average 66%, and not 67.2% from good /
+  total.
+- Never average percentages, and never pool a sum that lacks an input of one
+  machine: the pooled part is then not computable.
 - A machine with no data in the period has no OEE. It is named as "no data"
-  and left out of the pooled figure, never counted as 0%.
+  and left out of every figure and every sum, never counted as 0%.
 
 ## Absent is not zero
 
 - A figure whose input the data does not hold is not computed. No ideal
-  cycle time: no performance and no OEE. No planned production time: no
+  cycle time: no performance and no OEE, and quality only as good / total
+  by count, said so. No planned production time: no
   availability (shares of calendar time can be shown, named as such). No
   split into good and scrap: no quality and no OEE. Say which input is
   missing and what would provide it, and report the parts that can be
@@ -101,23 +110,26 @@ board the three parts are separate figures beside OEE.
   assumption: name it next to every figure that uses it. A stand-in taken
   from the data, such as the best rate shown over a stated period, is used
   only when the user agrees, and named as that.
-- Time without data (logger offline, a gap in the rows) is neither run time
-  nor stop time. Say how much there was, compute availability over the
-  planned time that has data, and when a large part of the period has none,
-  say the figure is not representative.
-- No count rows for an hour can mean no production or no data. Check the
-  state rows before calling it zero.
+- Time without data (logger offline, a gap in the rows) or with an unknown
+  state is neither run time nor stop time. Every part and OEE are computed
+  over the planned time with usable state data; report the time left out
+  beside them, and when it is a large share, say the figures are not
+  representative. Parts counted in that time are left out and reported apart.
+- No count rows: when the state rows show no run time in the period, the
+  count is 0, a known zero; with run time but no count rows, the counts are
+  missing (not computable); with no state data the machine is left out.
 
 ## Checks before reporting
 
 - Each part between 0 and 100%. A value above 100% is a finding, never
-  capped: availability over 100% means run time outside planned time
-  (unscheduled overtime, or the schedule is wrong); performance over 100%
-  means the ideal cycle time is too slow or parts are counted twice.
-- Run time + stop time + time without data = planned production time.
+  capped: performance over 100% means the ideal cycle time is too slow or
+  parts are counted twice. Run time outside the planned windows (unscheduled
+  overtime, a wrong plan) is a finding too.
+- Run time + stop time + unknown state + time without data = planned
+  production time, all clipped to the planned windows. Parts counted while the machine did not
+  run are a finding.
 - Good count <= total count; total = good + scrap (+ rework) where the data
   holds them separately.
-- For one product, OEE equals ideal cycle time x good / planned time.
 - Discrete production commonly runs at 60 to 70% OEE; 85% is often called
   world class. A figure far above that is checked before it is reported.
 
