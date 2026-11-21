@@ -10,8 +10,9 @@ stops from rows).
 ## Terms
 
 - **Stop** (Stillstand): a period in which the machine does not produce.
-  **One stop is one continuous period in a stop state**, however many rows
-  it spans; counting rows instead of stops inflates the frequency.
+  **One stop is one continuous period in any state the plant counts as a
+  stop** (FAULT then WAIT is one stop), however many rows it spans; a gap
+  in the data ends it. Counting rows or state values inflates the frequency.
 - **Planned stop**: a break, planned maintenance, and whatever else the
   plant defines as planned. Shown on its own, never in the ranking of
   unplanned stops and never as an availability loss.
@@ -32,7 +33,8 @@ problem it does not sort by.
 
 Per reason and per machine also give:
 
-- **Mean stop length** = stop minutes / number of stops of that kind; for
+- **Mean stop length** = stop minutes / number of the stops whose minutes
+  are counted (not those kept out of the minutes, below); for
   breakdowns this is the **MTTR** (mean time to repair, mittlere
   Reparaturdauer).
 - **MTBF** (mean time between failures) = run time / number of breakdowns.
@@ -52,12 +54,16 @@ Per reason and per machine also give:
   finding worth fixing.
 - A code is translated into words only from a table or from the user,
   never guessed.
+- A stop's minutes go to the reason of its first row: a convention, so say
+  it. The alternative: each part's minutes to its own reason, the stop
+  counted once under its first reason.
 
 ## Edges of the period and bad rows
 
 - A stop that runs across the start or end of the period contributes only
   its minutes inside the period. It counts as one stop in the period where
-  it began, so that sums over periods do not count it twice; say so.
+  it began, so that sums over periods do not count it twice, and shows its
+  true start; say so.
 - A stop still going on is one stop with its minutes so far, marked as
   ongoing ("at least 47 minutes"), not a closed stop.
 - A row whose end lies before its start, or whose stated duration disagrees
@@ -71,10 +77,10 @@ Per reason and per machine also give:
 All losses can be shown in one unit, minutes, which adds up:
 
 ```text
-planned production time - stops                         = run time
+known time (planned, with usable state data) - stops    = run time
 run time - ideal cycle time x total count               = speed loss and micro-stops
 ideal cycle time x (total count - good count)           = quality loss
-planned time - all three losses = ideal cycle time x good count (fully productive time)
+known time - all three losses = ideal cycle time x good count (fully productive time)
 ```
 
 Example: planned 450 min, stops 45, ideal cycle time 1.0 min, total 360,

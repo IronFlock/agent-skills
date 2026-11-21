@@ -51,22 +51,26 @@ Two kinds of work use this skill:
   from the data (such as the best rate shown over a period) is used only
   when the user agrees, and named next to every figure it affects.
 - **Compute in SQL.** One `execute_sql` query that returns the inputs and
-  the parts per machine and period; state the figures as the result gives
+  the parts per machine and period, with run time, stops and parts clipped
+  to the planned production windows; state the figures as the result gives
   them, never worked out by hand. Aggregate per machine and shift or day,
   so the result stays small.
 - **Report the parts with their inputs and period.** OEE always with
   availability, performance and quality beside it, per machine (or line),
   with planned time, run time, total and good count, ideal cycle time, the
-  period and the time zone, and each assumption next to the figure it
-  affects. Stops ranked by minutes and by count side by side, the share
+  period and the time zone, the time left out for lack of state data, and
+  each assumption next to the figure it affects. Where a part counter gives
+  two counts (references/machine-data-sql.md), report the range and ask
+  about the flagged steps. Stops ranked by minutes and by count side by side, the share
   without a usable reason first. Plain words, in the user's language; the
   German terms are in references/oee.md.
 - **Keep figures live with a transform.** One row per machine and shift
   (or hour or day) with the input columns and the parts; a second
   transform on top sums the inputs and divides again for longer periods or
-  several machines, because averaging a ratio column over rows is wrong.
-  An input the user gave goes into its own CTE with a comment naming its
-  source. In a project, save it with `save_transform` as `ironflock-data`
+  several machines (quality weighted by ideal cycle time, as
+  references/oee.md says), because averaging a ratio column over rows is
+  wrong. An input the user gave is named with its source in the
+  transform's description. In a project, save it with `save_transform` as `ironflock-data`
   describes; in an app, it goes into `data-template.yml`.
 - **Why something happened.** Safety first, as references/root-cause-checks.md
   says. No rows is not a stop: when the data stopped arriving, check the app
