@@ -1,6 +1,9 @@
 ---
 name: ironflock-templates
 description: Build IronFlock apps: their architecture (edge containers that keep all state in the app's tables through the ironflock SDK, the board as the central UI, device web UIs embedded through remote-access tunnels), the interview and entity model a new app or a refactor starts from, a starter app to scaffold, and the integration files in the app's .ironflock/ folder, with a validator. These are board-template.yml (widgets, data bindings, pages, layout), data-template.yml (tables and transforms), env-template.yml (parameters), port-template.yml (remote-access ports) and ai-template.yml (AI agents). Use this whenever you create, design, refactor or change an IronFlock app or its edge code, add or change a board, dashboard or widget, bind a widget to live data, add a table or column, expose a parameter or port, or define an app's AI agent. Also use it when the user mentions IronFlock, Reswarm or a .ironflock folder. To change a widget's own code (the @ironflock/widget-* packages), use ironflock-widgets instead.
+metadata:
+  mcp-tools: list_projects list_project_apps list_dashboards execute_sql check_app_status get_app_logs get_device_logs get_dev_dashboard_image get_dashboard_image
+  min-api-version: 2.1.2
 allowed-tools: Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/*), Bash(uv run ${CLAUDE_SKILL_DIR}/scripts/*)
 ---
 
@@ -129,12 +132,12 @@ in it is described.
 
    | Task | Read only |
    |---|---|
-   | Build a board from scratch | in this order: board-design.md, board-route-tree.md, board-assets.md when users manage entities, "Designing a board" in board-template.md, [references/example-board.yml](references/example-board.yml), board-navigation.md, board-bindings.md, board-layout-style.md, board-markdown.md, board-charts.md for every chart, board-forms.md and board-interaction.md when users create, edit or delete records or switch something, and board-critique.md before you report |
+   | Build a board from scratch | in this order: board-design.md, board-route-tree.md, board-assets.md when users manage entities, "Designing a board" in board-template.md, [references/example-board.yml](references/example-board.yml), board-navigation.md, board-bindings.md, board-layout-style.md, board-markdown.md, board-charts.md for every chart, board-forms.md and board-interaction.md when users create, edit or delete records or switch something, and board-critique.md, then board-look.md to look at the result before you report |
    | Change what one widget shows (table, columns, filters, time window, aggregation) | board-bindings.md; for a widget-markdown also board-markdown.md; for a chart also board-charts.md |
    | Add a widget to a page | board-design.md ("What goes where"), board-bindings.md, board-layout-style.md, and board-charts.md for a chart or board-interaction.md for a form or a switch |
    | Add a page or change a menu | board-route-tree.md, board-navigation.md, board-layout-style.md |
    | Let users create, edit and delete records | board-assets.md, board-forms.md, board-interaction.md, board-navigation.md, board-bindings.md |
-   | Restyle or re-layout a board | board-design.md ("One colour, one meaning", "Pick a look"), board-layout-style.md, board-charts.md ("Colour") when the board has charts, board-interaction.md for a touch screen, and board-critique.md before you report |
+   | Restyle or re-layout a board | board-design.md ("One colour, one meaning", "Pick a look"), board-layout-style.md, board-charts.md ("Colour") when the board has charts, board-interaction.md for a touch screen, and board-critique.md, then board-look.md to look at the result before you report |
    | A card with several values, or one record shown | board-markdown.md, board-bindings.md |
    | A SCADA page | "SCADA pages" in board-template.md, board-layout-style.md, board-bindings.md, board-navigation.md |
    | A filter dropdown or a date range | board-bindings.md |

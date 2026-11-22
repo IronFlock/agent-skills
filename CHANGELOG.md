@@ -6,6 +6,17 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
+## 1.1.7 - 2026-11-22
+
+- The app skill has an agent look at the board it built or restyled
+  (`references/board-look.md`), with
+  `get_dev_dashboard_image` (the app in development, cloud only) or
+  `get_dashboard_image` (an installed board; both need API 2.1.2): after a
+  new board or a change to a whole page, not after a change to one widget. It
+  fixes each widget the report lists as not drawn, runs the five checks on
+  the picture and corrects in one round, and tells the user when no picture
+  could be had.
+
 ## 1.1.6 - 2026-11-22
 
 - Five more looks for boards beside `control-room`, `office` and
