@@ -18,13 +18,14 @@ lint:
 
 # The validator's regression tests and the starter app; the MCP tool names the
 # skills use against the API's tool catalogue; versions, changelog and the
-# form of recorded eval results; and the tests of those two checks and of the
-# eval runner.
+# form of recorded eval results; the tests of those two checks and of the
+# eval runner; and the contrast and file form of the board presets.
 test:
     {{PY}} tests/run.py
     {{PY}} tools/check_tools.py
     {{PY}} tools/release.py check
     {{PY}} tests/repo_checks.py
+    {{PY}} tests/preset_checks.py
 
 # Copy the tool catalogue of the API service's current release from a local
 # checkout (default ../api) into tools/api/, with its version. Commit both.

@@ -6,6 +6,24 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
+## Unreleased
+
+- Five more looks for boards beside `control-room`, `office` and
+  `daylight`: `night-shift` (dim rooms at night, only the alarm bright),
+  `showroom` (boards shown on a meeting-room screen or projector),
+  `scada-grey` (panels beside grey plant operator screens), `portal` (boards
+  embedded in a customer's web portal, in its brand colour) and `lobby`
+  (glass tiles over a dark picture the user supplies, with its limit
+  stated). Each has its style values, state colours, series colours and
+  Delete red, all computed for contrast. The question about the look offers
+  at most four viewing situations; `portal` and `lobby` are not among them:
+  the user names the brand colour or the picture's address instead. A brand
+  colour's label is chosen for contrast, and a brand colour in the hue of a
+  state (red, amber, green, or teal where the look's ok is teal) never
+  frames the tiles.
+  `just test` checks every preset's contrast and style against the board
+  schema (`tests/preset_checks.py`).
+
 ## 1.1.5 - 2026-11-22
 
 - The app skill points a coding agent to Anthropic's `frontend-design` plugin

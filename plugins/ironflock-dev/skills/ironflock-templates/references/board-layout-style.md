@@ -36,8 +36,9 @@ fixed width or height (see below).
   laptop. With it, every column or row it spans is `style.cell_size` pixels
   (default 12) on any screen, and the other columns and rows share the rest.
   Other widgets in those columns or rows get the same fixed size, which keeps a
-  button beside a navbar in line with it. The validator warns about a missing
-  flag or too few cells.
+  button beside a navbar in line with it. A new `grid_gap` (a restyle to
+  another preset) changes the count: recount. The validator warns about a
+  missing flag or too few cells.
 
   ```yaml
   - {id: nav, x: 0, y: 0, w: 16, h: 64, fixedWidth: true}     # widget-sidenav, 184 px
@@ -136,15 +137,16 @@ text, `#ffffff80` tiles with a `#fefefe` border.
 
 ### Presets
 
-Three presets, `control-room`, `office` and `daylight`, each a complete `style`
-block plus the four state colours for the widgets, are in
-[board-design.md](board-design.md), "Pick a look", with the situation each one
-is for and its values. Pick one by the viewing situation, copy all its values
-into `style`, and change it only when the user asks for brand colours. The
-control-room preset, as it stands in the file:
+Eight presets, each a complete `style` block plus the four state colours for
+the widgets, are in [board-design.md](board-design.md), "Pick a look", with the
+situation each one is for and its values. Pick one by the viewing situation,
+copy all its values into `style`, leave out the keys it marks `-` (on a
+restyle, remove them), and change it only for brand colours as that section
+says. Two presets as they stand in the file: control-room, and showroom with
+keys the first three leave out:
 
 ```yaml
-style:
+style:                            # control-room
     theme: {theme_name: dark}
     background_color: '#0f172a'
     text_color: '#e2e8f0'
@@ -155,6 +157,24 @@ style:
     columns: 96
     rows: 64
 # states: ok '#22c55e'  warning '#f59e0b'  alarm '#ef4444'  idle '#94a3b8'
+```
+
+```yaml
+style:                            # showroom
+    theme: {theme_name: light}
+    background_color: '#e2e8f0'
+    background_gradient_color: '#f1f5f9'
+    background_gradient_angle: 180
+    text_color: '#0f172a'
+    tile_background_color: '#ffffff'
+    tile_border_color: '#cbd5e1'
+    tile_border_radius: 16px
+    tile_style: shadow
+    tile_style_strength: 40
+    grid_gap: 16
+    columns: 96
+    rows: 64
+# states: ok '#15803d'  warning '#b45309'  alarm '#b91c1c'  idle '#4b5563'
 ```
 
 [example-board.yml](example-board.yml) carries the office preset.

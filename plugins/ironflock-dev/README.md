@@ -38,7 +38,7 @@ widget repository.
 - a starter app and `new_app.py`, which scaffolds a new app from it, with a
   `design/` folder that records the app's purpose, entities and board;
 - a design step for the board: who looks at it and where, one meaning per
-  colour, three style presets;
+  colour, eight style presets;
 - the rules for the files in the app's `.ironflock/` folder:
   `board-template.yml` (widgets, data bindings, pages, layout),
   `data-template.yml` (tables and transforms), `env-template.yml` (app

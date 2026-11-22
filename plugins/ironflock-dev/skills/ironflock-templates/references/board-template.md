@@ -155,7 +155,7 @@ The design rules are in three references of their own. They describe boards,
 pages, routes and widget settings, and hold for every way a board is built:
 
 - [board-design.md](board-design.md): the brief, what goes where on a page,
-  one colour for one meaning, and the look, with the three style presets.
+  one colour for one meaning, and the look, with the eight style presets.
 - [board-route-tree.md](board-route-tree.md): the route tree, how the pages
   and routes follow the entity model (app-architecture.md, "The entities"),
   and how menus and tab bars build their routes.
@@ -304,8 +304,8 @@ Some values only exist inside a running platform, and a template cannot know the
    reason to do otherwise (board-layout-style.md, "Layout").
 6. `design/board.md` holds the board's design and matches the board; the header
    says who looks at the board and where, and which look was chosen.
-   `style` sets the theme and all four colours (a preset, or the user's brand
-   colours on the preset's text and tile colours). Every state colour means one
+   `style` holds a preset's values whole (board-design.md, "Pick a look"),
+   brand colours only where that section allows them. Every state colour means one
    thing on every widget, and nothing else is coloured (board-design.md;
    the `style` keys in board-layout-style.md).
 7. In widget-markdown (board-markdown.md), every `{{placeholder}}` has a `data` entry, values in CSS are

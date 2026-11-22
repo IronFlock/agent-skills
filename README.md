@@ -148,7 +148,7 @@ tunnels and embedded in the board. It holds:
   settings users save on the board, and serves a live view that the board embeds,
   and an AI agent that loads an app skill to diagnose a machine;
 - a design step for the board: a brief (who looks at it, where, and what each
-  page answers), a visual hierarchy, one meaning per colour, three style presets,
+  page answers), a visual hierarchy, one meaning per colour, eight style presets,
   and a wireframe on a design canvas when the agent has one;
 - the rules for writing the integration templates, the files in the app's
   `.ironflock/` folder:
@@ -365,7 +365,7 @@ tools/build_widget_catalog.py            regenerates widget-catalog.md
 tools/check_tools.py                     checks the MCP tool names skills use; vendors the catalogue
 tools/api/tools.json                     the API's tool catalogue (vendored), api-version.txt its version
 tools/release.py                         version, changelog and results-file checks; writes the version
-tests/                                   validator, starter-app, widget-checker and repository-check tests
+tests/                                   validator, starter-app, widget-checker, repository-check and preset tests
 evals/run.py                             runs the evals with and without the skills, grades them, writes SUMMARY.md
 evals/                                   test app, eval prompts and grader for ironflock-templates
 evals/widgets/                           eval prompts, fixtures and grader for ironflock-widgets
@@ -474,6 +474,13 @@ the skills follow.
 example board to stay clean, every mistake in `tests/boards/broken.yml` to be
 reported, and, for app skills, one planted mistake per rule of the release
 build to be reported and every limit reached exactly to pass.
+
+**Board presets are checked, not judged.** `tests/preset_checks.py` (part of
+`just test`) reads the presets from `board-design.md` and requires the contrast
+the text claims (text on tile, state colours, series colours, the Delete red of
+`board-interaction.md`), a style the board schema allows, and the same values
+in `board-charts.md` and `board-layout-style.md`. Change a preset there, then
+run it.
 
 **App skills follow the release build.** The platform checks an app's skills
 (`.ironflock/skills/`) when it builds a release. `skill_checks.py` repeats

@@ -71,13 +71,13 @@ written: board-design.md and widget-catalog.md.
   colour; left empty, either shows the theme's (`dark`: red first). A
   restyle to another preset recolours every series.
 
-Series colours (5:1 on the tiles, apart in lightness for red-green
-colour-blind readers):
+Series colours (5:1 on the tiles, `lobby`'s over its dark picture; apart in
+lightness for red-green colour-blind readers; the 2nd is the text colour):
 
-| Series | control-room | office | daylight |
-|---|---|---|---|
-| 1st | `#60a5fa` | `#2563eb` | `#1d4ed8` |
-| 2nd | `#e2e8f0` | `#1e293b` | `#111827` |
+| Series | control-room | office | daylight | night-shift | showroom | scada-grey | portal | lobby |
+|---|---|---|---|---|---|---|---|---|
+| 1st | #60a5fa | #2563eb | #1d4ed8 | #818cf8 | #1d4ed8 | #4338ca | #1d4ed8 | #60a5fa |
+| 2nd | #e2e8f0 | #1e293b | #111827 | #d6d3d1 | #0f172a | #111827 | #1f2937 | #f8fafc |
 
 - Never colour alone: line series differ by `dataseries[].styling.borderDash`:
   1st colour solid, 2nd dashed, 1st dotted; a total 2nd solid, its parts

@@ -42,12 +42,14 @@ board-interaction.md.
    language; the style is the preset's, whole. Correct: align the colour maps,
    sizes, units and titles.
 5. **Accessibility.** Text and state colours are the preset's, which pass
-   contrast; no colour written into markup that the theme cannot reach (dark
-   text on a dark board); a state shows its word beside its colour; text is
-   no smaller than board-design.md's sizes for the viewing distance; on a
-   tablet every button and switch has the touch size of
-   board-interaction.md. Correct: take the preset's colours, add the state's
-   word, set the font sizes, enlarge the tile.
+   contrast (`lobby` only over a picture no lighter behind the tiles than its
+   `background_color`); no colour written into markup that the theme cannot
+   reach (dark text on a dark board); a state shows its word beside its
+   colour; text is no smaller than
+   board-design.md's sizes for the viewing distance; on a tablet every
+   button and switch has the touch size of board-interaction.md. Correct:
+   take the preset's colours, add the state's word, set the font sizes,
+   enlarge the tile.
 
 ## Once, and one round
 
