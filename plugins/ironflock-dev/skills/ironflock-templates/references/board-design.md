@@ -2,7 +2,7 @@
 
 This reference covers what to decide before a board gets its widgets, and the
 rules for what goes on a page: the brief, what goes where, the one meaning of
-each colour, and the look, with the three style presets. The checks to run on
+each colour, and the look, with its eight style presets. The checks to run on
 the finished board before you report it are in board-critique.md. Which pages a board
 has and how their routes are formed is in board-route-tree.md; the standard
 shape of a board on which users manage assets is in board-assets.md.
@@ -127,8 +127,7 @@ means something:
   tiles of buttons and dialog forms of board-assets.md), and decorative colours
   are left out. On a board where everything is coloured, nothing is an alarm.
   The alarm red also marks an action that destroys something: the Delete
-  button and its dialog (board-interaction.md). On control-room it is
-  `#f87171` there, a lighter red that keeps 3:1 on the raised dialog.
+  button and its dialog (board-interaction.md has its red per preset).
 - **Limits are shown, not told.** A figure that has limits is a gauge whose
   sections carry the limits in the state colours. A legend such as "red =
   fault" is only needed where a state has no widget of its own.
@@ -144,12 +143,21 @@ means something:
 
 ## Pick a look
 
-Every board is built on one of the presets below. The preset is the basis of
-the design decisions: the style values, the state colours, and how many tiles
-a page carries. Choose it by the design direction: who looks at the board and
-where, light or dark, and brand colours. `control-room` is for wall screens
-and HMIs, `office` for desks and laptops, `daylight` for tablets and bright
-halls.
+Every board is built on one of the eight presets below. The preset is the
+basis of the design decisions: the style values, the state colours, and how
+many tiles a page carries. Choose it by the design direction: who looks at the
+board and where, light or dark, and brand colours.
+
+| Preset | For | Not for: take instead |
+|---|---|---|
+| control-room | wall screens and HMIs, read from a distance, often under harsh light: dark, few tiles, big numbers | |
+| office | desks and laptops, an overview with more tiles and tables: light, soft contrast | |
+| daylight | tablets and panels next to the machine, bright halls, outdoors: highest contrast, hard edges | |
+| night-shift | wall screens and HMIs in rooms kept dim at night: dark, only the alarm is bright | a lit hall: control-room |
+| showroom | boards shown to management or customers on a meeting-room screen or projector: cards with a shadow | daily work at a desk: office |
+| scada-grey | panels beside plant operator screens that are grey and show colour only for abnormal states | a board on its own: office |
+| portal | boards embedded in a customer's or machine builder's web portal, in its brand colour | boards opened in IronFlock itself: office |
+| lobby | reception and visitor screens: glass tiles over a dark picture the user supplies | no such picture, weak panel PCs: showroom |
 
 Look for the direction before you ask for it. It can come from:
 
@@ -161,71 +169,80 @@ Look for the direction before you ask for it. It can come from:
 - a brand the user or the app names, with its colours.
 
 When none of these shows the direction, ask the user before you build: in your
-reply, together with any other open question, or, where you cannot write to
-the user yourself, as your surface's instructions say. Ask once per board, in
-one question with concrete choices: the viewing situations, each naming its
-preset and whether it is light or dark; an answer that leaves the choice to
-you; and room for brand colours. When the user does not answer, or leaves the
-choice to you, take `office`: most boards are opened at a desk or on a laptop.
-Ask only for a new board or a restyle (a change to the look or the layout of a
-whole board or page), never for a change that keeps the board's look, such as
-what one widget shows. An answer, or no answer, settles the look: do not ask
-again for that board.
+reply, together with any other open question, or, where you cannot write to the
+user yourself, as your surface's instructions say. Ask once per board, in one
+question with concrete choices: the viewing situations, each naming its preset
+and whether it is light or dark; an answer that leaves the choice to you; and
+room for brand colours. Offer at most four situations, those the app makes
+likely, the desk always among them; never list the eight names. `portal` and
+`lobby` need a brand colour or a picture's address, which a bare choice cannot
+carry: offer them only by saying that the user can write that instead of
+choosing. A user who names another situation gets its preset. When the user
+does not answer, or leaves the choice to you, take `office`: most boards are
+opened at a desk or on a laptop. Ask only for a new board or a restyle (a
+change to the look or the layout of a whole board or page), never for a change
+that keeps the board's look, such as what one widget shows. An answer, or no
+answer, settles the look: do not ask again for that board.
 
 When the user wants a dark board at a desk, or a light one on a wall screen,
 take the preset of that theme that is closest to the viewing situation:
 `control-room` for dark, `office` for light at a desk, `daylight` for light in
 a bright place.
 
-Copy the preset's style values whole into the board's style, and its state
-colours into the widgets. On a restyle to another preset, the chart series
-take that preset's series colours too (board-charts.md, "Colour"): the old
-ones lose their contrast on the new tiles. A restyle of an existing board
-keeps the board's grid (`columns` and `rows`), because its widgets are placed
-on it. Brand colours go to the tile border or the navigation band, never to a
-state; keep the preset's text and tile colours so the board stays readable.
+Copy the preset's style values whole into the board's style (a key marked `-`
+is left out, and removed on a restyle), and its state colours into the widgets.
+On a restyle to another preset, the chart series take that preset's series
+colours too (board-charts.md, "Colour"): the old ones lose their contrast on
+the new tiles. A restyle of an existing board keeps the board's grid (`columns`
+and `rows`), because its widgets are placed on it; when it changes `grid_gap`,
+recount the cells of every fixed-size widget (board-layout-style.md, "Layout").
 When you report the board, say which preset you took and why: the user's
 answer, what the request, the app or its other boards showed, or `office`
 because nothing showed the direction.
 
-The presets:
+Brand colours go to the navigation band and the tile border, never to a state;
+the preset's text, tile and state colours stay. On the band
+(board-interaction.md, "Contrast"), the label takes the preset's text colour or
+white, whichever reads better, at 4.5:1 or better, else the band stays neutral.
+The tile border takes the brand colour only at 3:1 or better against the page,
+and never when it has the hue of one of the preset's state colours (red, amber
+or orange, green, and teal where the preset's ok is teal): such a colour goes
+on the band only, and your report says that it is close to a state colour.
+`portal` is made for this; without a brand colour it keeps its neutral band
+and border, and your report says so.
 
-- **control-room**: wall screens and HMIs, read from a distance, often under
-  harsh light. Dark, few tiles, big numbers.
-- **office**: desks and laptops, a supervisor's or manager's overview with more
-  tiles and tables. Light, soft contrast.
-- **daylight**: tablets and panels next to the machine, bright halls, outdoors.
-  Highest contrast, hard edges.
+`lobby` needs the `https://` address of a picture the user supplies
+(`background_image`, board-layout-style.md). Its see-through tiles take their
+contrast from the picture: over a light part (such as `#d8dee8`) a state colour
+can vanish. So take it only over a picture no lighter than `#1b2d4f` wherever
+tiles sit, draw nothing that carries a state outside a tile, and take
+`showroom` when there is no picture or nobody knows that it is that dark.
 
-Their style values:
+Their values: the style keys (`-`: left out; `columns` 96 and `rows` 64 in
+all), the state colours, and the 1st series colour of charts (the 2nd is
+`text_color`; board-charts.md, "Colour"):
 
-| Style key | control-room | office | daylight |
-|---|---|---|---|
-| `theme.theme_name` | `dark` | `light` | `light` |
-| `background_color` | `#0f172a` | `#f1f5f9` | `#ffffff` |
-| `text_color` | `#e2e8f0` | `#1e293b` | `#111827` |
-| `tile_background_color` | `#1e293b` | `#ffffff` | `#f8fafc` |
-| `tile_border_color` | `#334155` | `#e2e8f0` | `#9ca3af` |
-| `tile_border_radius` | `8px` | `12px` | `4px` |
-| `grid_gap` | `8` | `8` | `8` |
-| `columns` × `rows` | 96 × 64 | 96 × 64 | 96 × 64 |
-
-Their state colours, for the widgets:
-
-| State | control-room | office | daylight |
-|---|---|---|---|
-| ok | `#22c55e` | `#16a34a` | `#15803d` |
-| warning | `#f59e0b` | `#d97706` | `#b45309` |
-| alarm | `#ef4444` | `#dc2626` | `#b91c1c` |
-| idle | `#94a3b8` | `#64748b` | `#4b5563` |
-
-Their series colours, for the charts (board-charts.md, "Colour", has the
-rules; a restyle writes them into every chart):
-
-| Series | control-room | office | daylight |
-|---|---|---|---|
-| 1st | `#60a5fa` | `#2563eb` | `#1d4ed8` |
-| 2nd | `#e2e8f0` | `#1e293b` | `#111827` |
+| Value | control-room | office | daylight | night-shift | showroom | scada-grey | portal | lobby |
+|---|---|---|---|---|---|---|---|---|
+| `theme.theme_name` | dark | light | light | dark | light | light | light | dark |
+| `background_color` | #0f172a | #f1f5f9 | #ffffff | #0c0a09 | #e2e8f0 | #d1d5db | #ffffff | #1b2d4f |
+| `background_gradient_color` | - | - | - | - | #f1f5f9 | - | - | #0b1324 |
+| `background_gradient_angle` | - | - | - | - | 180 | - | - | 180 |
+| `background_image` | - | - | - | - | - | - | - | the picture |
+| `text_color` | #e2e8f0 | #1e293b | #111827 | #d6d3d1 | #0f172a | #111827 | #1f2937 | #f8fafc |
+| `tile_background_color` | #1e293b | #ffffff | #f8fafc | #1c1917 | #ffffff | #e5e7eb | #ffffff | #0f172a40 |
+| `tile_border_color` | #334155 | #e2e8f0 | #9ca3af | #292524 | #cbd5e1 | #6b7280 | #d1d5db or brand | #cbd5e1 |
+| `tile_border_radius` | 8px | 12px | 4px | 6px | 16px | 0px | 6px | 16px |
+| `tile_style` | - | - | - | flat | shadow | - | - | glass |
+| `tile_style_strength` | - | - | - | - | 40 | - | - | 50 |
+| `grid_gap` | 8 | 8 | 8 | 8 | 16 | 6 | 8 | 12 |
+| ok | #22c55e | #16a34a | #15803d | #0f766e | #15803d | #0f766e | #15803d | #22c55e |
+| warning | #f59e0b | #d97706 | #b45309 | #d97706 | #b45309 | #b45309 | #b45309 | #f59e0b |
+| alarm | #ef4444 | #dc2626 | #b91c1c | #ef4444 | #b91c1c | #b91c1c | #b91c1c | #ef4444 |
+| idle | #94a3b8 | #64748b | #4b5563 | #78716c | #4b5563 | #4b5563 | #4b5563 | #94a3b8 |
+| 1st series | #60a5fa | #2563eb | #1d4ed8 | #818cf8 | #1d4ed8 | #4338ca | #1d4ed8 | #60a5fa |
 
 In every preset the text reads at 11:1 or better against the tiles and each
-state colour at 3:1 or better, so they stay legible on cheap screens.
+state colour at 3:1 or better, so they stay legible on cheap screens; in
+`lobby` only where the picture behind the tiles is no lighter than its
+`background_color` `#1b2d4f`.

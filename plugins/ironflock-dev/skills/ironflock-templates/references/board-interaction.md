@@ -47,22 +47,27 @@ widget-navbutton `style.fontSize` 20 or more, widget-sidenav
 `columns[].styling.fontSize` `24px`.
 
 Give a button's tile `fixedWidth` and `fixedHeight`, a switch's
-`fixedWidth`: their cells are then 12 px on every screen. Per axis the
-tile needs ceil((control + 24) / 12) cells: 10 × 10 for the large round
+`fixedWidth`: their cells are then `cell_size` (12) px on every screen. Per
+axis the tile needs ceil((control + 16 + grid_gap) / cell_size) cells, at
+the default gap of 8 ceil((control + 24) / 12): 10 × 10 for the large round
 button; for a large button with text 7 rows and ceil((label + 112) / 12)
-columns, about 9 px per character. A "New" button on a list gets its own
-band above the list, not over its items.
+columns, about 9 px per character. Recount them when `grid_gap` changes. A
+"New" button on a list gets its own band above the list, not over its
+items.
 
 ## Contrast
 
 - Text needs 4.5:1 (from 24 px, or 19 px bold, 3:1), state colours, icons
-  and field outlines 3:1; the presets meet this.
+  and field outlines 3:1; the presets meet this (`lobby` only over a dark
+  picture, board-design.md).
 - A brand colour behind text needs 4.5:1 with that text: widget-sidenav
   and widget-navbutton `style.backgroundColor` with `style.color`, a
   widget-navbar's `custom_style.tile_background_color` with
   `custom_style.text_color`. As widget-form `accentColor`, 3:1 against
   the tile.
 - The Delete button and its dialog take the alarm red as
-  `formButtonStyle.bgColor` and `accentColor`: daylight `#b91c1c`, office
-  `#dc2626`, control-room `#f87171`. Leave `formButtonStyle.color` unset
-  on a button with text; the widget picks black or white.
+  `formButtonStyle.bgColor` and `accentColor`: `#b91c1c` on daylight,
+  showroom, scada-grey and portal, `#dc2626` on office, `#f87171` on
+  control-room and night-shift, `#fc8181` on lobby. Leave
+  `formButtonStyle.color` unset on a button with text; the widget picks
+  black or white.

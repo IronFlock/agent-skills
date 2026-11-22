@@ -96,7 +96,7 @@ in it is described.
 5. **Design the board before you write it.** Read
    [references/board-design.md](references/board-design.md). Decide who looks
    at the board and where, what question each page answers, what people look for
-   first, and which look (one of its three presets) suits that viewing
+   first, and which look (one of its eight presets) suits that viewing
    situation; when nothing shows the direction, ask the user once, as "Pick a
    look" says. Then lay out the route tree
    with [references/board-route-tree.md](references/board-route-tree.md), before
