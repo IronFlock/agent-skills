@@ -6,7 +6,7 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
-## Unreleased
+## 1.1.7 - 2026-11-22
 
 - The app skill has an agent look at the board it built or restyled
   (`references/board-look.md`), with
