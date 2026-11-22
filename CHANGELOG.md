@@ -6,7 +6,7 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
-## Unreleased
+## 1.1.5 - 2026-11-22
 
 - The app skill points a coding agent to Anthropic's `frontend-design` plugin
   for the design of web pages an app serves itself.
