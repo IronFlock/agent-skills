@@ -119,10 +119,17 @@ off until the user switches it on.
 widget-form with `formButton: $bool:true` opens the create form in a dialog, and
 it shows a round floating action button unless `formButtonStyle.fab` is false.
 Lay it over the top of the sidenav, in the sidenav's header next to its title: a
-small tile (about 6 × 6 cells for the default button) inside the sidenav's
+small tile (about 7 × 7 cells for the default button) inside the sidenav's
 columns, with `z: 1` and a transparent tile border and background. Put it on
 every page that has the sidenav, at the same position. This overlap is
 intended, as is that of the empty tiles of the dialog forms (section 7).
+
+On a board people touch, the round button at its touch size would cover the
+list's first items. There the "New" form is a button with text
+(`formButtonStyle.fab` false, `label` "New machine", `size` large, `fullWidth`
+true) in a band of its own above the list: the list's columns, 7 rows,
+`fixedWidth` and `fixedHeight`, the list starting below it
+(board-interaction.md, "Sizes on a board people touch").
 
 Its fields are a hidden key field with `generateId: $bool:true` (widget-form
 2.2.0 or later), which saves a new UUID as the asset's id (users never type or
@@ -164,6 +171,11 @@ asset's key, and a checkbox on the delete flag with
 `defaultValueBoolean: $bool:true`. A save writes the key with `deleted` true,
 so the asset drops out of every list.
 
+Say what the delete does, as a fact, in a third entry of `type` `section`,
+which writes nothing and is shown above the dialog's buttons (a dialog does
+not show `subTitle`): "It leaves every list. Its recorded data is kept." The
+red is the preset's alarm red (board-interaction.md, "Contrast").
+
 There are two equally good ways to offer them. Pick the one that suits the
 board, or offer both:
 
@@ -177,7 +189,7 @@ board, or offer both:
   the parameter. Their valueRefs filter the key with that URL parameter
   (`value` `edit` or `delete`, `useFilter: true`), and they need no
   `submitNavigationRoute`: the dialog closes after a save or Cancel and drops
-  the parameter. Their tiles stay empty on a board: about 6 × 6 cells over a
+  the parameter. Their tiles stay empty on a board: about 7 × 7 cells over a
   corner of the table (both may share it), `z: 1`, with a transparent tile
   border and background.
 - **On the asset's page** (its detail or settings page). The edit form is shown
@@ -188,7 +200,9 @@ board, or offer both:
   `bgColor`, its key field filtered with `useRoute`, and
   `submitNavigationRoute` back to the type's page (`/machine`), so it leads
   back to the list after the save. Give its tile about the size of the button
-  (some 12 × 5 cells), next to the edit form, not over it.
+  (some 12 × 5 cells; on a board people touch, `size` large with `fixedWidth`
+  and `fixedHeight`, 7 rows and 14 columns for "Delete", board-interaction.md),
+  next to the edit form, not over it.
 
 Never place a form button, such as the Delete button, at the bottom of the
 screen (the last rows of the grid). Put it at the top of the asset's area or
@@ -247,7 +261,20 @@ An asset's tab page on a 96 × 64 grid:
 ```text
 types   x=0  y=0  w=96 h=5   widget-navbar: Machines · Lines · Recipes (fixedHeight)
 list    x=0  y=5  w=16 h=59  widget-sidenav of the machines (fixedWidth)
-new     x=10 y=5  w=6  h=6   widget-form, floating action button, z: 1 (over the list)
+new     x=9  y=5  w=7  h=7   widget-form, floating action button, z: 1 (over the list)
 tabs    x=16 y=5  w=80 h=5   widget-navbar: title = machine name; History · KPIs
 content x=16 y=10 w=80 h=54  the tab's widgets
 ```
+
+On a board people touch, the "New" button takes a band above the list
+instead:
+
+```text
+new     x=0  y=5  w=20 h=7   widget-form, button with text, fixedWidth, fixedHeight
+list    x=0  y=12 w=20 h=52  widget-sidenav of the machines (fixedWidth), style.fontSize 22
+tabs    x=20 y=5  w=76 h=5   widget-navbar: title = machine name; History · KPIs
+content x=20 y=10 w=76 h=54  the tab's widgets
+```
+
+The band is as wide as the list; the label "New machine" needs
+ceil((99 + 112) / 12) = 18 of its 20 columns.

@@ -37,6 +37,10 @@ transform. For an app that costs money it shows the price before it asks.
   quality shown apart, stops and downtime ranked by minutes and by count,
   losses, and why a machine stopped. It asks for what the data does not hold,
   such as the planned time or the ideal cycle time, instead of assuming it.
+  It also knows the figures of ISO 22400, technical availability by VDI
+  3423, packaging lines with PackML states, semiconductor tools with SEMI
+  E10 states, failures and reliability, energy from meters, and control
+  charts and capability.
 - `ironflock-cli`: works on a machine with the `ironflock` command: installs
   the device agent, connects the machine as a new device, checks it. It needs
   a shell on that machine, so it is for Claude Code.

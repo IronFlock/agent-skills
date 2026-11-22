@@ -1,0 +1,89 @@
+ironflock-templates
+Copyright 2026 Record Evolution GmbH
+
+This skill incorporates material adapted from plugins by Anthropic, licensed
+under the Apache License, Version 2.0. The full licence text is in
+LICENSE-APACHE-2.0.txt in this folder and at
+https://www.apache.org/licenses/LICENSE-2.0.
+
+- the design-critique, ux-copy and accessibility-review skills of the design
+  plugin, version 1.2.0 (repository anthropics/knowledge-work-plugins);
+- the data-visualization skill of the data plugin, version 1.1.0 (repository
+  anthropics/knowledge-work-plugins);
+- the frontend-design plugin, version 1.1.1 (repository
+  anthropics/claude-plugins-official).
+
+Files adapted from those plugins, and under the Apache License, Version 2.0:
+
+  references/board-critique.md     (design-critique)
+  references/board-charts.md       (data-visualization)
+  references/board-interaction.md  (ux-copy, accessibility-review, and the
+                                    part on writing of frontend-design)
+
+Each states this at its top. The other files of this skill are original
+work of Record Evolution GmbH under the MIT License of the repository.
+
+What was changed in references/board-critique.md, by Record Evolution GmbH
+in 2026:
+
+- The text is new wording throughout, written as checks that an agent runs
+  on an IronFlock board it built or restyled, before it reports it.
+- Kept and condensed: the five dimensions of the critique (first
+  impression, usability, visual hierarchy, consistency, accessibility) and
+  the questions behind them.
+- Changed: each check names what to look at in a board's definition (its
+  pages, widget types, tile sizes and positions, titles, style, state
+  colours and bindings), so that it can be answered without an image, and
+  what to correct; the checks are run once, with one round of corrections.
+- Left out: the request for a design file or a screenshot, the feedback
+  style and the report format, typography and whitespace, the connectors
+  to design tools and user feedback, and the tips.
+
+What was changed in references/board-charts.md, by Record Evolution GmbH in
+2026:
+
+- The text is new wording throughout, written as rules for the widgets of
+  IronFlock boards, each naming the widget setting that applies it.
+- Kept and condensed: the chart chosen by what the data shows, and when a
+  number or a table serves better; categories sorted by value unless they
+  have an order of their own; bars from zero, lines allowed to leave it;
+  the same scale on charts that are compared; few categories and series;
+  titles and labelled axes with units; values written on the bars; colour
+  that encodes data; never colour alone; colours that hold for red-green
+  colour-blind readers.
+- Changed: the title says what is measured, not the finding, because a
+  board's data is live; the palette is per board preset and keeps clear of
+  the state colours.
+- Added: the order in which the board hands rows to a widget, fixed time
+  buckets for amounts per period, the same period on compared charts,
+  splitting a chart per entity, the colours a theme gives a series left
+  without one, recolouring on a restyle, doughnut slices and the state
+  column of tables.
+- Left out: the Python plotting code, chart types IronFlock has no widget
+  for, 3D charts, pattern fills and point markers, highlighting one series
+  against grey, annotations, error bars, alt text, number formatting,
+  typography and the checklist: no widget setting applies them.
+
+What was changed in references/board-interaction.md, by Record Evolution
+GmbH in 2026:
+
+- The text is new wording throughout, written as rules that each name the
+  setting of an IronFlock board widget that applies them.
+- Kept and condensed: buttons labelled by what their click does; the same
+  word for the same thing everywhere; errors that say what happened and
+  what to do; empty states that say why and how to start; confirmations
+  that name the action and its consequence, with buttons named by the
+  action; contrast thresholds for text and for other parts; touch target
+  sizes (accessibility-review); an action keeping its name through the
+  flow and errors that neither apologise nor stay vague (the part on
+  writing of frontend-design).
+- Added: touch target sizes in pixels and fixed grid cells, derived from
+  the physical size of a pixel; the alarm red for the Delete button per
+  look; the widget settings for each rule.
+- Left out: keyboard, focus and screen-reader checks, the audit and copy
+  report formats, tone tables, tooltips, loading and onboarding copy, the
+  connectors, and everything of frontend-design outside its part on
+  writing.
+
+The adapted files are distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, as the licence states.

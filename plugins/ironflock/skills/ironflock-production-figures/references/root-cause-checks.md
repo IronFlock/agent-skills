@@ -90,6 +90,8 @@ beyond a limit, eight points in a row on one side of the centre (some
 plants use nine), six in a row steadily rising or falling. Control limits
 describe the process, specification limits the drawing: report against
 both and label them. A process can be within specification and drifting.
+A chart kept over time with limits from a baseline, more run rules, and
+capability indices (Cp, Cpk) are in `process-quality.md`.
 
 **2. Clustering.** Group the events (stops of one reason, scrap, alarms) by
 what the data holds: shift, machine, product or recipe, tool, material lot.

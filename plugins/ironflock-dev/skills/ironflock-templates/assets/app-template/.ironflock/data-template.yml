@@ -39,6 +39,12 @@ data:
             OK while the temperature is at or below the limit on the board's Settings
             page, TOO_HOT above it, NO_READING while the machine cannot be read.
           dataType: string
+        - id: state_text
+          name: State in words
+          description: >-
+            The state as the board shows it beside its colour: OK, Too hot or No
+            reading. Written by the device with the state.
+          dataType: string
         - id: ui_url
           name: Live view
           description: >-

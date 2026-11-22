@@ -12,9 +12,9 @@ Files adapted from that plugin, and under the Apache License, Version 2.0:
   references/downtime-losses.md
   references/root-cause-checks.md
 
-Each of them states this at its top. The other files of this skill
-(SKILL.md, references/machine-data-sql.md) are original work of Record
-Evolution GmbH under the MIT License of the repository.
+Each of them states this at its top. Every other file of this skill
+(SKILL.md and every file in references/ not listed above) is original work
+of Record Evolution GmbH under the MIT License of the repository.
 
 What was changed, by Record Evolution GmbH in 2026:
 
@@ -38,6 +38,10 @@ What was changed, by Record Evolution GmbH in 2026:
   from device uptime, combining figures across machines and periods,
   losses expressed in minutes, MTBF, stops at the edges of a period, a
   drift query, German terms and worked examples.
+- references/oee.md and references/downtime-losses.md name the ISO 22400
+  figures they correspond to, as publicly described, and where they differ
+  on purpose; references/root-cause-checks.md points to
+  references/process-quality.md for control charts and capability.
 
 The adapted files are distributed on an "AS IS" BASIS, WITHOUT WARRANTIES
 OR CONDITIONS OF ANY KIND, as the licence states.

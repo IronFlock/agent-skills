@@ -164,6 +164,10 @@ async def announce() -> None:
 # --- main -------------------------------------------------------------------
 
 
+# The state in words, for the board: a colour alone does not tell it.
+STATE_TEXT = {"OK": "OK", "TOO_HOT": "Too hot", "NO_READING": "No reading"}
+
+
 async def main() -> None:
     await serve_live_view()
     await flock.subscribe_to_table("settings", on_settings)  # before the read, so no row falls between
@@ -192,7 +196,8 @@ async def main() -> None:
             if new_state != state:
                 if new_state == "NO_READING":
                     await flock.report_error(problem, append=True, user_message=f"{DEVICE_NAME} cannot read the machine")
-                await flock.append_to_table("devices", {"tsp": now(), "device_id": DEVICE_ID, "state": new_state})
+                await flock.append_to_table("devices", {"tsp": now(), "device_id": DEVICE_ID, "state": new_state,
+                                                        "state_text": STATE_TEXT[new_state]})
                 state = new_state
         except RuntimeError as error:
             print(f"Not recorded: {error}")

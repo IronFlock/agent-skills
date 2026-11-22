@@ -36,6 +36,15 @@ What each file holds:
   widgets, layering, the `style` keys, tile frames, the presets in the file.
 - [board-markdown.md](board-markdown.md): widget-markdown placeholders and
   HTML, one record as a card, how a value is shown, figures as cards.
+- [board-charts.md](board-charts.md): charts: when a chart and when a card,
+  the order of ranked categories, scales, how many series, titles and axis
+  labels, the series colours per preset.
+- [board-interaction.md](board-interaction.md): the words on buttons, forms,
+  confirmations, switches, messages and empty tiles; touch sizes and tiles;
+  contrast of controls and brand colours behind text.
+- [board-critique.md](board-critique.md): five checks to run once on a
+  finished or restyled board before you report it, with one round of
+  corrections.
 - This file: [Anatomy](#anatomy), [Literal values](#literal-values),
   [Designing a board](#designing-a-board) (where the design is written, a
   sketch on a design canvas), [SCADA pages](#scada-pages),

@@ -6,6 +6,79 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
+## 1.1.5 - 2026-11-22
+
+- The app skill points a coding agent to Anthropic's `frontend-design` plugin
+  for the design of web pages an app serves itself.
+- A board's look: when nothing in the request, the conversation, the app or a
+  brand shows who looks at the board and where, light or dark and the brand
+  colours, the agent asks the user once, with the presets as choices, and
+  takes `office` when the user leaves it open. It says which preset it took
+  and why.
+- `ironflock-templates` has five checks to run once on a finished or restyled
+  board before reporting it (first impression, usability, hierarchy,
+  consistency, accessibility), with one round of corrections
+  (`references/board-critique.md`, adapted from Anthropic's design plugin
+  under the Apache License 2.0; its notice is in the skill's folder).
+- Charts on boards: `references/board-charts.md` has the chart rules (chart
+  or card, the order of a ranking, scales, how many series, titles and axis
+  labels, series colours per preset that hold for colour-blind readers),
+  each mapped to the widget setting that applies it; adapted from the data
+  plugin's data-visualization skill (Apache 2.0). Series colours are set per
+  preset instead of taken from the theme, whose dark theme draws the first
+  series red, and a restyle recolours them.
+- Boards people act on: `references/board-interaction.md` has the words of
+  buttons, forms, delete confirmations, switches, messages and empty tiles,
+  touch sizes on tablets and the contrast of controls; adapted from the
+  design plugin's ux-copy and accessibility-review skills and the writing
+  part of the frontend-design plugin (Apache 2.0). A state shows its word
+  beside its colour, text is sized for the viewing distance, the Delete
+  button takes the preset's alarm red, and its dialog says what the delete
+  does in a section entry (a dialog does not show `subTitle`); the starter
+  app follows this.
+- `ironflock-production-figures` knows the figures of ISO 22400 and VDMA
+  66412 beyond OEE (`references/iso-22400-figures.md` with its SQL): ask
+  for the setup ratio (Rüstgrad), technical, allocation or utilisation
+  efficiency, first pass yield or the scrap and rework ratio of a machine,
+  or which of the standards' figures your data supports.
+- Machine builders can ask for the technical availability of their machines
+  at customers by VDI 3423, counting only the machine's own faults, and
+  compare it with an agreed value (`references/technical-availability.md`
+  with its SQL).
+- Packaging, filling and bottling lines whose machines report PackML states:
+  ask for OEE and stops from those states, line stops by the machine that
+  caused them, starved and blocked time, and how a state counts
+  (`references/packaging-lines.md` with its SQL; DIN EN 415-11, which
+  replaced DIN 8743, and the Weihenstephan Standards named).
+- Semiconductor tools with SEMI E10 states: ask for uptime, utilization,
+  tool availability, MTBF in productive time and E79 equipment efficiency,
+  each with its denominator (`references/semiconductor-equipment.md` with
+  its SQL).
+- Failures and repairs: ask for the failure count and rate, MTBF, MTTR,
+  restoration times, reliability, or planned against unplanned
+  maintenance, in the terms of EN 13306, EN 15341 and IEC 60050-192, and
+  what machine data cannot show about them
+  (`references/maintenance-reliability.md` with its SQL).
+- Energy from meters: ask for energy in kWh from counters or power
+  readings, energy per part, energy by machine state, base load, load
+  profile and peaks, a baseline against output and whether a measure saved
+  energy, as ISO 50001 and ISO 50006 describe indicators and baselines
+  (`references/energy-performance.md` with its SQL).
+- Process quality: ask for a control chart with limits from a baseline, its
+  signals and where a process changed, and the capability indices Cp, Cpk,
+  Pp and Ppk, as ISO 7870 and ISO 22514 describe them
+  (`references/process-quality.md` with its SQL); the drift check of
+  `references/root-cause-checks.md` points there.
+- `references/oee.md` and `references/downtime-losses.md` name the ISO 22400
+  figures they correspond to, as publicly described, and where they differ
+  on purpose; they never say a figure conforms to a standard. The rough MTTR
+  of the downtime ranking points to the exact one in
+  `references/maintenance-reliability.md`.
+- Fixed: amounts per period (COUNT, SUM) need a fixed time bucket; the rows
+  of a transform reach a widget in reverse order; the "New" button needs
+  about 7 × 7 cells; the example board puts the states first and passes its
+  own references.
+
 ## 1.1.4 - 2026-11-21
 
 - Both plugins have an icon, and `ironflock` names IronFlock's privacy

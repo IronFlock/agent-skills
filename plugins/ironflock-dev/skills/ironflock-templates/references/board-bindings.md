@@ -182,7 +182,7 @@ queryParams:
     nowMinusPeriods: 0
     series:
         method: AVG              # AVG SUM COUNT MIN MAX FIRST LAST
-        bucket:                  # optional: a fixed interval; omit for automatic
+        bucket:                  # a fixed interval: always for COUNT and SUM over time; otherwise omit for automatic
             length: 1
             period: hour         # second minute hour day week
 ```
@@ -191,7 +191,7 @@ The roles come from the format:
 
 | Format | Result |
 |---|---|
-| `x: tsp` | A time series. Buckets are automatic (sized to the widget's width) or fixed by `bucket`. |
+| `x: tsp` | A time series. Buckets are automatic (sized to the widget's width) or fixed by `bucket`; COUNT and SUM need a fixed bucket, at most 2,000 per window (board-charts.md). |
 | `x: <other column>` | One value per category over the whole window. No `bucket`. |
 | `pivot: <column>` | Each group aggregated separately, e.g. one line per machine. |
 | every other column leaf | Aggregated with the method. |
@@ -217,8 +217,10 @@ You can read:
   marked `private: true`: users can't reach those directly, but the app's own
   board can. Users see whatever the board shows, so show only what they should see.
 - **Transforms (SQL views):** only `limit`, `offset` and `filterAnd` work. There is
-  no time window, no aggregation and no latest filter, and rows come in the view's
-  own order.
+  no time window, no aggregation and no latest filter. The limit keeps the view's
+  first rows, and the widget gets them in reverse order: a view ordered newest
+  first arrives oldest first. board-charts.md, "Order", says how to order a
+  ranking.
 - **`error-logs`:** the app's error log, with columns `tsp msg user_message source
   level device_key`. `source` is `app` for what the app reports with
   `report_error` and `system` for the platform's own errors, and `user_message` is
