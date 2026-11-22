@@ -6,7 +6,7 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
-## Unreleased
+## 1.1.6 - 2026-11-22
 
 - Five more looks for boards beside `control-room`, `office` and
   `daylight`: `night-shift` (dim rooms at night, only the alarm bright),
