@@ -16,7 +16,7 @@ platform:
 | `ironflock-connect` | connecting Claude to IronFlock in the cloud or on an appliance, checking the connection, and what an API key lets Claude do |
 | `ironflock-fleet` | devices, the apps on them, alarms, logs and the audit log: what runs where, why something does not work, and changing apps, devices and alarms with the person's agreement |
 | `ironflock-data` | a project's data: finding its tables, read-only SQL on the project database, the files apps store, and custom transforms for boards |
-| `ironflock-production-figures` | production figures of machines: OEE with availability, performance and quality, stops ranked by minutes and by count, losses, and why a machine stopped; for answers from an instance and for an app's transforms and board |
+| `ironflock-production-figures` | production figures of machines: OEE with availability, performance and quality, stops ranked by minutes and by count, losses, and why a machine stopped; the figures of ISO 22400, technical availability (VDI 3423), packaging lines (PackML), semiconductor tools (SEMI E10, E79), failures and reliability, energy, control charts and capability; for answers from an instance and for an app's transforms and board |
 | `ironflock-cli` | machine work with the `ironflock` command in a shell: install the agent, connect a machine as a new device, log in, check a machine (`status`, `doctor`), work on another machine with `--host`; needs a shell, so Claude Code |
 | `ironflock-templates` | IronFlock apps: their architecture, a starter app, and the integration templates in the app's `.ironflock/` folder |
 | `ironflock-widgets` | the board widgets themselves: the `@ironflock/widget-*` Lit web components |
@@ -296,7 +296,21 @@ plugins/ironflock/
     │   │   ├── oee.md                   OEE, its three parts and TEEP: inputs, formulas, what each is not
     │   │   ├── downtime-losses.md       stops ranked by minutes and by count, MTTR, MTBF, losses, prices
     │   │   ├── machine-data-sql.md      durations, stops, shifts and counts from machine rows in SQL
-    │   │   └── root-cause-checks.md     why a machine stopped: safety, checks, ranked causes
+    │   │   ├── root-cause-checks.md     why a machine stopped: safety, checks, ranked causes
+    │   │   ├── iso-22400-figures.md     ISO 22400 and VDMA 66412 figures beyond OEE
+    │   │   ├── iso-22400-figures-sql.md their SQL
+    │   │   ├── technical-availability.md technical availability by VDI 3423, for machine builders
+    │   │   ├── technical-availability-sql.md its SQL
+    │   │   ├── packaging-lines.md       packaging and bottling lines, PackML states
+    │   │   ├── packaging-lines-sql.md   their SQL
+    │   │   ├── semiconductor-equipment.md SEMI E10 states and E79 figures of fab tools
+    │   │   ├── semiconductor-equipment-sql.md their SQL
+    │   │   ├── maintenance-reliability.md failures, MTBF, MTTR, reliability, maintenance
+    │   │   ├── maintenance-reliability-sql.md their SQL
+    │   │   ├── energy-performance.md    energy indicators, baselines, base load, peaks
+    │   │   ├── energy-performance-sql.md their SQL, with the traps of meter data
+    │   │   ├── process-quality.md       control charts and capability indices
+    │   │   └── process-quality-sql.md   their SQL
     │   ├── NOTICE                       origin of the adapted references and what was changed
     │   └── LICENSE-APACHE-2.0.txt       the licence of the adapted references
     ├── ironflock-cli/SKILL.md           machine work with the ironflock command
@@ -308,6 +322,7 @@ plugins/ironflock-dev/
 └── skills/
     ├── ironflock-templates/
     │   ├── SKILL.md                     workflow and principles
+    │   ├── NOTICE, LICENSE-APACHE-2.0.txt  the licence of the adapted references
     │   ├── references/
     │   │   ├── app-architecture.md      how an app is built: the interview, entities, state, data flow, containers, web UIs
     │   │   ├── board-template.md        board format basics, which board reference to read for which task, checklist
@@ -319,6 +334,9 @@ plugins/ironflock-dev/
     │   │   ├── board-forms.md           delete forms and file uploads in the file
     │   │   ├── board-layout-style.md    the grid and the board's style
     │   │   ├── board-markdown.md        widget-markdown cards and HTML
+    │   │   ├── board-charts.md          chart rules mapped to widget settings (adapted, Apache 2.0)
+    │   │   ├── board-interaction.md     words, touch sizes and contrast of controls (adapted, Apache 2.0)
+    │   │   ├── board-critique.md        five checks before reporting a board (adapted, Apache 2.0)
     │   │   ├── example-board.yml        a complete, valid three-page board
     │   │   ├── widget-catalog.md        which widget for which data (generated)
     │   │   └── app-templates.md         data, env, port and ai templates, app skills

@@ -30,7 +30,8 @@ One writer per table. Every row has a `tsp`.
 1. **Readings:** every `SAMPLE_INTERVAL` seconds a device reads its machine and
    appends a row to `measurements`. The board's charts follow the table live.
 2. **State:** a device writes a row to `devices` only when its state changes
-   (OK, TOO_HOT, NO_READING). The board shows the newest row per device with the
+   (OK, TOO_HOT, NO_READING), with the state in words in `state_text`, which the
+   board shows beside the state's colour. The board shows the newest row per device with the
    `{latest: true}` filter and the filter on `deleted`.
 3. **Registration and deletion:** at start a device writes its row with
    `device_id`, its name, its live view's URL and `deleted: false`. A device

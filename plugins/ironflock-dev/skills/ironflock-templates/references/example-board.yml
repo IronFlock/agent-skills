@@ -1,11 +1,13 @@
 # yaml-language-server: $schema=https://ironflock.com/schemas/board-template/v1.yml
 # Example board-template.yml for an app with two tables:
 #   measurements     tsp, machine_id, temperature, vibration, power_kw
-#   machine_status   tsp, machine_id, state, target_rpm  (maintainLatestFlagFor: [machine_id])
+#   machine_status   tsp, machine_id, state, state_text, target_rpm  (maintainLatestFlagFor: [machine_id])
 # Viewers: the shift supervisor at a desk or laptop (office preset). The home page
-# answers "how are the machines doing?": the temperature gauges and the power draw
-# on top, the 24-hour trend and the state table below; /machines/* answers it for
-# one machine. States: RUNNING green, IDLE grey, FAULT red, the same on every widget.
+# answers "how are the machines doing?": the machine states (the biggest tile, top
+# left) and the temperature gauges on top, the hourly highest temperature and the
+# power draw below; /machines/* answers it for one machine. States: RUNNING green,
+# IDLE grey, FAULT red, the same on every widget, each with its word beside it.
+# Chart series take the office preset's series colours (board-charts.md).
 # Three pages: an overview (/), a machine list (/machines) and a detail page per
 # machine (/machines/*) filtered by the URL. Shows static and data-driven
 # navigation, aggregation, latest-per-entity rows and a fully covered grid.
@@ -30,7 +32,7 @@ widgets:
       version: 1.7.45
       chartconfig:
           title: $str:Spindle temperature
-          subTitle: $str:Latest reading per machine
+          subTitle: $str:°C, latest reading per machine
           dataseries:
               - label: $str:Temperature
                 unit: $str:°C
@@ -62,7 +64,7 @@ widgets:
       version: 1.1.39
       chartconfig:
           title: $str:Power draw
-          subTitle: $str:Latest reading per machine
+          subTitle: $str:kW, latest reading per machine
           dataseries:
               - label: $str:Power
                 unit: $str:kW
@@ -84,28 +86,29 @@ widgets:
       package_name: widget-linechart
       version: 1.7.15
       chartconfig:
-          title: $str:Temperature, last 24 hours
-          subTitle: $str:Hourly average per machine
+          title: $str:Highest spindle temperature
+          subTitle: $str:°C, hourly maximum of all machines, last 24 h
           axis:
               timeseries: $bool:true
-              yAxisLabel: $str:°C
+              yAxisLabel: $str:Temperature (°C)
           dataseries:
               - label: $str:Temperature
                 type: $str:line
+                borderColor: $str:#2563eb
+                backgroundColor: $str:#2563eb
                 data:
                     tableRef:
                         tablename: measurements
                         format:
                             x: tsp
                             y: temperature
-                            pivot: machine_id
                         queryParams:
                             limit: 3000
                             windowPeriod: hour
                             windowLength: 24
                             nowMinusPeriods: 0
                             series:
-                                method: AVG
+                                method: MAX
                                 bucket:
                                     length: 1
                                     period: hour
@@ -130,7 +133,7 @@ widgets:
                                   operator: '='
                                   value: ''
                                   dataType: boolean
-              - header: $str:State
+              - header: '$str:'
                 type: $str:state
                 values:
                     tableRef:
@@ -147,6 +150,21 @@ widgets:
                                   dataType: boolean
                 styling:
                     stateMap: "$str:'RUNNING', '#16a34a', 'IDLE', '#64748b', 'FAULT', '#dc2626'"
+              - header: $str:State
+                type: $str:string
+                values:
+                    tableRef:
+                        tablename: machine_status
+                        format:
+                            value: state_text
+                        queryParams:
+                            limit: 50
+                            filterAnd:
+                                - latest: true
+                                  column: ''
+                                  operator: '='
+                                  value: ''
+                                  dataType: boolean
               - header: $str:Updated
                 type: $str:timestamp
                 values:
@@ -240,14 +258,17 @@ widgets:
       version: 1.7.15
       chartconfig:
           title: $str:Temperature and vibration
-          subTitle: $str:Last 24 hours
+          subTitle: $str:°C and mm/s, last 24 h
           axis:
               timeseries: $bool:true
-              yAxisLabel: $str:°C
-              yAxisLabelRight: $str:mm/s
+              showLegend: $bool:true
+              yAxisLabel: $str:Temperature (°C)
+              yAxisLabelRight: $str:Vibration (mm/s)
           dataseries:
               - label: $str:Temperature
                 type: $str:line
+                borderColor: $str:#2563eb
+                backgroundColor: $str:#2563eb
                 data:
                     tableRef:
                         tablename: measurements
@@ -270,6 +291,10 @@ widgets:
               - label: $str:Vibration
                 type: $str:line
                 yAxis: $str:right
+                borderColor: $str:#1e293b
+                backgroundColor: $str:#1e293b
+                styling:
+                    borderDash: $str:dashed
                 data:
                     tableRef:
                         tablename: measurements
@@ -292,10 +317,10 @@ widgets:
 layout:
     gridLayout:
         - {id: nav, x: 0, y: 0, w: 16, h: 64, fixedWidth: true}
-        - {id: temperature-gauges, x: 16, y: 0, w: 52, h: 24}
-        - {id: power, x: 68, y: 0, w: 28, h: 24}
-        - {id: trend, x: 16, y: 24, w: 52, h: 40}
-        - {id: states, x: 68, y: 24, w: 28, h: 40}
+        - {id: states, x: 16, y: 0, w: 44, h: 36}
+        - {id: temperature-gauges, x: 60, y: 0, w: 36, h: 36}
+        - {id: trend, x: 16, y: 36, w: 56, h: 28}
+        - {id: power, x: 72, y: 36, w: 24, h: 28}
     subRoutes:
         machines:
             gridLayout:

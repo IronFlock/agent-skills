@@ -20,8 +20,8 @@ fixed width or height (see below).
   split each band into widths that add up to `columns`. On a 96 × 64 grid:
 
   ```text
-  nav    x=0  y=0  w=16 h=64 │ gauges x=16 y=0  w=52 h=24 │ power  x=68 y=0  w=28 h=24
-                             │ trend  x=16 y=24 w=52 h=40 │ states x=68 y=24 w=28 h=40
+  nav    x=0  y=0  w=16 h=64 │ states x=16 y=0  w=44 h=36 │ gauges x=60 y=0  w=36 h=36
+                             │ trend  x=16 y=36 w=56 h=28 │ power  x=72 y=36 w=24 h=28
   ```
 
 - **Size for readability.** A chart below roughly 16 × 10 cells is too small to

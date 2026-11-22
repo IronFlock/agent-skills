@@ -51,13 +51,15 @@ The delete form on the record's page:
           fab: $bool:false
           label: $str:Delete
           iconName: $str:delete
-          bgColor: $str:#d32f2f
-      accentColor: $str:#d32f2f         # the dialog's Delete button
+          bgColor: $str:#dc2626         # the preset's alarm red (office here)
+      accentColor: $str:#dc2626         # the dialog's Delete button
       buttonLabels:
           submitLabel: $str:Delete
           cancelLabel: $str:Keep
       submitNavigationRoute: $str:/settings/machines
-      formFields:                       # exactly these two, both hidden
+      formFields:                       # what follows, and the two hidden fields
+          - type: $str:section
+            description: $str:It leaves every list. Its recorded data is kept.
           - label: $str:Machine
             type: $str:textfield
             hiddenField: $bool:true

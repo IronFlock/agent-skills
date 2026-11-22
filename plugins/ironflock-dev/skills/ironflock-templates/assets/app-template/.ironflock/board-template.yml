@@ -74,7 +74,7 @@ widgets:
                                   filters:
                                       - {column: deleted, operator: 'IS NULL', dataType: boolean}
                                       - {column: deleted, operator: '=', value: false, dataType: boolean}
-              - header: $str:State
+              - header: '$str:'
                 type: $str:state
                 values:
                     tableRef:
@@ -95,6 +95,25 @@ widgets:
                                       - {column: deleted, operator: '=', value: false, dataType: boolean}
                 styling:
                     stateMap: "$str:'OK', '#16a34a', 'TOO_HOT', '#dc2626', 'NO_READING', '#64748b'"
+              - header: $str:State
+                type: $str:string
+                values:
+                    tableRef:
+                        tablename: devices
+                        format:
+                            value: state_text
+                        queryParams:
+                            limit: 100
+                            filterAnd:
+                                - latest: true
+                                  column: ''
+                                  operator: '='
+                                  value: ''
+                                  dataType: boolean
+                                - combinator: OR
+                                  filters:
+                                      - {column: deleted, operator: 'IS NULL', dataType: boolean}
+                                      - {column: deleted, operator: '=', value: false, dataType: boolean}
               - header: $str:Updated
                 type: $str:timestamp
                 values:
@@ -291,19 +310,20 @@ widgets:
       version: 2.0.1
       chartconfig:
           title: $str:Delete this device?
-          subTitle: $str:Delete a device that is gone for good. It reappears when it starts the app again.
           formButton: $bool:true
           formButtonStyle:
               fab: $bool:false
               label: $str:Delete
               iconName: $str:delete
-              bgColor: $str:#d32f2f
-          accentColor: $str:#d32f2f
+              bgColor: $str:#dc2626
+          accentColor: $str:#dc2626
           buttonLabels:
               submitLabel: $str:Delete
               cancelLabel: $str:Keep
           submitNavigationRoute: $str:/devices
           formFields:
+              - type: $str:section
+                description: $str:Delete a device that is gone for good. It leaves every list and comes back when it starts the app again.
               - label: $str:Device
                 type: $str:numberfield
                 hiddenField: $bool:true
@@ -335,7 +355,7 @@ widgets:
                 required: $bool:true
                 min: $num:0
                 max: $num:200
-                description: $str:A device whose temperature is above this reports TOO_HOT.
+                description: $str:A device above this temperature shows as too hot.
                 targetColumn:
                     tablename: settings
                     column: max_temperature

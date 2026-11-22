@@ -97,7 +97,8 @@ in it is described.
    [references/board-design.md](references/board-design.md). Decide who looks
    at the board and where, what question each page answers, what people look for
    first, and which look (one of its three presets) suits that viewing
-   situation, `office` when nothing says otherwise. Then lay out the route tree
+   situation; when nothing shows the direction, ask the user once, as "Pick a
+   look" says. Then lay out the route tree
    with [references/board-route-tree.md](references/board-route-tree.md), before
    any page gets a widget: the pages follow
    the entity tree (a type segment and a key segment per entity, a child's
@@ -128,12 +129,12 @@ in it is described.
 
    | Task | Read only |
    |---|---|
-   | Build a board from scratch | in this order: board-design.md, board-route-tree.md, board-assets.md when users manage entities, "Designing a board" in board-template.md, [references/example-board.yml](references/example-board.yml), board-navigation.md, board-bindings.md, board-layout-style.md, board-markdown.md, and board-forms.md when users create, edit or delete records |
-   | Change what one widget shows (table, columns, filters, time window, aggregation) | board-bindings.md; for a widget-markdown also board-markdown.md |
-   | Add a widget to a page | board-design.md ("What goes where"), board-bindings.md, board-layout-style.md |
+   | Build a board from scratch | in this order: board-design.md, board-route-tree.md, board-assets.md when users manage entities, "Designing a board" in board-template.md, [references/example-board.yml](references/example-board.yml), board-navigation.md, board-bindings.md, board-layout-style.md, board-markdown.md, board-charts.md for every chart, board-forms.md and board-interaction.md when users create, edit or delete records or switch something, and board-critique.md before you report |
+   | Change what one widget shows (table, columns, filters, time window, aggregation) | board-bindings.md; for a widget-markdown also board-markdown.md; for a chart also board-charts.md |
+   | Add a widget to a page | board-design.md ("What goes where"), board-bindings.md, board-layout-style.md, and board-charts.md for a chart or board-interaction.md for a form or a switch |
    | Add a page or change a menu | board-route-tree.md, board-navigation.md, board-layout-style.md |
-   | Let users create, edit and delete records | board-assets.md, board-forms.md, board-navigation.md, board-bindings.md |
-   | Restyle or re-layout a board | board-design.md ("One colour, one meaning", "Pick a look"), board-layout-style.md |
+   | Let users create, edit and delete records | board-assets.md, board-forms.md, board-interaction.md, board-navigation.md, board-bindings.md |
+   | Restyle or re-layout a board | board-design.md ("One colour, one meaning", "Pick a look"), board-layout-style.md, board-charts.md ("Colour") when the board has charts, board-interaction.md for a touch screen, and board-critique.md before you report |
    | A card with several values, or one record shown | board-markdown.md, board-bindings.md |
    | A SCADA page | "SCADA pages" in board-template.md, board-layout-style.md, board-bindings.md, board-navigation.md |
    | A filter dropdown or a date range | board-bindings.md |
@@ -340,7 +341,8 @@ complete reference.
   and bind widget-embed to it. Never hard-code a device's address, port or URL.
 - **One colour, one meaning.** The chosen preset's four state colours mark ok,
   warning, alarm and idle, with the same value on every widget. The board's chrome
-  stays neutral and nothing else is coloured. board-design.md, "One colour, one
+  stays neutral, chart series take board-charts.md's series colours, and nothing
+  else is coloured. board-design.md, "One colour, one
   meaning", has the rules and the key each widget takes its colours from.
 - **Bind, don't paste.** If a value lives in a table, bind the widget to it with a
   data reference. Pasted numbers go stale the moment the board is installed.

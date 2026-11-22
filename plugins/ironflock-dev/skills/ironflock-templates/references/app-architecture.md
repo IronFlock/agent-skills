@@ -624,6 +624,13 @@ remote-access tunnel of its port:
    filtered to one device (board-bindings.md, "Embedding a web UI the app
    serves").
 
+**Design of the page.** When the app serves web pages of its own, design them
+with Anthropic's `frontend-design` plugin (skill `frontend-design`) if it is
+installed. If it is not, tell the user that they can install it with
+`claude plugin install frontend-design@claude-plugins-official`, and design
+the page without it until they have. The board is not built with it: a board
+is made of widgets and follows the board references.
+
 Rules for the page:
 
 - **Who can open it.** An http tunnel is private: only people who are signed in to

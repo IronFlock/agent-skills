@@ -1,23 +1,20 @@
 <!-- Adapted from the claude-for-manufacturing plugin, version 1.0.0, by Anthropic, under the Apache License, Version 2.0; this file is under the same licence. Changed by Record Evolution GmbH in 2026: rewritten for machine data in SQL tables. The licence text and the notice are in LICENSE-APACHE-2.0.txt and NOTICE in the folder of the skill ironflock-production-figures (IronFlock/agent-skills), and at https://www.apache.org/licenses/LICENSE-2.0 -->
 # OEE and its three parts
 
-This file defines OEE (overall equipment effectiveness) and its three parts,
-availability, performance and quality, and TEEP: the inputs each needs, what
-each is not, how figures are combined across machines and periods, and what
-to do when an input is missing. It holds for any machine or line whose data
-are time-stamped rows in tables. How durations and counts are derived from
-such rows is in `machine-data-sql.md`; stop and loss rankings are in
-`downtime-losses.md`.
+OEE (overall equipment effectiveness), its parts availability, performance
+and quality, and TEEP: inputs, what each is not, combining, missing inputs.
+Deriving durations and counts from rows is in `machine-data-sql.md`, stop
+rankings in `downtime-losses.md`.
 
 ## Inputs
 
 | Input | Meaning | German |
 | --- | --- | --- |
 | Planned production time | The time the machine was meant to produce in the period: shift time minus planned stops (breaks, planned maintenance, and only if the plant says so planned changeovers or time without orders). A definition of the plant, not a measurement. | Planbelegungszeit, geplante Produktionszeit |
-| Run time | Planned production time minus the stops in it. | Hauptnutzungszeit, Laufzeit; "Betriebszeit" often means operating or planned time, so ask |
-| Ideal cycle time | The fastest time per part the machine is designed or proven to reach, per product (or its inverse, the ideal rate). | ideale or theoretische Zykluszeit; a "Soll" value is often the planned or standard one: ask |
-| Total count | Every part made in the period, good or not. | Gesamtmenge |
-| Good count | Parts right the first time: neither scrap nor rework. | Gutmenge, Gutteile |
+| Run time | Planned production time minus the stops in it. | Hauptnutzungszeit, Laufzeit; "Betriebszeit" names different times, so ask |
+| Ideal cycle time | The fastest time per part the machine is designed or proven to reach, per product (or its inverse, the ideal rate). | ideale Zykluszeit; a "Soll" value (Sollzykluszeit) is often the planned or standard one: ask |
+| Total count | Every part made in the period, good or not. | Gesamtstückzahl |
+| Good count | Parts right the first time: neither scrap nor rework. | Gutteile, Gutmenge |
 
 ## Formulas
 
@@ -34,7 +31,7 @@ TEEP         = ideal cycle time x good count / calendar time with usable state d
              = OEE x known time / that calendar time
 ```
 
-Calendar time is all the time in the period, 24 hours a day. OEE is the
+Calendar time is the whole period, 24 hours a day. OEE is the
 default; report TEEP only when asked for the use of all available time, and
 name which one a figure is.
 
@@ -42,6 +39,9 @@ Worked example: shift 480 min, break 30 min, planned 450 min, stops 45 min,
 run 405 min, ideal cycle time 1.0 min, total 360, good 342. Availability
 405/450 = 90%, performance 360/405 = 88.9%, quality 342/360 = 95%,
 OEE 76.0% = 342/450.
+
+Their names in ISO 22400-2 and VDMA 66412-1, and where they differ on
+purpose: `iso-22400-figures.md`. Never say a figure conforms to a standard.
 
 ## What they are not
 
@@ -63,17 +63,17 @@ OEE 76.0% = 342/450.
   the data holds no rework, say that quality is good / (good + scrap) and
   that rework could not be taken into account.
 - **The ideal cycle time is not the planned, average or standard time.** If
-  the plant uses a standard time instead, performance can exceed 100%; say
-  so. It is also not takt time (available time divided by customer demand);
-  in German both are called Taktzeit, so ask which one is meant.
+  the plant uses a planned time (as ISO 22400-2 does), performance can
+  exceed 100%; say so. It is also not takt time (available time divided by
+  customer demand); in German both are called Taktzeit, so ask which one is
+  meant.
 
 ## Show the parts apart
 
 Always state availability, performance and quality next to OEE, with the
-inputs, the period and the grain (which machine or line). The same 62% OEE
+inputs, the period and the grain (which machine or line): the same 62% OEE
 caused by availability is a maintenance question, caused by quality a
-process question: the composite alone does not tell anyone what to do. On a
-board the three parts are separate figures beside OEE.
+process question.
 
 ## Grain and combining
 

@@ -41,6 +41,10 @@ data:
           name: State
           description: Operating state, one of RUNNING, IDLE, FAULT
           dataType: string
+        - id: state_text
+          name: State in words
+          description: The state as the board shows it beside its colour, Running, Idle or Fault
+          dataType: string
         - id: target_rpm
           name: Target speed
           description: Target spindle speed in rpm set from the board
