@@ -6,6 +6,14 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
+## 1.1.10 - 2026-11-23
+
+- The CLI skill explains how to sign in to an appliance from a headless terminal using a code and a second device on the LAN.
+
+- **2.0 migration.** The IronFlock connection signs in to the cloud through the browser. Update the plugin and select IronFlock in Claude Code’s `/mcp` or Connect in the plugin’s Connectors tab in Claude chat or Cowork. Review the permissions in Studio.
+- If your previous plugin address pointed to an appliance, install the optional `ironflock-appliance@ironflock` plugin in Claude Code, enter its full HTTPS MCP address, and sign in to the appliance. Cloud and appliance sign-ins are independent. The old `api_url` and `api_key` plugin settings are no longer read. You can delete the old key in Studio once you have checked that no script or separate client still uses it.
+- For a paired online appliance reached through the cloud, Claude identifies the instance before using its projects or changing a device. This requires an instance that supports and allows cloud access.
+
 ## 1.1.9 - 2026-11-23
 
 - Fleet operations use API 2.2.0's `read_app_tool` for developer-marked reads

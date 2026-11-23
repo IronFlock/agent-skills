@@ -1,6 +1,6 @@
 ---
 name: ironflock-cli
-description: Machine work with the `ironflock` command in a shell, where Claude can run commands - install the device agent on a machine and connect it to IronFlock as a new device, log in to an instance with an API key, check a machine or a device's health locally (status, doctor), delete a device, install or update the command itself, or work on another machine over SSH with --host. Use this whenever the user asks to connect, set up, install or check a machine, a Raspberry Pi, a test machine or an edge computer as an IronFlock device, mentions the ironflock command, a .flock file, ironflock login, agent install, doctor or --host, or an ironflock command fails.
+description: Machine work with the `ironflock` command in a shell, where Claude can run commands - install the device agent on a machine and connect it to IronFlock as a new device, sign in to an instance in a browser or with an API key, check a machine or a device's health locally (status, doctor), delete a device, install or update the command itself, or work on another machine over SSH with --host. Use this whenever the user asks to connect, set up, install or check a machine, a Raspberry Pi, a test machine or an edge computer as an IronFlock device, mentions the ironflock command, a .flock file, ironflock login, agent install, doctor or --host, or an ironflock command fails.
 metadata:
   mcp-tools: none
 ---
@@ -94,13 +94,22 @@ Only the commands that ask the platform need a login: `device ...` and the
 account, the key's scopes and its restrictions, and does not change anything.
 A login is only needed if `whoami` says there is none or the key is rejected.
 
-To log in the person creates an API key in Studio (see `ironflock-connect` for
+If `ironflock login --help` lists `--device-code` and the instance supports
+browser sign-in, the person can run `ironflock login --browser` on their laptop.
+For a terminal without a browser, have them run
+`ironflock login --device-code --instance factory.example.com` using their own
+instance name. They enter the printed code in Studio on any device that can
+reach that instance and approve the permissions there. An appliance can serve
+this flow entirely on its LAN. Keep the code in the person's terminal.
+`ironflock whoami --json` reports `browser` or `device_code` as the key source.
+Logout revokes either grant at the instance.
+
+For API-key login the person creates an API key in Studio (see `ironflock-connect` for
 where) and saves it to a file only they can read, such as one in their home
 folder with mode 600, outside any repository. Then run
 `ironflock login --key-file <that file>` (add `--instance` for an appliance, or
 the person's own instance, otherwise the cloud is used). A key piped in on
-standard input works as well. The command never asks for the key at a
-terminal, and refuses a key given as an argument.
+standard input works as well. Newer CLI versions also offer a private terminal prompt with `--paste-key`.
 
 Afterwards run `ironflock whoami` and tell the person which account and scopes
 it shows. Creating a device needs the scope to write devices; a 403 means the

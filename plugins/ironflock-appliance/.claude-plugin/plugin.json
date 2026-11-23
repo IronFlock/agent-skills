@@ -1,0 +1,38 @@
+{
+  "name": "ironflock-appliance",
+  "displayName": "IronFlock Appliance",
+  "version": "1.1.10",
+  "description": "Add a direct connection from Claude Code to your IronFlock appliance. Configure the appliance’s HTTPS MCP address and sign in to that installation.",
+  "author": {
+    "name": "IronFlock",
+    "url": "https://ironflock.com"
+  },
+  "homepage": "https://ironflock.com",
+  "privacyPolicyUrl": "https://ironflock.com/en/company-legal/terms-privacy/",
+  "repository": "https://github.com/IronFlock/agent-skills",
+  "keywords": [
+    "ironflock",
+    "iot",
+    "edge",
+    "devices",
+    "fleet"
+  ],
+  "license": "MIT",
+  "mcpServers": {
+    "appliance": {
+      "type": "http",
+      "url": "${user_config.appliance_url}"
+    }
+  },
+  "dependencies": [
+    "ironflock"
+  ],
+  "userConfig": {
+    "appliance_url": {
+      "type": "string",
+      "title": "Appliance MCP address",
+      "description": "The full HTTPS MCP address from your appliance, for example https://api.plant.example/mcp.",
+      "required": true
+    }
+  }
+}
