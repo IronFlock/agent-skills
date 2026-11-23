@@ -2,8 +2,8 @@
 name: ironflock-fleet
 description: Look after an IronFlock fleet through IronFlock's MCP tools - devices, the apps on them, alarms, logs and the audit log - and find out why something does not work. Use this whenever the user asks which devices are online, what runs where, why a device or an app is not working or sends no data, wants to read an app's or a device's logs, asks who changed something, wants to install, update, start, stop or remove an app, create or delete a device, create, change, pause or delete an alarm, asks what an app costs, or wants an app's own tools to read or change something on a machine. For questions about the data itself (tables, SQL, transforms) use ironflock-data.
 metadata:
-  mcp-tools: list_projects list_devices list_project_apps check_app_status get_app_logs get_device_logs get_appliance_health get_appliance_logs query_audit_log list_alarms create_alarm update_alarm delete_alarm get_schema list_app_tools call_app_tool set_app_state update_app uninstall_app search_apps get_app_details get_install_quote install_app sync_app_to_store estimate_project_cost create_device delete_device
-  min-api-version: 2.0.0
+  mcp-tools: list_projects list_devices list_project_apps check_app_status get_app_logs get_device_logs get_appliance_health get_appliance_logs query_audit_log list_alarms create_alarm update_alarm delete_alarm get_schema list_app_tools read_app_tool call_app_tool set_app_state update_app uninstall_app search_apps get_app_details get_install_quote install_app sync_app_to_store estimate_project_cost create_device delete_device
+  min-api-version: 2.2.0
 ---
 
 # Look after an IronFlock fleet
@@ -16,7 +16,7 @@ what to read first, how to find the cause of a fault, and how to change
 things without surprising anyone. For the data itself, its tables, SQL and
 transforms, use the skill `ironflock-data`.
 
-It needs version 2.0.0 or later of the IronFlock API service (the service's
+It needs version 2.2.0 or later of the IronFlock API service (the service's
 own version, which the MCP server reports when Claude connects; not the
 IronFlock release). If the IronFlock tools are missing or fail to connect, use
 `ironflock-connect`.
@@ -189,19 +189,28 @@ An app can bring its own AI agent with tools: functions that run on a device,
 such as reading a machine's state or changing a setting on it. They are the
 way to ask an app about its machine.
 
-1. `list_app_tools` for the app: its tools, what each does, its arguments,
-   and the agent's instructions, which explain what the app's data means.
-   An app without tools has none to list; then the data (`ironflock-data`)
-   and the logs are what there is.
+1. `list_app_tools` for the app and stage: read each tool's title, description,
+   arguments and `annotations`, plus the agent's instructions. An app without
+   tools is answered from data (`ironflock-data`) or logs instead.
 2. The app must be running on an online device. `list_devices` for the app
-   says which devices can serve its calls.
-3. `call_app_tool` runs one tool on one device. Nothing marks which tools
-   change something on the device or on the machine it controls. Read the
-   description: a tool that only reads may run when the person asked for that
-   reading; any other tool, and any tool the person did not ask for, needs
-   their yes first, with the tool, the device by name and the arguments you
-   will pass. Run a changing tool on one device at a time, and on several
-   devices only after the person has seen the list.
+   identifies the device. Keep the project, app, stage and device consistent
+   between listing and calling.
+3. For a requested reading, use `read_app_tool` only when the developer marks
+   `readOnlyHint: true` without a contradictory destructive marking. This is
+   the developer's assertion, not proof that the handler is safe. If the server
+   refuses the read (including a conflicting alias of the same topic), explain
+   the refusal; never silently retry through `call_app_tool`.
+4. A changing or unmarked tool uses `call_app_tool`. Before calling, state the
+   marking in plain words: changing/additive, destructive (can delete or
+   overwrite), or unmarked. `readOnlyHint: false` without `destructiveHint`
+   defaults to destructive. Unknown or contradictory markings need clarification.
+   Explain the actual effect from the description, name the app, DEV or PROD,
+   device and exact argument values, and obtain the person's confirmation.
+   `idempotentHint: true` is not permission to retry: check the previous result.
+   `openWorldHint` describes interaction beyond a closed system, not permission.
+5. Run a changing tool on one device at a time; several devices require agreement
+   to the whole list. Missing tools or scopes require an explanation or a key
+   configured intentionally for the task, never an automatic broader-key fallback.
 
 The result is the app's answer; report it in plain words.
 

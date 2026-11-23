@@ -6,6 +6,15 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
+## 1.1.9 - 2026-11-23
+
+- Fleet operations use API 2.2.0's `read_app_tool` for developer-marked reads
+  and explain changing or unmarked tools before asking for confirmation.
+  A refused read is never retried automatically through the changing endpoint.
+  Connection guidance explains the separate `apptools:read` and `apptools:write`
+  scopes and the read-only preset. The bundled tool catalogue now follows the
+  published API 2.2.0 release.
+
 ## 1.1.8 - 2026-11-23
 
 - The template validator warns when tools in different agents or in the same
