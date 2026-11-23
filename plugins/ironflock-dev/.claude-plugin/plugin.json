@@ -1,7 +1,7 @@
 {
   "name": "ironflock-dev",
   "displayName": "IronFlock Dev",
-  "version": "1.1.9",
+  "version": "1.1.10",
   "description": "Build on IronFlock: design and scaffold edge apps that keep their state in the app's tables and embed their devices' web UIs in the board, write and validate their .ironflock templates (boards and widgets, data tables, app parameters, remote-access ports, AI agents), and create, change and check the board widgets themselves (@ironflock/widget-* Lit components). Needs the ironflock plugin, which Claude Code installs with it.",
   "author": {
     "name": "IronFlock",

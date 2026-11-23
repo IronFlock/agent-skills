@@ -6,7 +6,7 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
-## Unreleased
+## 1.1.10 - 2026-11-23
 
 - The CLI skill explains how to sign in to an appliance from a headless terminal using a code and a second device on the LAN.
 
