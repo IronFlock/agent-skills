@@ -3,7 +3,7 @@ name: ironflock-connect
 description: Connect Claude to IronFlock, in the cloud or on an appliance, through IronFlock's MCP endpoint and an API key, and check that the connection works. Use this whenever the user wants to connect Claude (Claude Code, the Claude app, claude.ai or Cowork) to IronFlock, set up or change the IronFlock API key or address, asks where the key goes, when the IronFlock tools are missing or fail to connect (401, unauthorized, not reachable), or asks what an IronFlock API key lets Claude do.
 metadata:
   mcp-tools: list_projects list_devices
-  min-api-version: 2.0.0
+  min-api-version: 2.2.0
 ---
 
 # Connect Claude to IronFlock
@@ -241,13 +241,17 @@ or changed:
 | `data:read`, `data:write` | read the project's data, its tables and the files apps store; create, change and delete transforms |
 | `alarms:read`, `alarms:write` | read alarms; create, change and delete them |
 | `logs:read` | read the logs of apps, devices and the audit log |
-| `apptools:call` | list and call the tools that apps bring, which run on devices and can change things there |
+| `apptools:read` | list app tools and run only those marked read-only by their developer |
+| `apptools:write` | list and call any app tool, including changing and unmarked tools |
 | `releases:publish` | publish an app's release, for automated builds |
 
 A key may also be restricted to some projects or to one app. Whatever the
 key allows, Claude never does more than the key's owner may do in IronFlock.
-The server offers Claude only the tools the key allows, and marks the tools
-that change or delete something, so that Claude asks before using them.
+The server offers Claude only the tools the key allows. The app-tool scopes
+require API service 2.2.0 or later. A developer's read-only marking is
+an assertion, not a guarantee: the platform cannot inspect a handler's effects.
+The migration replaces legacy `apptools:call` with both scopes; do not recommend
+the legacy scope for new keys. Follow the fleet skill before any changing call.
 
 Recommend the smallest key that does the job:
 
@@ -255,7 +259,10 @@ Recommend the smallest key that does the job:
   are online, which apps run where and whether their data arrives, querying
   data, reading alarms and logs. Such a key cannot install, start, stop,
   update or remove apps, create or delete devices, change alarms or
-  transforms, or call app tools.
+  transforms, or call app tools. The preset includes neither `apptools:read`
+  nor `apptools:write`. Add `apptools:read` explicitly only when the person
+  wants developer-marked app reads; select `apptools:write` separately for
+  changing calls, with the narrowest project or app restriction.
 - Restricted to the projects the person works on, and for a connector that a
   whole organization shares, to what all its members may see.
 - Write scopes only when the person wants Claude to act, and
