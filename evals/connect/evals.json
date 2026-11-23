@@ -37,6 +37,12 @@
       "name": "error-429",
       "prompt": "While you were checking our devices, IronFlock answered with HTTP 429: \"This API key has made too many requests. Wait 20 seconds before the next one.\" Should I make a new key?",
       "expected_output": "No new key: the key is fine, IronFlock limits the requests per key. Wait the 20 seconds the answer names, then go on with fewer calls at once."
+    },
+    {
+      "id": 7,
+      "name": "app-tool-scopes",
+      "prompt": "I want a key that lets Claude read a machine through an app tool, but never run its changing tools. Does the Read only preset cover this? What would a separate key need to run changing app tools?",
+      "expected_output": "Explain apptools:read versus apptools:write. The Read only preset includes neither. Explicitly select apptools:read for developer-marked reads, with project/app restrictions. The marking is a developer assertion, not a safety guarantee. apptools:write permits all app tools and needs separate intentional approval."
     }
   ]
 }

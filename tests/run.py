@@ -30,6 +30,12 @@ validator warns about) into a copy of the starter, and validate.py must report
 it; every case in SKILL_ACCEPTED is correct, at the limits, and must produce no
 findings.
 
+Then tool annotations: every mutation in AI_MUTATIONS plants one mistake in the
+annotations of the starter's AI tools, and validate.py must report exactly the
+findings it lists, nothing else (the starter's tool without a title and
+annotations gets only the warning about readOnlyHint); every case in
+AI_ACCEPTED must produce no findings.
+
 Needs network access for the widget schemas (cached after the first run).
 """
 
@@ -265,6 +271,7 @@ def sub_agent(app: Path) -> None:
     edit(app, AI, lambda t: t.replace("  tools:\n", "  tools:\n    codes:\n      delegate: codes\n      description: Looks up fault codes.\n", 1)
          + "codes:\n  system_prompt: Look up fault codes with app/fault-codes.\n  skills: [fault-codes]\n"
          "  tools:\n    current_reading:\n      topic: current_reading\n      description: Reads the machine.\n"
+         "      annotations:\n        readOnlyHint: true\n"
          "  max_context_tokens: 8000\n  messages_after_summary: 5\n  max_iterations: 5\n")
 
 
@@ -454,6 +461,131 @@ SKILL_ACCEPTED: dict[str, SkillMutation] = {
 }
 
 
+# -- tool annotations ------------------------------------------------------------
+
+READ_ONLY = "        readOnlyHint: true\n"  # the starter tool's first hint
+
+
+def add_hint(hint: str) -> Callable[[Path], None]:
+    """One more hint on the starter's tool, after its readOnlyHint: true."""
+    return lambda a: edit(a, AI, lambda t: t.replace(READ_ONLY, READ_ONLY + f"        {hint}\n", 1))
+
+
+def no_annotations(app: Path) -> None:
+    """The starter's tool as a template from before annotations: no title, no annotations."""
+    edit(app, AI, lambda t: re.sub(r"      annotations:\n(        .*\n)+", "", t.replace("      title: Current reading\n", ""), count=1))
+
+
+def delegate_with_annotations(app: Path) -> None:
+    sub_agent(app)
+    edit(app, AI, lambda t: t.replace("      delegate: codes\n", "      delegate: codes\n      annotations:\n" + READ_ONLY, 1))
+
+
+def every_hint(app: Path) -> None:
+    """A second topic tool that only adds something new, with a title and all four hints."""
+    edit(app, AI, lambda t: t.replace("  tools:\n", "  tools:\n    add_note:\n      title: Add note\n"
+                                      "      topic: add_note\n      description: Adds a note to the machine's log.\n"
+                                      "      annotations:\n        readOnlyHint: false\n        destructiveHint: false\n"
+                                      "        idempotentHint: false\n        openWorldHint: true\n", 1))
+
+
+def changing(rest: str) -> Callable[[Path], None]:
+    """The starter's tool marked as changing something: readOnlyHint: false, then rest."""
+    return lambda a: edit(a, AI, lambda t: t.replace(READ_ONLY, "        readOnlyHint: false\n" + rest, 1))
+
+
+TOOL = "machines.tools.current_reading"
+
+
+def topic_alias(hints: str, *, other_agent: bool = False, topic: str = "current_reading") -> SkillMutation:
+    def mutate(app: Path) -> None:
+        alias = (
+            f"    alias:\n      title: Alias\n      topic: '{topic}'\n"
+            "      description: The same device handler.\n      annotations:\n"
+            + "".join(f"        {line}\n" for line in hints.splitlines())
+        )
+        if other_agent:
+            edit(app, AI, lambda t: t + "\nother:\n  system_prompt: Read the machine.\n"
+                 "  max_context_tokens: 32000\n  messages_after_summary: 10\n  max_iterations: 12\n  tools:\n" + alias)
+        else:
+            edit(app, AI, lambda t: t.replace("  max_context_tokens:", alias + "  max_context_tokens:", 1))
+    return mutate
+
+
+# name: (mutation, the exact findings as (level, file, path, part of the message))
+AI_MUTATIONS: dict[str, tuple[SkillMutation, list[tuple[str, str, str, str]]]] = {
+    "same topic with changing alias": (
+        topic_alias("readOnlyHint: false\ndestructiveHint: false"),
+        [("WARN", "ai-template.yml", "machines.tools.alias", "different annotations from machines.tools.current_reading")],
+    ),
+    "same topic across agents with changing alias": (
+        topic_alias("readOnlyHint: false\ndestructiveHint: true", other_agent=True),
+        [("WARN", "ai-template.yml", "other.tools.alias", "different annotations from machines.tools.current_reading")],
+    ),
+    "same topic with different open-world marking": (
+        topic_alias("readOnlyHint: true\nopenWorldHint: false"),
+        [("WARN", "ai-template.yml", "machines.tools.alias", "different annotations")],
+    ),
+    # Reported once, by validate.py's sentence, not also by the schema's if/then.
+    "annotations on a delegate tool": (
+        delegate_with_annotations,
+        [("ERROR", "ai-template.yml", "machines.tools.codes.annotations",
+          "remove the annotations and annotate the other agent's tools instead")],
+    ),
+    "destructiveHint: true next to readOnlyHint: true": (
+        add_hint("destructiveHint: true"),
+        [("WARN", "ai-template.yml", f"{TOOL}.annotations.destructiveHint", "contradict each other")],
+    ),
+    "destructiveHint: false next to readOnlyHint: true": (
+        add_hint("destructiveHint: false"),
+        [("WARN", "ai-template.yml", f"{TOOL}.annotations.destructiveHint", "counts for nothing next to readOnlyHint: true")],
+    ),
+    "idempotentHint next to readOnlyHint: true": (
+        add_hint("idempotentHint: true"),
+        [("WARN", "ai-template.yml", f"{TOOL}.annotations.idempotentHint", "counts for nothing next to readOnlyHint: true")],
+    ),
+    "topic tool without readOnlyHint": (
+        lambda a: edit(a, AI, lambda t: t.replace(READ_ONLY, "", 1)),
+        [("WARN", "ai-template.yml", TOOL, "counts as changing something and possibly destructive")],
+    ),
+    "readOnlyHint: false without destructiveHint": (
+        changing(""),
+        [("WARN", "ai-template.yml", f"{TOOL}.annotations", "counts as destructive (MCP's default)")],
+    ),
+    # A template from before annotations validates as it did, with only that warning.
+    "no title and no annotations": (
+        no_annotations,
+        [("WARN", "ai-template.yml", TOOL, "add `readOnlyHint: true` if it only reads")],
+    ),
+    # The schema refuses malformed annotations, and validate.py adds nothing to it.
+    "a hint MCP does not have": (
+        add_hint("safeHint: true"),
+        [("ERROR", "ai-template.yml", f"{TOOL}.annotations", "'safeHint' was unexpected")],
+    ),
+    "a hint that is not true or false": (
+        lambda a: edit(a, AI, lambda t: t.replace(READ_ONLY, '        readOnlyHint: "yes"\n', 1)),
+        [("ERROR", "ai-template.yml", f"{TOOL}.annotations.readOnlyHint", "is not of type 'boolean'")],
+    ),
+    "annotations without a value": (
+        lambda a: edit(a, AI, lambda t: re.sub(r"      annotations:\n(        .*\n)+", "      annotations:\n", t, count=1)),
+        [("ERROR", "ai-template.yml", f"{TOOL}.annotations", "null is not of type 'object'")],
+    ),
+    "an empty title": (
+        lambda a: edit(a, AI, lambda t: t.replace("      title: Current reading\n", '      title: ""\n', 1)),
+        [("ERROR", "ai-template.yml", f"{TOOL}.title", "should be non-empty")],
+    ),
+}
+
+AI_ACCEPTED: dict[str, SkillMutation] = {
+    "same topic with equivalent defaults": topic_alias("readOnlyHint: true"),
+    "same topic across agents with consistent markings": topic_alias("readOnlyHint: true\nopenWorldHint: true", other_agent=True),
+    "different topics may have different markings": topic_alias("readOnlyHint: false\ndestructiveHint: true", topic="reset_counter"),
+    "a tool with a title and every hint": every_hint,
+    "readOnlyHint: false with destructiveHint and nothing else": lambda a: edit(a, AI, lambda t: t.replace(
+        READ_ONLY + "        openWorldHint: true\n", "        readOnlyHint: false\n        destructiveHint: true\n", 1)),
+}
+
+
 def skill_findings(app: Path, name: str) -> list[tuple[str, str, str, str]]:
     """(level, file, path, message) for every finding; the line is cut off the file."""
     done = subprocess.run([sys.executable, str(VALIDATE), str(app), "--offline"], capture_output=True, text=True)
@@ -463,8 +595,14 @@ def skill_findings(app: Path, name: str) -> list[tuple[str, str, str, str]]:
             for m in map(FINDING.match, done.stdout.splitlines()) if m]
 
 
-def check_skills() -> tuple[int, list[str]]:
-    """Problems with validate.py's app-skill checks."""
+def check_cases(
+    mutations: dict[str, tuple[SkillMutation, list[tuple[str, str, str, str]]]],
+    accepted: dict[str, SkillMutation],
+    exact: bool = False,
+) -> tuple[int, list[str]]:
+    """Problems with validate.py's findings on mutated copies of the starter
+    (without its board). With exact, a mutation must produce its expected
+    findings and nothing else."""
     problems = []
     with tempfile.TemporaryDirectory() as tmp:
         base = Path(tmp) / "base"
@@ -473,7 +611,7 @@ def check_skills() -> tuple[int, list[str]]:
         if found := skill_findings(base, "the starter without its board"):
             return 0, [f"the base case is not clean: {found}"]
         cases = 0
-        for name, (mutate, expected) in SKILL_MUTATIONS.items():
+        for name, (mutate, expected) in mutations.items():
             app = Path(tmp) / f"case-{cases}"
             cases += 1
             shutil.copytree(base, app, symlinks=True)
@@ -482,7 +620,9 @@ def check_skills() -> tuple[int, list[str]]:
             for level, file, path, text in expected:
                 if not any(f[0] == level and f[1] == file and f[2] == path and text in f[3] for f in found):
                     problems.append(f"{name}: missing {level} {file} {path} :: {text}; got {found}")
-        for name, mutate in SKILL_ACCEPTED.items():
+            if exact and len(found) != len(expected):
+                problems.append(f"{name}: expected only {expected}; got {found}")
+        for name, mutate in accepted.items():
             app = Path(tmp) / f"case-{cases}"
             cases += 1
             shutil.copytree(base, app, symlinks=True)
@@ -522,11 +662,14 @@ def main() -> int:
     for problem in problems:
         print(f"     {problem}")
     failed += bool(problems)
-    cases, problems = check_skills()
-    print(f"{'ok  ' if not problems else 'FAIL'} app skills: {cases} case(s)")
-    for problem in problems:
-        print(f"     {problem}")
-    failed += bool(problems)
+    for label, (cases, problems) in (
+        ("app skills", check_cases(SKILL_MUTATIONS, SKILL_ACCEPTED)),
+        ("tool annotations", check_cases(AI_MUTATIONS, AI_ACCEPTED, exact=True)),
+    ):
+        print(f"{'ok  ' if not problems else 'FAIL'} {label}: {cases} case(s)")
+        for problem in problems:
+            print(f"     {problem}")
+        failed += bool(problems)
     return 1 if failed else 0
 
 

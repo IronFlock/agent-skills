@@ -599,6 +599,28 @@ def grade_app_skill(app: Path, errors, warnings):
     ]
 
 
+def grade_tool_markings(app: Path, errors, warnings):
+    ai = load(app / ".ironflock/ai-template.yml") or {}
+    tools = [t for a in ai.values() if isinstance(a, dict)
+             for t in (a.get("tools") or {}).values() if isinstance(t, dict) and "topic" in t]
+    expected = {
+        "read_status": {"readOnlyHint": True, "openWorldHint": True},
+        "append_note": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": True},
+        "set_speed": {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": True, "openWorldHint": True},
+    }
+    results = [check("validator accepts the tools without warnings", not errors and not warnings,
+                     f"{len(errors)} errors, {len(warnings)} warnings")]
+    for topic, hints in expected.items():
+        matches = [t for t in tools if t.get("topic") == topic]
+        correct = matches and all(isinstance(t.get("title"), str) and t["title"].strip()
+                                 and isinstance(t.get("annotations"), dict)
+                                 and all(t["annotations"].get(k) is v for k, v in hints.items()) for t in matches)
+        results.append(check(f"{topic} has a title and the correct semantic markings", bool(correct), f"{len(matches)} tools"))
+    results.append(check("both read_status aliases remain available",
+                         sum(t.get("topic") == "read_status" for t in tools) >= 2, "checked all agents"))
+    return results
+
+
 GRADERS = {
     "overview-board": grade_overview,
     "multi-page-navigation": grade_multipage,
@@ -608,6 +630,7 @@ GRADERS = {
     "records-live": grade_records,
     "camera-app-interview": grade_entities,
     "app-skill": grade_app_skill,
+    "tool-markings": grade_tool_markings,
 }
 
 

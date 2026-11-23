@@ -26,6 +26,7 @@ machines:
   skills: [machine-diagnosis]
   tools:
     current_reading:
+      title: Current reading
       topic: current_reading
       description: >-
         Reads the machine at one device now. Returns the device's name, the
@@ -33,6 +34,9 @@ machines:
         force on that device, or an error that says why the machine cannot be
         read. The call fails when the device is offline or the app is not
         running on it.
+      annotations:
+        readOnlyHint: true
+        openWorldHint: true
   max_context_tokens: 32000
   messages_after_summary: 10
   max_iterations: 12

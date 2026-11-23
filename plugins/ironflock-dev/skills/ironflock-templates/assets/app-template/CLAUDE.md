@@ -45,7 +45,9 @@ function, a different look. Record a choice between alternatives in
   keep running.
 - The AI agent (`.ironflock/ai-template.yml`) calls the device function
   `current_reading` that `main.py` registers; the tool's `topic` and the
-  registered name must match. Its app skill
+  registered name must match. The tool's `annotations` say it only reads
+  (`readOnlyHint: true`): when the function starts to change anything, change
+  them with it. Its app skill
   (`.ironflock/skills/machine-diagnosis/SKILL.md`) names tables, columns and
   that tool: change it with them. Prompt text names the skill
   `app/machine-diagnosis`; `skills:` lists it without the prefix.

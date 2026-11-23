@@ -25,6 +25,7 @@ test:
     {{PY}} tools/check_tools.py
     {{PY}} tools/release.py check
     {{PY}} tests/repo_checks.py
+    {{PY}} tests/annotation_evals.py
     {{PY}} tests/preset_checks.py
 
 # Copy the tool catalogue of the API service's current release from a local

@@ -174,6 +174,16 @@ def grade_error_429(reply: str, work: Path) -> list[dict]:
     ]
 
 
+def grade_app_tool_scopes(reply: str, work: Path) -> list[dict]:
+    return [
+        no_key_request(reply),
+        check("names the app-tool read scope", *said(reply, r"apptools:read")),
+        check("names the separate app-tool write scope", *said(reply, r"apptools:write")),
+        check("explains the developer assertion", *said(reply, r"developer|assertion|not a guarantee")),
+        check("says the read-only preset excludes app tools", *said(reply, r"(preset|read.only)[^.\n]{0,120}(neither|exclud|does not|doesn't|no app|not include)")),
+    ]
+
+
 GRADERS: dict[str, Callable[[str, Path], list[dict]]] = {
     "claude-code-setup": grade_claude_code_setup,
     "pasted-key": grade_pasted_key,
@@ -181,6 +191,7 @@ GRADERS: dict[str, Callable[[str, Path], list[dict]]] = {
     "appliance-browser": grade_appliance_browser,
     "error-401": grade_error_401,
     "error-429": grade_error_429,
+    "app-tool-scopes": grade_app_tool_scopes,
 }
 
 

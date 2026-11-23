@@ -14,8 +14,9 @@ against the rules the platform only enforces at install or render time:
 fleetdb's data-template checks, cross-file references (board data bindings must
 name real tables and columns), each board widget's config against that
 widget's published definition schema, the app's docker-compose.yml against
-the privileged access data-template.yml declares, and the app skills in
-skills/ against the release build's rules and the agents that list them.
+the privileged access data-template.yml declares, the annotations of the AI
+agents' tools, and the app skills in skills/ against the release build's rules
+and the agents that list them.
 
 Prints one line per finding as `LEVEL file:line path: message` and exits 1 if
 there is any ERROR. Warnings point at things that are legal but probably wrong.
@@ -210,6 +211,11 @@ def check_schema(name: str, doc: Doc, report: Report) -> bool:
         # A failed anyOf reports one summary error ("is not valid under any of
         # the given schemas"); best_match descends to the branch that explains it.
         best = best_match([err])
+        # The ai-template's only if/then forbids annotations on a delegate tool;
+        # check_ai reports that with a sentence that says what to do.
+        if name == "ai-template" and list(best.schema_path)[-2:] == ["then", "properties"]:
+            ok = False
+            continue
         message = re.sub(r"\bNone\b", "null", re.sub(r"\bTrue\b", "true", re.sub(r"\bFalse\b", "false", best.message)))
         report.error(doc, list(best.absolute_path), message)
         ok = False
@@ -488,6 +494,74 @@ def check_port(doc: Doc, report: Report) -> None:
             )
 
 
+def check_annotations(doc: Doc, tpath: list, tool: dict, report: Report) -> None:
+    """A tool's MCP annotations. The schema checks their form; these are the
+    rules it cannot express, and the clear sentence for the one it can (no
+    annotations on a delegate tool, whose schema error check_schema drops).
+    They are hints the developer states, so a missing hint is a warning,
+    never an error."""
+    annotations = tool.get("annotations")
+    if "delegate" in tool:
+        if "annotations" in tool:
+            report.error(
+                doc,
+                tpath + ["annotations"],
+                "remove the annotations and annotate the other agent's tools instead: "
+                "a delegate tool takes no annotations, because what it does is what those tools do",
+            )
+        return
+    if "topic" not in tool or ("annotations" in tool and not isinstance(annotations, dict)):
+        return  # no topic, or annotations that are not a mapping (null included): the schema reports it
+    hints = annotations or {}
+    read_only = hints.get("readOnlyHint")
+    if "readOnlyHint" not in hints:
+        report.warn(
+            doc,
+            tpath,
+            "no annotations.readOnlyHint, so the tool counts as changing something and possibly destructive; "
+            "add `readOnlyHint: true` if it only reads, or `readOnlyHint: false` with `destructiveHint` "
+            "(and `idempotentHint`) if it changes something",
+        )
+    elif read_only is True:
+        for hint in ("destructiveHint", "idempotentHint"):
+            if hint not in hints:
+                continue
+            if hint == "destructiveHint" and hints[hint] is True:
+                message = (
+                    "destructiveHint: true and readOnlyHint: true contradict each other: a tool that can delete "
+                    "or overwrite is not read-only; set `readOnlyHint: false`, or remove destructiveHint if the "
+                    "tool really only reads"
+                )
+            else:
+                message = (
+                    f"{hint} counts for nothing next to readOnlyHint: true; remove it, "
+                    "or set `readOnlyHint: false` if the tool changes anything"
+                )
+            report.warn(doc, tpath + ["annotations", hint], message)
+    elif read_only is False and "destructiveHint" not in hints:
+        report.warn(
+            doc,
+            tpath + ["annotations"],
+            "readOnlyHint: false without destructiveHint, so the tool counts as destructive (MCP's default); "
+            "state `destructiveHint: true` if it deletes, overwrites or acts on the machine, "
+            "or `destructiveHint: false` if it only adds something new",
+        )
+
+
+def topic_markings(tool: dict) -> tuple | None:
+    """Compare effective hints, including defaults, but leave malformed hints to the schema."""
+    hints = tool.get("annotations", {})
+    if not isinstance(hints, dict) or any(type(v) is not bool for v in hints.values()):
+        return None
+    read = hints.get("readOnlyHint", False)
+    return (
+        read,
+        hints.get("destructiveHint", False) if read else hints.get("destructiveHint", True),
+        False if read else hints.get("idempotentHint", False),
+        hints.get("openWorldHint", True),
+    )
+
+
 def check_ai(doc: Doc, report: Report, data: DataModel) -> None:
     if not isinstance(doc.data, dict):
         return
@@ -497,6 +571,7 @@ def check_ai(doc: Doc, report: Report, data: DataModel) -> None:
         report.error(doc, [], "no agent has main: true, so the IronFlock assistant cannot reach any of them")
     elif len(mains) > 1:
         report.warn(doc, [mains[1], "main"], "more than one main agent; normally exactly one is main")
+    topics: dict[str, tuple[list, tuple]] = {}
     for name, agent in agents.items():
         tools = agent.get("tools") if isinstance(agent.get("tools"), dict) else {}
         for tname, tool in tools.items():
@@ -510,6 +585,22 @@ def check_ai(doc: Doc, report: Report, data: DataModel) -> None:
                 report.error(doc, tpath + ["delegate"], f"no agent named '{target}' in this file")
             elif target == name:
                 report.error(doc, tpath + ["delegate"], "an agent cannot delegate to itself")
+            check_annotations(doc, tpath, tool, report)
+            topic = tool.get("topic")
+            markings = topic_markings(tool)
+            if isinstance(topic, str) and topic.strip() and "delegate" not in tool and markings is not None:
+                topic = topic.strip()
+                if topic in topics:
+                    first_path, first_markings = topics[topic]
+                    if markings != first_markings:
+                        report.warn(
+                            doc, tpath,
+                            f"topic '{topic}' has different annotations from {'.'.join(first_path)}; "
+                            "use consistent markings for the same handler across all agents. "
+                            "The read-only API refuses this topic if any alias is not read-only",
+                        )
+                else:
+                    topics[topic] = (tpath, markings)
         prompt, budget = agent.get("system_prompt"), agent.get("max_context_tokens")
         if isinstance(prompt, str) and isinstance(budget, int) and len(prompt) / 4 > budget / 2:
             report.warn(doc, [name, "system_prompt"], "system_prompt uses over half of max_context_tokens")
