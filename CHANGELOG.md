@@ -6,7 +6,7 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
-## Unreleased
+## 1.1.9 - 2026-11-23
 
 - Fleet operations use API 2.2.0's `read_app_tool` for developer-marked reads
   and explain changing or unmarked tools before asking for confirmation.
