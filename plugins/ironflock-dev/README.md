@@ -81,7 +81,7 @@ together with this one. If you add `ironflock-dev` from the directory, add
 `ironflock` there as well.
 
 Building and validating an app needs no IronFlock account and no API key.
-You need them only when Claude is to look at your instance, which is what
+Sign in when Claude needs to look at your instance, which is what
 `ironflock` is for.
 
 ## Requirements

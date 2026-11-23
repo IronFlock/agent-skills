@@ -9,7 +9,7 @@
     {
       "name": "ironflock",
       "source": "./plugins/ironflock",
-      "description": "Operate IronFlock: connects Claude to your IronFlock instance, in the cloud or on an appliance, through IronFlock's MCP endpoint and an API key that you enter in Claude's settings, looks after its devices, apps, alarms and logs and answers questions from its data, and, where Claude has a shell, also works on machines with the ironflock command. The skills to build apps and widgets are in ironflock-dev.",
+      "description": "Connect Claude to IronFlock in the cloud with browser sign-in. Work with devices, apps, alarms, logs and project data. Add the optional IronFlock Appliance plugin for a direct connection to a local installation.",
       "category": "productivity",
       "keywords": [
         "ironflock",
@@ -33,6 +33,17 @@
         "templates",
         "lit",
         "web-components"
+      ]
+    },
+    {
+      "name": "ironflock-appliance",
+      "source": "./plugins/ironflock-appliance",
+      "description": "Add a direct connection from Claude Code to your IronFlock appliance. Configure the appliance’s HTTPS MCP address and sign in to that installation.",
+      "category": "productivity",
+      "keywords": [
+        "ironflock",
+        "appliance",
+        "iot"
       ]
     }
   ]

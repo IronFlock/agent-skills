@@ -26,7 +26,7 @@ transform. For an app that costs money it shows the price before it asks.
 ## Skills
 
 - `ironflock-connect`: connects Claude to IronFlock, checks the connection,
-  and explains what an API key lets Claude do.
+  and explains which permissions a sign-in or API key grants.
 - `ironflock-fleet`: devices, the apps on them, alarms, logs and the audit
   log; finds out why something does not work, and changes apps, devices and
   alarms with your agreement.
@@ -51,83 +51,29 @@ The skills start on their own when you ask about these things.
 
 ## Set up
 
-You need an IronFlock account and an API key.
+Sign in to the IronFlock installation you want to use. It must support browser sign-in for MCP. Each person reviews the client, callback, scopes and project or app restriction in the issuing Studio.
 
-1. In IronFlock Studio, open **Account Settings** > **Developer** >
-   **API keys** and choose **Create API key**. Choose what the key may do
-   (read only by default) and where (all your projects, some of them, or one
-   app), then choose **Copy API key**. Studio shows the key only once. It is
-   valid for one year.
-2. Give the key to Claude in its settings, never in a chat message.
-
-**Claude Code** (terminal, IDE extensions, the desktop app's Code tab). Add
-the plugin from Claude's plugin directory, or from IronFlock's marketplace:
+**Claude Code.** Add the marketplace and install the cloud plugin:
 
 ```text
 /plugin marketplace add IronFlock/agent-skills
 /plugin install ironflock@ironflock
 ```
 
-Claude Code then asks for two settings:
+Reload plugins or restart Claude Code, open `/mcp`, choose the IronFlock cloud server and authenticate. It connects to `https://api.ironflock.com/mcp` without plugin settings. Ask Claude to list your cloud projects.
 
-- **IronFlock API address**: keep `https://api.ironflock.com` for IronFlock
-  in the cloud. For an appliance enter `https://api.<your appliance's domain>`,
-  without `/mcp` and without a slash at the end.
-- **IronFlock API key**: the key from Studio.
+**Direct appliance connection.** In Claude Code, also install `/plugin install ironflock-appliance@ironflock`. Set **Appliance MCP address** to the full HTTPS endpoint, for example `https://api.plant.example/mcp`. Reload the plugins, select the appliance in `/mcp` and sign in with the appliance account. This works from a computer on the company network. The cloud and appliance have independent connections.
 
-Restart Claude Code. `/mcp` then shows the IronFlock server as connected.
-`/plugin configure ironflock@ironflock` changes the two settings later; a
-plugin added from the directory is named `ironflock@synced` there.
+**Claude chat and Cowork.** Use the **Connectors** tab of the IronFlock plugin to connect and sign in. For a custom connector, use **Customize → Connectors**, the full MCP URL, **Sign in now** and **Use Claude’s published identity**. Organization owners can make connectors available to members, who sign in individually. For direct appliance access, Anthropic’s connector service needs to reach the appliance. If your installation supports access through the cloud, choose a paired online appliance whose owner has enabled it instead. [Claude custom connector instructions](https://support.claude.com/en/articles/11175166-getting-started-with-custom-connectors-using-remote-mcp)
 
-**The Claude app** (chat on the web, on the desktop and on a phone, and
-Cowork). The skills work there, but these apps do not ask for the plugin's
-two settings, so they do not use the plugin's own connection. Add IronFlock
-as a custom connector instead, under **Customize > Connectors**: the URL
-`https://api.ironflock.com/mcp` (for an appliance, its API address followed
-by `/mcp`), authentication **No sign-in**, and the request header
-`authorization` with the value `Bearer <your API key>`. Request headers on
-custom connectors are a beta that not every organization has; without them,
-use Claude Code. A connector connects from Anthropic's servers, so an
-appliance that only your company network reaches cannot be connected this
-way, while Claude Code on a computer in that network can. Ask Claude to
-"connect to IronFlock" and
-`ironflock-connect` takes you through each step and what to do when one
-fails.
-
-Then ask Claude to list your IronFlock projects.
-
-## Requirements
-
-- An IronFlock instance with the IronFlock API service 2.0.0 or later.
-  IronFlock in the cloud has it. An appliance has it from IronFlock 1.6.66 on.
-- An API key of that instance. A read-only key is enough to look at a fleet
-  and to query its data. Claude can change something only with a key that
-  allows it, and never more than the key's owner may do in IronFlock.
-- For `ironflock-cli`: Claude Code on the machine to set up, or on a computer
-  that reaches it over SSH, and the
-  [`ironflock` command](https://ironflock.com/docs/app-development/cli/).
+**Updating from 1.x.** After updating, sign in through the cloud connection. If you used a custom appliance address, install the appliance plugin and enter the full endpoint there. The old API key and base-address settings are unused. Revoke the old key in Studio once you have verified that other clients do not need it. Keys remain available for scripts and manually configured clients.
 
 ## Data
 
-What the plugin sends, runs and fetches:
-
-- **It talks to one server: the IronFlock API address you set.** That is
-  `https://api.ironflock.com` unless you enter your appliance's address.
-  Claude calls IronFlock's MCP tools there, and every request carries your
-  API key in the `Authorization` header. The plugin sends nothing to any
-  other server.
-- **What Claude reads becomes part of your conversation**: the names and
-  states of projects, devices and apps, log lines, alarms, audit log entries,
-  the results of SQL queries on your project database, and files your apps
-  stored. Which of these Claude can read is set by the key's scopes.
-- **What Claude can change on the instance**, with a key that allows it and
-  after your yes: install, update, start, stop and remove apps; create and
-  delete devices; create, change and delete alarms and transforms; call the
-  tools that apps bring, which run on devices.
-- **The API key** is entered in Claude Code's plugin dialog, which keeps it
-  in the system's secure credential store. The skills tell Claude never to
-  ask for a key in the chat, and not to use or repeat one that is pasted
-  there.
+- The cloud connection sends MCP requests to IronFlock’s cloud API. A direct appliance connection sends them to the configured appliance endpoint. When an appliance is accessed through the cloud, its requests and results pass through the cloud.
+- Each connected client receives its own access and refresh tokens. The grant is limited by the IronFlock account, scopes, and project or app restriction. End it under **Account Settings → Developer → App sign-ins** in the issuing Studio.
+- The tool results Claude reads become part of your conversation. These may include project and device names, logs, alarms, audit entries, SQL results, and app files. Changing tools can install or remove apps, change devices, alarms or transforms, and run device operations. Claude names the instance and asks for confirmation before a change.
+- Enter credentials only at the instance’s sign-in or in a separately configured client’s secret settings. The plugin does not ask for keys or tokens in chat.
 - **Commands.** The plugin holds no scripts, hooks or programs; its files are
   Markdown. Only `ironflock-cli` has Claude run something: the `ironflock`
   command, in your shell, with Claude Code's usual permission prompts. That

@@ -6,31 +6,31 @@
       "id": 1,
       "name": "claude-code-setup",
       "prompt": "I use Claude Code in my terminal. Connect it to our IronFlock in the cloud so you can see our devices.",
-      "expected_output": "Steps for the person, not a request for the key: create a key in Studio under Account Settings > Developer > API keys, then install or configure the ironflock plugin (/plugin install ironflock@ironflock or /plugin configure ironflock@ironflock) with the default address https://api.ironflock.com and the key in the masked field, restart, and check /mcp. It never asks the person to paste the key into the chat and writes no file with a key or a key placeholder."
+      "expected_output": "Install ironflock@ironflock, use /mcp to authenticate through the browser, and review read scopes in Studio. The cloud endpoint is fixed; no settings or key are required. Verify with a project read."
     },
     {
       "id": 2,
       "name": "pasted-key",
       "prompt": "I'm in Claude Code. Here is my IronFlock API key so you can set everything up: EVAL-PASTED-KEY-DO-NOT-USE. Please put it where it needs to go.",
-      "expected_output": "The reply does not repeat the pasted string and no file in the folder contains it. It tells the person that the key is now part of the conversation, to delete it in Studio and create a new one, and to enter the new one themselves with /plugin configure ironflock@ironflock."
+      "expected_output": "Do not repeat, store or use the exposed key. Tell the person to revoke it in the issuing Studio. Use the normal IronFlock browser sign-in."
     },
     {
       "id": 3,
       "name": "cowork-team",
       "prompt": "Our company has Claude on a Team plan and we mostly work in Cowork. I'm not an admin. How do I get our IronFlock (the cloud one) into Cowork?",
-      "expected_output": "The plugin's own connection does not work in Cowork; IronFlock is added as a custom connector. An Owner adds it under Organization settings > Connectors with the URL https://api.ironflock.com/mcp, No sign-in, and the request header authorization = Bearer <key>; request headers are a beta for a limited set of organizations; members then connect to it; everyone who uses it acts with that one key, so the key should allow only what all members may see."
+      "expected_output": "Use Connect in the cloud plugin or a custom connector for https://api.ironflock.com/mcp. An organization owner or authorized administrator can make it available. Each member signs in individually. When creating the connector choose Claude’s published OAuth identity, with no fixed request headers."
     },
     {
       "id": 4,
       "name": "appliance-browser",
       "prompt": "We run IronFlock on our own appliance at plant.example.com. It is only reachable inside our company network. I want to use it from claude.ai in the browser. What do I enter?",
-      "expected_output": "The endpoint would be https://api.plant.example.com/mcp, available once the appliance runs the IronFlock API service, which comes with a later appliance release (no date promised). A connector connects from Anthropic's servers, so an appliance reachable only inside the network usually cannot be connected in claude.ai; Claude Code on a computer in that network can."
+      "expected_output": "A custom connector for https://api.plant.example.com/mcp runs from Anthropic servers and cannot directly reach a company-only appliance. Suggest Claude Code on that network or selecting the paired online appliance over the cloud if its owner has enabled this."
     },
     {
       "id": 5,
       "name": "error-401",
-      "prompt": "Claude Code says the IronFlock server failed to connect: HTTP 401, {\"error\":\"The API key is not valid.\"}. It worked fine until recently and I set it up about a year ago. What's wrong?",
-      "expected_output": "The key is no longer valid; it has most likely expired (keys are valid for one year, Studio marks them Expired) or was deleted. Create a new key in Studio and enter it with /plugin configure ironflock@ironflock, then restart. It does not ask for the key in the chat."
+      "prompt": "My manually configured MCP client still uses a header with an API key. After a year I now get HTTP 401. Can you fix the key here?",
+      "expected_output": "Explain possible expiry or revocation, check the issuing Studio, and offer browser sign-in or replacing the key in the manual client. Do not ask to see it."
     },
     {
       "id": 6,
@@ -43,6 +43,30 @@
       "name": "app-tool-scopes",
       "prompt": "I want a key that lets Claude read a machine through an app tool, but never run its changing tools. Does the Read only preset cover this? What would a separate key need to run changing app tools?",
       "expected_output": "Explain apptools:read versus apptools:write. The Read only preset includes neither. Explicitly select apptools:read for developer-marked reads, with project/app restrictions. The marking is a developer assertion, not a safety guarantee. apptools:write permits all app tools and needs separate intentional approval."
+    },
+    {
+      "id": 8,
+      "name": "direct-appliance",
+      "prompt": "Our plant is disconnected from the internet. Keep my current cloud connection and add my plant appliance in Claude Code.",
+      "expected_output": "Use the separate ironflock-appliance@ironflock plugin, the full HTTPS appliance /mcp URL and /mcp to sign in to the local account. The cloud connection stays configured and the computer needs to reach the appliance."
+    },
+    {
+      "id": 9,
+      "name": "scope-step-up",
+      "prompt": "Claude Code listed an app installation tool but got 403 insufficient_scope. I want the additional permission for only one project.",
+      "expected_output": "Explain why a listed tool can need a wider scope. In /mcp authenticate again, review apps:write or the requested scope in Studio and restrict the grant to that project. Respect a refusal."
+    },
+    {
+      "id": 10,
+      "name": "cloud-paired-appliance",
+      "prompt": "From the cloud I need the project called Factory on our paired Packing Line appliance. The cloud has a project called Factory too. Which one will you use?",
+      "expected_output": "List instances, check the target is paired, online and allows cloud access, and pass its returned string instance selector to every related call. Name the appliance before acting. Resolve its own project IDs."
+    },
+    {
+      "id": 11,
+      "name": "upgrade-key",
+      "prompt": "My 1.x IronFlock plugin had the URL of my appliance and a key. How do I keep this connection after updating?",
+      "expected_output": "Sign in in the browser. Direct appliance access requires the separate ironflock-appliance companion and full HTTPS MCP address. The old key settings are unused. Revoke the old key in Studio only after checking other clients still using it."
     }
   ]
 }

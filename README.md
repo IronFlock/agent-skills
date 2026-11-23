@@ -1,11 +1,12 @@
 # IronFlock agent skills
 
-A Claude Code marketplace, `ironflock`, with two plugins for the IronFlock IoT
+A Claude Code marketplace, `ironflock`, with three plugins for the IronFlock IoT
 platform:
 
 | Plugin | For | Skills |
 |---|---|---|
 | `ironflock` | people who operate IronFlock: projects, devices, apps and their data | `ironflock-connect`, `ironflock-fleet`, `ironflock-data`, `ironflock-production-figures`, `ironflock-cli` (and `ironflock-dev-moved`, see below) |
+| `ironflock-appliance` | direct sign-in to an appliance from Claude Code | adds the appliance MCP connection to the IronFlock skills |
 | `ironflock-dev` | people who build apps and widgets for IronFlock | `ironflock-templates`, `ironflock-widgets` |
 
 `ironflock-dev` needs `ironflock`. It says so in its `plugin.json`
@@ -13,7 +14,7 @@ platform:
 
 | Skill | For |
 |---|---|
-| `ironflock-connect` | connecting Claude to IronFlock in the cloud or on an appliance, checking the connection, and what an API key lets Claude do |
+| `ironflock-connect` | connecting Claude to IronFlock in the cloud or on an appliance, checking the connection, and what a sign-in or API key lets Claude do |
 | `ironflock-fleet` | devices, the apps on them, alarms, logs and the audit log: what runs where, why something does not work, and changing apps, devices and alarms with the person's agreement |
 | `ironflock-data` | a project's data: finding its tables, read-only SQL on the project database, the files apps store, and custom transforms for boards |
 | `ironflock-production-figures` | production figures of machines: OEE with availability, performance and quality, stops ranked by minutes and by count, losses, and why a machine stopped; the figures of ISO 22400, technical availability (VDI 3423), packaging lines (PackML), semiconductor tools (SEMI E10, E79), failures and reliability, energy, control charts and capability; for answers from an instance and for an app's transforms and board |
@@ -23,14 +24,7 @@ platform:
 
 ## The ironflock plugin
 
-The plugin for operating IronFlock connects Claude to an IronFlock instance,
-in the cloud or on an appliance, through IronFlock's MCP endpoint and an API
-key, and works without the `ironflock` command and without a shell. Its skill
-`ironflock-connect` walks a person through the connection on each of Claude's
-surfaces, checks it with a first read, and explains what a key lets Claude
-do. It states the lowest version of the IronFlock API service it needs
-(2.0.0, the first with the MCP endpoint; the API service's own version, not
-the IronFlock release).
+The operator plugin connects Claude to the cloud MCP endpoint through browser sign-in. Add the optional `ironflock-appliance` plugin for a direct connection from Claude Code. The `ironflock-connect` skill walks through setup and checks the selected installation with a read.
 
 It also holds `ironflock-dev-moved`: when someone who has only this plugin
 asks to build an IronFlock app or widget, it tells them that the build skills
@@ -79,51 +73,11 @@ the connection described above, not this skill.
 
 ## Connect to IronFlock
 
-| | |
-|---|---|
-| MCP endpoint, cloud | `https://api.ironflock.com/mcp` |
-| MCP endpoint, appliance | `https://api.<your appliance's domain>/mcp`, once the appliance runs the IronFlock API service, which comes with a later appliance release |
-| Authentication | `Authorization: Bearer <API key>`; there is no sign-in through a browser |
+In Claude Code install `ironflock@ironflock`, open `/mcp`, select IronFlock and sign in. Review the requested permissions in Studio. For an appliance on your network, install `ironflock-appliance@ironflock` and set the full HTTPS MCP address. It adds a second connection with a separate sign-in.
 
-Create the key in IronFlock Studio: **Account Settings** > **Developer** >
-**API keys** > **Create API key**: choose what the key may do (read only by
-default) and where, then **Copy API key**. Studio shows the key only once,
-and it is valid for one year. A key that may do everything in all projects
-lets Claude do whatever the key's owner may do in IronFlock. Treat the key like a password,
-and never paste it into a chat or a file.
+In Claude chat or Cowork, connect on the IronFlock plugin’s **Connectors** tab. A custom connector uses the cloud URL `https://api.ironflock.com/mcp` or the appliance’s public MCP URL, with Claude’s published OAuth identity. A paired online appliance that supports and permits access through the cloud can be selected from the cloud connection.
 
-**Claude Code** (terminal, IDE extensions, the desktop app's Code tab): the
-`ironflock` plugin declares the MCP server. Installing it with
-`/plugin install ironflock@ironflock` opens a dialog with two settings: the
-API address (`https://api.ironflock.com` by default; for an appliance
-`https://api.<its domain>`, without `/mcp` and without a slash at the end)
-and the API key, which Claude Code
-keeps in the system's secure credential store. Change them later with
-`/plugin configure ironflock@ironflock` and restart Claude Code. `/mcp` then
-shows `plugin:ironflock:ironflock` as connected. Until the key is set, the
-server does not start. An install from a shell (`claude plugin install`) does
-not ask; complete it with `/plugin configure ironflock@ironflock` in a
-session.
-
-**The Claude app** (chat on claude.ai, in the desktop app and on a phone, and
-Cowork): the plugin's own connection works only in Claude Code, so add
-IronFlock as a custom connector under **Customize > Connectors** > **Add** >
-**Add custom connector**: the MCP endpoint as the URL, authentication
-**No sign-in**, and under **Request headers** the header `authorization` with
-the value `Bearer <your API key>`. Request headers on custom connectors are a
-beta that is available to a limited set of organizations; without them the
-Claude app cannot connect to IronFlock. On Team and Enterprise plans an Owner
-(on Enterprise also a member whose role includes managing the organization's
-libraries) adds the connector under **Organization settings > Connectors**,
-and every member then uses that one key. The connector connects from
-Anthropic's servers, so the address must be reachable from the internet; an
-appliance that only a company network reaches usually cannot be connected
-there. For that case Anthropic offers MCP tunnels to Enterprise organizations,
-as a research preview on request
-([custom connectors](https://claude.com/docs/connectors/custom/add-unlisted)).
-
-Then ask Claude to list your IronFlock projects and a project's devices.
-`ironflock-connect` has the details, and what to do when it does not work.
+After upgrading from 1.x, reconnect in the browser. Install the optional appliance plugin if you previously overrode the cloud address. API keys continue to work in separately configured clients. For setup, migration and data handling, see the [plugin guide](plugins/ironflock/README.md).
 
 ## ironflock-templates
 
@@ -206,8 +160,7 @@ claude plugin install ironflock-dev@ironflock
 ```
 
 This installs `ironflock` as well. To operate IronFlock without building apps,
-install only `ironflock@ironflock`. Claude Code then asks for the IronFlock
-API address and key (see [Connect to IronFlock](#connect-to-ironflock)).
+install only `ironflock@ironflock`. Then sign in to the cloud through `/mcp` (see [Connect to IronFlock](#connect-to-ironflock)).
 
 Claude Code does not auto-update third-party plugins by default. Turn it on under
 `/plugin` → Marketplaces → `ironflock` → Enable auto-update, or pull changes with
@@ -279,15 +232,16 @@ Or add `"ironflock-dev@ironflock": true` to `enabledPlugins` next to
 ## Layout
 
 ```text
-.claude-plugin/marketplace.json          marketplace "ironflock", plugins "ironflock" and "ironflock-dev"
-VERSION                                  the version of the repository and both plugins
+.claude-plugin/marketplace.json          marketplace for the operator, appliance and development plugins
+VERSION                                  the version of the repository and its plugins
 CHANGELOG.md                             what each version changed
+plugins/ironflock-appliance/               optional direct connection and setup instructions
 plugins/ironflock/
-├── .claude-plugin/plugin.json           plugin "ironflock": its settings (API address, key) and the MCP server
+├── .claude-plugin/plugin.json           plugin "ironflock" and its fixed cloud MCP connection
 ├── .claude-plugin/icon.png              the plugin's icon where it is listed
 ├── README.md                            what the plugin does, its setup and its data; shown where the plugin is listed
 └── skills/
-    ├── ironflock-connect/SKILL.md       connect, check, what a key lets Claude do
+    ├── ironflock-connect/SKILL.md       connect, check, what a sign-in or key lets Claude do
     ├── ironflock-fleet/SKILL.md         devices, apps, alarms, logs, diagnosis, the apps' own tools
     ├── ironflock-data/SKILL.md          tables, read-only SQL, files, transforms
     ├── ironflock-production-figures/
@@ -391,7 +345,7 @@ script mirrors the widgets the platform registers. Widget property names are nev
 change here.
 
 **Releases.** The repository has one semantic version, in `VERSION` and in
-the `version` of both plugins' `plugin.json` (never in `marketplace.json`).
+the `version` of all plugins' `plugin.json` (never in `marketplace.json`).
 Claude Code serves the plugins from the main branch of this repository. A new
 install gets what is on main at that moment, including changes that are not
 released yet. An installed plugin updates only when its version changes, so it
@@ -616,13 +570,7 @@ routing texts too long for the AI's prompt.
 `ironflock-connect` and once without, each in an empty folder
 `<eval>/<config>/work` without an IronFlock connection, answers no follow-up
 question, saves the agent's final reply as `REPLY.md` next to `work`, and
-scores the replies with `evals/connect/grade.py`: that the
-agent never asks for the key in the chat, does not repeat or store a pasted
-key and has it replaced, gives the steps that fit the surface (the plugin's
-settings in Claude Code, a custom connector with a request header in the
-Claude app and Cowork, an appliance only reachable inside a network), and
-reads a 401 and a 429 right. The checks are patterns on the reply; read the
-replies too. It has not been run yet.
+scores the replies with `evals/connect/grade.py`. The cases cover browser sign-in, organization and personal connectors, direct and paired appliances, additional scopes, upgrading a key-based installation, protecting a disclosed key, expiry, and request limits. Read the replies alongside the pattern-based grades.
 
 **Evaluate the fleet and data skills** with `evals/fleet/` and `evals/data/`,
 against a local IronFlock test instance with its demo data. Never run them
@@ -683,9 +631,10 @@ It has not been run yet.
 claude plugin validate .
 claude plugin validate plugins/ironflock
 claude plugin validate plugins/ironflock-dev
+claude plugin validate plugins/ironflock-appliance
 ```
 
-To try both plugins from a checkout, add it as a marketplace:
+To try the plugins from a checkout, add it as a marketplace:
 `claude plugin marketplace add <path to this checkout>`, then
 `claude plugin install ironflock-dev@ironflock`. A marketplace added from a
 local path loads the files in place, so edits show after `/reload-plugins`.

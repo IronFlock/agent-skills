@@ -1,9 +1,9 @@
 # One version for the repository: VERSION, written into the plugin.json of
-# both plugins and into CHANGELOG.md by the release (tools/release.py). The
+# all marketplace plugins and into CHANGELOG.md by the release (tools/release.py). The
 # tag is v<version>.
 RELEASE_NAME := "agent-skills"
 VERSION_FILE := "VERSION"
-VERSION_FILES := "VERSION CHANGELOG.md plugins/ironflock/.claude-plugin/plugin.json plugins/ironflock-dev/.claude-plugin/plugin.json"
+VERSION_FILES := "VERSION CHANGELOG.md plugins/ironflock/.claude-plugin/plugin.json plugins/ironflock-dev/.claude-plugin/plugin.json plugins/ironflock-appliance/.claude-plugin/plugin.json"
 # PyYAML and jsonschema, the validator's two dependencies, pinned in a
 # throwaway environment.
 PY := "uv run --no-project --python 3.13 --with pyyaml==6.0.3 --with jsonschema==4.25.1 -- python -I"
@@ -42,10 +42,10 @@ refresh-plugin:
     set -euo pipefail
     claude plugin marketplace update ironflock
     installed=$(claude plugin list 2>/dev/null || true)
-    for plugin in ironflock ironflock-dev; do
+    for plugin in ironflock ironflock-dev ironflock-appliance; do
         if grep -qF "$plugin@ironflock" <<<"$installed"; then
             claude plugin update "$plugin@ironflock" --scope user
-        else
+        elif [[ "$plugin" != ironflock-appliance ]]; then
             claude plugin install "$plugin@ironflock" --scope user
         fi
     done

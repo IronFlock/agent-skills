@@ -26,6 +26,8 @@ Two kinds of work use this skill:
 
 ## Which reference to read
 
+Select the instance before looking up a project. Name it in the findings and in any requested change. Use the cloud connection without an `instance` selector for cloud work. For a paired appliance through the cloud, use the online, cloud-enabled appliance’s identifier from the instance list, as a string, on every related call. On a direct appliance connection omit the selector. Project and device keys are local to each installation; resolve them again when the target changes. Ask if the target is ambiguous.
+
 | Task | Read |
 | --- | --- |
 | A figure: OEE, availability, performance, quality, TEEP, output, scrap rate | references/oee.md, and references/machine-data-sql.md before the first query |
