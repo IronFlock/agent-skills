@@ -6,7 +6,7 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
-## Unreleased
+## 1.1.8 - 2026-11-23
 
 - The template validator warns when tools in different agents or in the same
   agent call the same topic with different markings. Equivalent default hints
