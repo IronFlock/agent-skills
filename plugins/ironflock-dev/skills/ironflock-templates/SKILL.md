@@ -1,6 +1,6 @@
 ---
 name: ironflock-templates
-description: Build IronFlock apps: their architecture (edge containers that keep all state in the app's tables through the ironflock SDK, the board as the central UI, device web UIs embedded through remote-access tunnels), the interview and entity model a new app or a refactor starts from, a starter app to scaffold, and the integration files in the app's .ironflock/ folder, with a validator. These are board-template.yml (widgets, data bindings, pages, layout), data-template.yml (tables and transforms), env-template.yml (parameters), port-template.yml (remote-access ports) and ai-template.yml (AI agents). Use this whenever you create, design, refactor or change an IronFlock app or its edge code, add or change a board, dashboard or widget, bind a widget to live data, add a table or column, expose a parameter or port, or define an app's AI agent. Also use it when the user mentions IronFlock, Reswarm or a .ironflock folder. To change a widget's own code (the @ironflock/widget-* packages), use ironflock-widgets instead.
+description: "Build IronFlock apps: their architecture (edge containers that keep all state in the app's tables through the ironflock SDK, the board as the central UI, device web UIs embedded through remote-access tunnels), the interview and entity model a new app or a refactor starts from, a starter app to scaffold, and the integration files in the app's .ironflock/ folder, with a validator. These are board-template.yml (widgets, data bindings, pages, layout), data-template.yml (tables and transforms), env-template.yml (parameters), port-template.yml (remote-access ports) and ai-template.yml (AI agents). Use this whenever you create, design, refactor or change an IronFlock app or its edge code, add or change a board, dashboard or widget, bind a widget to live data, add a table or column, expose a parameter or port, or define an app's AI agent. Also use it when the user mentions IronFlock, Reswarm or a .ironflock folder. To change a widget's own code (the @ironflock/widget-* packages), use ironflock-widgets instead."
 metadata:
   mcp-tools: list_projects list_project_apps list_dashboards execute_sql check_app_status get_app_logs get_device_logs get_dev_dashboard_image get_dashboard_image
   min-api-version: 2.1.2
@@ -30,6 +30,16 @@ files. Each file is optional and independent:
 | `port-template.yml` | Lists the ports the app serves. A production install opens a remote-access tunnel for each. |
 | `ai-template.yml` | Registers the app's AI agents with the IronFlock assistant. |
 | `skills/<name>/SKILL.md` | App skills: instructions an agent of `ai-template.yml` loads only when a task needs them ("App skills" in app-templates.md). |
+
+Give every `topic:` tool a human-readable `title` and `annotations`, following
+"Tool titles and annotations" in app-templates.md. Check the handler's actual
+effects: `readOnlyHint: true` only for reads; changing tools declare
+`readOnlyHint: false` and whether they can delete, overwrite or act on hardware
+(`destructiveHint`), whether repeating them has the same effect (`idempotentHint`),
+and whether they interact beyond a closed local system (`openWorldHint`). These
+are developer assertions, not a safety guarantee. Keep markings consistent for
+every alias of the same topic across all agents; annotate the target tools,
+never a `delegate:` tool. Recheck the markings whenever the handler changes.
 
 Each file has a JSON Schema in `${CLAUDE_SKILL_DIR}/schemas/<name>/v1.yml`, the same
 file that is published at `https://ironflock.com/schemas/<name>/v1.yml`. Every field

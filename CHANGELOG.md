@@ -6,6 +6,26 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
+## 1.1.8 - 2026-11-23
+
+- The template validator warns when tools in different agents or in the same
+  agent call the same topic with different markings. Equivalent default hints
+  do not cause a warning. Template instructions now require titles and markings
+  on every topic tool, with eval cases for read, additive and destructive tools.
+
+- A tool in an app's `ai-template.yml` can carry a `title` and `annotations`:
+  the four hints of the Model Context Protocol (`readOnlyHint`,
+  `destructiveHint`, `idempotentHint`, `openWorldHint`) with its meaning and
+  defaults, so that a client can tell a tool that only reads from one that
+  changes something. The bundled ai-template schema has them, and
+  `references/app-templates.md` explains each hint and when to set it. The
+  validator reports annotations on a `delegate:` tool (error), and warns
+  about `destructiveHint` or `idempotentHint` next to `readOnlyHint: true`,
+  a `topic:` tool without `readOnlyHint` (it then counts as changing
+  something and possibly destructive) and `readOnlyHint: false` without
+  `destructiveHint` (it then counts as destructive). The starter app's
+  `current_reading` tool has a title and is marked read-only.
+
 ## 1.1.7 - 2026-11-22
 
 - The app skill has an agent look at the board it built or restyled

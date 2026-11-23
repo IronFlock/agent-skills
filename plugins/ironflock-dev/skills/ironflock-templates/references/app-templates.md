@@ -18,6 +18,7 @@ autocomplete in their editor:
 - [env-template.yml](#env-templateyml): app parameters
 - [port-template.yml](#port-templateyml): remote access
 - [ai-template.yml](#ai-templateyml): AI agents
+  - [Tool titles and annotations](#tool-titles-and-annotations): what a tool promises to a client
   - [App skills](#app-skills): instructions an agent loads when a task needs them
 - [The SDK](#the-sdk)
 
@@ -247,6 +248,90 @@ AI agents the app contributes to the IronFlock assistant.
   reads private tables normally.
 - No tool may be named `load_skill`: the name is reserved for loading app
   skills, in every app.
+- Give every `topic:` tool a `title` and `annotations` ("Tool titles and
+  annotations" below).
+
+### Tool titles and annotations
+
+A tool may carry a `title` and `annotations`, after the tool annotations of the
+Model Context Protocol (MCP), with MCP's names, meaning and defaults. A client
+of the platform, such as an AI assistant that runs app tools for a person, may
+use them to decide whether to ask the person before a call and to show the tool.
+
+- **`title`**: a short name people read, in the words of the domain: "Current
+  reading", "Set speed". A client shows it for a `topic:` tool it lists.
+  Without it, the tool's name is shown.
+- **`annotations`**: four hints, each `true` or `false`, and no other key:
+
+| Hint | Promises when true | When missing |
+|---|---|---|
+| `readOnlyHint` | the tool changes nothing: no table row, no setting, no machine | false: it may change something |
+| `destructiveHint` | the tool may delete, overwrite or act on the machine; `false` means it only adds something new | true |
+| `idempotentHint` | a second call with the same arguments changes nothing more | false |
+| `openWorldHint` | the tool reaches things outside the app's own data, such as a machine, a network or an outside service | true |
+
+`destructiveHint` and `idempotentHint` count only for a tool that is not
+read-only; next to `readOnlyHint: true` they mean nothing, so leave them out.
+
+- **Set them from what the handler does**, not from what the tool is meant to
+  do. Read the function the app registers under the tool's `topic`. It is
+  read-only only if no path through it writes a row, changes a setting or
+  acts on the machine.
+- **`destructiveHint`, for every tool that changes something.** `false` only
+  for a tool that only adds something new: a note, a logged event, a new row
+  that changes no other. `true` for everything else that changes something:
+  overwriting a setpoint, a recipe or a program, deleting anything, and any
+  action on the machine (starting a cycle, moving an axis, opening a valve).
+  It matters: a client asks the person before it runs a tool marked
+  destructive, and may run a tool marked `false` without a question.
+- **`idempotentHint`** for a tool that changes something: `true` if repeating
+  the call with the same arguments leaves things as the first call left them
+  (setting a speed to 40 %), `false` if each call adds or does more (add a
+  note, start a cycle, jog by 5 mm).
+- **`openWorldHint`**: `false` only when the handler touches nothing but the
+  app's own data on that device. A tool that reads or drives a machine, or
+  calls a network or an outside service, is open-world: what it returns comes
+  from outside, and a client should not trust it blindly.
+- **A reading tool**: `readOnlyHint: true`, and `openWorldHint: true` when it
+  reads a machine.
+- **They are a promise you make.** The platform cannot check what a device
+  function does, so a wrong `readOnlyHint: true` lets a client run a changing
+  tool without asking. When you change the handler, check its annotations.
+- **Never on a `delegate:` tool.** What it does is what the other agent's tools
+  do: annotate those.
+- **Optional, but always set `readOnlyHint`,** and `destructiveHint` with
+  `readOnlyHint: false`. A tool without `readOnlyHint` counts as changing
+  something and possibly destructive, so a careful client asks before every
+  call, a pure read included. Templates without annotations stay valid.
+
+```yaml
+tools:
+  current_reading:
+    title: Current reading
+    topic: current_reading
+    description: Reads the machine's current temperature and state.
+    annotations:
+      readOnlyHint: true
+      openWorldHint: true
+  set_speed:
+    title: Set speed
+    topic: set_speed
+    description: Sets the conveyor's speed in percent, 0 to 100.
+    annotations:
+      readOnlyHint: false
+      destructiveHint: true     # it overwrites the speed in force and acts on the machine
+      idempotentHint: true      # setting 40 % twice leaves it at 40 %
+      openWorldHint: true
+```
+
+The validator reports annotations on a `delegate:` tool (error, as the schema
+does), and warns about `destructiveHint` or `idempotentHint` next to
+`readOnlyHint: true`, a `topic:` tool without `readOnlyHint`, and
+`readOnlyHint: false` without `destructiveHint`. It also warns when aliases of
+the same topic, including tools of different agents, have different effective
+markings. Keep their annotations consistent: the read-only API refuses a topic
+if any alias is not read-only. An explicit default and an omitted default mean
+the same thing.
 
 ### App skills
 
@@ -318,8 +403,12 @@ machines:
   skills: [machine-diagnosis]
   tools:
     current_reading:
+      title: Current reading
       topic: current_reading
       description: Reads the machine at one device now. ...
+      annotations:
+        readOnlyHint: true
+        openWorldHint: true
 ```
 
 And `.ironflock/skills/machine-diagnosis/SKILL.md`, shortened:

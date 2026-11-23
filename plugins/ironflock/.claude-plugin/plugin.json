@@ -1,7 +1,7 @@
 {
   "name": "ironflock",
   "displayName": "IronFlock",
-  "version": "1.1.7",
+  "version": "1.1.8",
   "description": "Operate IronFlock: connects Claude to your IronFlock instance, in the cloud or on an appliance, through IronFlock's MCP endpoint and an API key that you enter in Claude's settings, looks after its devices, apps, alarms and logs and answers questions from its data, and, where Claude has a shell, also works on machines with the ironflock command. The skills to build apps and widgets are in ironflock-dev.",
   "author": {
     "name": "IronFlock",

@@ -201,7 +201,24 @@ definitions:
     required:
       - description
     additionalProperties: false
+    # A delegate tool takes no annotations (see annotations). Additive in v1:
+    # before annotations existed, no valid template could carry the key.
+    if:
+      required: [delegate]
+    then:
+      properties:
+        annotations: false
     properties:
+      title:
+        type: string
+        minLength: 1
+        maxLength: 100
+        description: >
+          A short name for the tool that people read, such as "Current
+          reading" or "Set speed". A client shows it for a tool it lists
+          to a person, which is a topic tool. Optional: without it, the
+          tool's name is shown.
+
       description:
         type: string
         maxLength: 1000
@@ -210,6 +227,52 @@ definitions:
           This is the right place for per-tool usage detail (valid value
           ranges, side effects, when to prefer it over another tool) —
           keep such detail here rather than in the system_prompt.
+
+      annotations:
+        type: object
+        additionalProperties: false
+        description: >
+          Hints about what the tool does, with the names, meaning and
+          defaults of the tool annotations of the Model Context Protocol
+          (MCP). They are your statement as the app's developer: the
+          platform cannot check what your device function does. A client
+          may use the hints to decide when to ask a person before a call;
+          as MCP says, it must treat them as untrusted unless they come
+          from a server it trusts. Every hint is
+          optional; a missing one counts as its default, so a tool without
+          annotations counts as changing its environment, possibly
+          destructive, not idempotent and open-world. For a topic tool
+          only, not allowed on a delegate tool: what a delegate tool does
+          is what the other agent's tools do.
+        properties:
+          readOnlyHint:
+            type: boolean
+            description: >
+              If true, the tool does not modify its environment. Default
+              when missing: false, the tool may change something.
+          destructiveHint:
+            type: boolean
+            description: >
+              If true, the tool may perform destructive updates to its
+              environment. If false, the tool performs only additive
+              updates. An update is destructive when it deletes or
+              overwrites something or acts on the machine; only adding
+              something new is additive. Meaningful only when readOnlyHint
+              is false. Default when missing: true.
+          idempotentHint:
+            type: boolean
+            description: >
+              If true, calling the tool repeatedly with the same arguments
+              has no additional effect on its environment. Meaningful only
+              when readOnlyHint is false. Default when missing: false.
+          openWorldHint:
+            type: boolean
+            description: >
+              If true, the tool may interact with an "open world" of
+              external entities; if false, its domain of interaction is
+              closed. For example, the world of a web search tool is open,
+              whereas that of a memory tool is not. Default when missing:
+              true.
 
       topic:
         type: string

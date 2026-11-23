@@ -471,9 +471,11 @@ the skills follow.
 
 **Test the validator** after changing `validate.py`, `board_checks.py` or
 `skill_checks.py`: `just test` (or `python3 tests/run.py`). It requires the
-example board to stay clean, every mistake in `tests/boards/broken.yml` to be
-reported, and, for app skills, one planted mistake per rule of the release
-build to be reported and every limit reached exactly to pass.
+example board to stay clean and every mistake in `tests/boards/broken.yml` to
+be reported. For app skills, one planted mistake per rule of the release build
+must be reported, and every limit reached exactly must pass. For the
+annotations of an AI agent's tools, one planted mistake per rule must be
+reported, nothing else, and a tool with every hint must pass.
 
 **Board presets are checked, not judged.** `tests/preset_checks.py` (part of
 `just test`) reads the presets from `board-design.md` and requires the contrast
@@ -587,6 +589,16 @@ app skill listed by the main agent, with a description that says to load it for
 a machine in FAULT and instructions that name the app's tables and the warning
 level, while the confirmation rule for changing a speed stays in the system
 prompt and the prompt names the skill as `app/<name>`; it has not been run yet.
+
+The ninth, `tool-markings`, checks titles and semantic annotations on a read,
+an additive write and a destructive machine setting, including a read alias in
+another agent. The fleet cases require the read-only API route after inspecting
+the listed markings and confirmation before a destructive call; the connect
+case checks the two app-tool scopes and their exclusion from the Read only
+preset. The fleet fixture must supply those three kinds of tool. These Phase 10
+model evals require the API release containing `read_app_tool` and the matching
+operator skills; they have not been run yet. `tests/annotation_evals.py` exercises
+the graders with positive and negative controls without calling a model.
 
 **Evaluate the widget skill** with `python3 evals/run.py widgets
 <iteration-dir>`. It clones the fixture widgets with
