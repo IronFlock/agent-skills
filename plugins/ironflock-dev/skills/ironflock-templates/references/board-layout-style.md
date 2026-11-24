@@ -45,6 +45,15 @@ fixed width or height (see below).
   - {id: site, x: 16, y: 0, w: 20, h: 5, fixedHeight: true}   # widget-filter-dropdown, 48 px
   ```
 
+- **Size filter controls to their contents.** Give widget-filter-dropdown room
+  for a representative long selection and its arrow, and widget-filter-calendar
+  room for the formatted date range. Keep their catalog height. Group them at
+  the top of the data they filter. When the group would stretch across a wide
+  page, put it beside the main content or stack the controls in a narrow column.
+  Prefer a transparent tile background and border for each filter (the
+  `custom_style` below). Keep the field outline, label and focus indicator
+  legible on the page background. Use a contrasting tile on a busy background.
+
 - **Let navigation blend in.** A widget-navbutton normally has no tile border, and
   often no tile background either, so it reads as a button and not as a tile with
   a button inside. Widgets in a top navbar band usually look better without a

@@ -144,13 +144,13 @@ in it is described.
    |---|---|
    | Build a board from scratch | in this order: board-design.md, board-route-tree.md, board-assets.md when users manage entities, "Designing a board" in board-template.md, [references/example-board.yml](references/example-board.yml), board-navigation.md, board-bindings.md, board-layout-style.md, board-markdown.md, board-charts.md for every chart, board-forms.md and board-interaction.md when users create, edit or delete records or switch something, and board-critique.md, then board-look.md to look at the result before you report |
    | Change what one widget shows (table, columns, filters, time window, aggregation) | board-bindings.md; for a widget-markdown also board-markdown.md; for a chart also board-charts.md |
-   | Add a widget to a page | board-design.md ("What goes where"), board-bindings.md, board-layout-style.md, and board-charts.md for a chart or board-interaction.md for a form or a switch |
+   | Add a widget to a page | board-design.md ("What goes where"), board-bindings.md, board-layout-style.md, board-markdown.md for an HTML card, and board-charts.md for a chart or board-interaction.md for a form or a switch |
    | Add a page or change a menu | board-route-tree.md, board-navigation.md, board-layout-style.md |
    | Let users create, edit and delete records | board-assets.md, board-forms.md, board-interaction.md, board-navigation.md, board-bindings.md |
    | Restyle or re-layout a board | board-design.md ("One colour, one meaning", "Pick a look"), board-layout-style.md, board-charts.md ("Colour") when the board has charts, board-interaction.md for a touch screen, and board-critique.md, then board-look.md to look at the result before you report |
    | A card with several values, or one record shown | board-markdown.md, board-bindings.md |
    | A SCADA page | "SCADA pages" in board-template.md, board-layout-style.md, board-bindings.md, board-navigation.md |
-   | A filter dropdown or a date range | board-bindings.md |
+   | A filter dropdown or a date range | board-bindings.md for wiring, board-layout-style.md for placement and the tile background |
    | Show a device's web UI | board-bindings.md ("Embedding a web UI the app serves"), board-navigation.md |
 
    All of them are in `references/`; "Which file to read" in board-template.md
