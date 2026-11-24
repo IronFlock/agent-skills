@@ -1,6 +1,6 @@
 ---
 name: ironflock-fleet
-description: Look after an IronFlock fleet through IronFlock's MCP tools - devices, the apps on them, alarms, logs and the audit log - and find out why something does not work. Use this whenever the user asks which devices are online, what runs where, why a device or an app is not working or sends no data, wants to read an app's or a device's logs, asks who changed something, wants to install, update, start, stop or remove an app, create or delete a device, create, change, pause or delete an alarm, asks what an app costs, or wants an app's own tools to read or change something on a machine. For questions about the data itself (tables, SQL, transforms) use ironflock-data.
+description: Look after an IronFlock fleet through IronFlock's MCP tools - devices, the apps on them, alarms, logs and the audit log - and find out why something does not work. Use this whenever the user asks which devices are online, what runs where, why a device or an app is not working or sends no data, wants to read an app's or a device's logs, asks who changed something, wants to install, update, start, stop or remove an app, create or delete a device, create, change, pause or delete an alarm, asks what an app costs, or wants an app's own tools to read or change something on a machine. In the hosted IDE, route unqualified requests for the current app’s logs or status to ironflock-dev-run. For questions about the data itself (tables, SQL, transforms) use ironflock-data.
 metadata:
   mcp-tools: list_projects list_devices list_project_apps check_app_status get_app_logs get_device_logs get_appliance_health get_appliance_logs query_audit_log list_alarms create_alarm update_alarm delete_alarm get_schema list_app_tools read_app_tool call_app_tool set_app_state update_app uninstall_app search_apps get_app_details get_install_quote install_app sync_app_to_store estimate_project_cost create_device delete_device
   min-api-version: 2.2.0
@@ -20,6 +20,11 @@ It needs version 2.2.0 or later of the IronFlock API service (the service's
 own version, which the MCP server reports when Claude connects; not the
 IronFlock release). If the IronFlock tools are missing or fail to connect, use
 `ironflock-connect`.
+
+In a hosted IDE working copy under `~/apps/<app>`, use `ironflock-dev-run`
+for the current app’s builds, logs and status. The workspace connection reads
+the development run with explicit `stage: "DEV"`. Use the installed-release
+workflow below when the user explicitly asks about that release.
 
 ## Rules
 

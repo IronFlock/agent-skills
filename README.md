@@ -7,7 +7,7 @@ platform:
 |---|---|---|
 | `ironflock` | people who operate IronFlock: projects, devices, apps and their data | `ironflock-connect`, `ironflock-fleet`, `ironflock-data`, `ironflock-production-figures`, `ironflock-cli` (and `ironflock-dev-moved`, see below) |
 | `ironflock-appliance` | direct sign-in to an appliance from Claude Code | adds the appliance MCP connection to the IronFlock skills |
-| `ironflock-dev` | people who build apps and widgets for IronFlock | `ironflock-templates`, `ironflock-widgets` |
+| `ironflock-dev` | people who build apps and widgets for IronFlock | `ironflock-templates`, `ironflock-dev-run`, `ironflock-widgets` |
 
 `ironflock-dev` needs `ironflock`. It says so in its `plugin.json`
 (`dependencies`), and Claude Code installs `ironflock` with it.

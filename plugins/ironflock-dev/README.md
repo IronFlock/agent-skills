@@ -27,6 +27,10 @@ widget repository.
 
 ## Skills
 
+`ironflock-dev-run` handles “build the app”, “show the app logs” and “is it
+running?” in the hosted IronFlock IDE. It uses IronFlock MCP to build the
+current working copy on the development device and inspect its DEV run.
+
 `ironflock-templates` is for apps:
 
 - an interview before a new app or a refactor: what the app is for, who uses
@@ -80,7 +84,7 @@ IronFlock instance. From IronFlock's marketplace, Claude Code installs it
 together with this one. If you add `ironflock-dev` from the directory, add
 `ironflock` there as well.
 
-Building and validating an app needs no IronFlock account and no API key.
+Editing and validating templates works offline with locally cached widget schemas.
 Sign in when Claude needs to look at your instance, which is what
 `ironflock` is for.
 
@@ -98,9 +102,7 @@ Sign in when Claude needs to look at your instance, which is what
 
 What the plugin sends, runs and fetches:
 
-- **It sends nothing about your code or your data to anyone.** The plugin
-  has no connection of its own, and its scripts work on the files of your
-  checkout, on your computer.
+- **Development builds and logs.** The skill uses the hosted workspace’s IronFlock connection. The platform sends the working copy to the selected development device and returns build output and requested runtime logs.
 - **Scripts.** The skills have Claude run Python scripts from the plugin's
   folder: `validate.py` (checks an app's `.ironflock` folder), `widget.py`
   (prints a widget's configuration schema), `new_app.py` and `new_widget.py`

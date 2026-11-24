@@ -186,7 +186,11 @@ in it is described.
 
 ## Checking the app on a device
 
-Select the instance before looking up a project. Name it in the findings and in any requested change. Use the cloud connection without an `instance` selector for cloud work. For a paired appliance through the cloud, use the online, cloud-enabled appliance’s identifier from the instance list, as a string, on every related call. On a direct appliance connection omit the selector. Project and device keys are local to each installation; resolve them again when the target changes. Ask if the target is ambiguous.
+In a hosted IronFlock IDE working copy, use the `ironflock-dev-run` skill for
+builds, build output, app logs and status. Use the workspace MCP connection and
+explicit `stage: "DEV"` for the app's logs and status.
+
+For an installed release, select the instance before looking up a project. Name it in the findings and in any requested change. Use the cloud connection without an `instance` selector for cloud work. For a paired appliance through the cloud, use the online, cloud-enabled appliance’s identifier from the instance list, as a string, on every related call. On a direct appliance connection omit the selector. Project and device keys are local to each installation; resolve them again when the target changes. Ask if the target is ambiguous.
 
 This plugin comes with the `ironflock` plugin and its connection to IronFlock.
 When its tools are there, check an installed release of the app without leaving
@@ -195,10 +199,6 @@ data arrives, then `get_app_logs` for the app's own log when it is not running
 or its data does not arrive, then `get_device_logs` when that log is empty,
 which means the container never started. Read the state before the logs, never
 show log lines to the user, and explain the cause in your own words.
-`get_app_logs` reads only installed releases, not the development run from the
-IDE; when a development run does not start, `get_device_logs` shows why. The
-log of a release build is not available through the connection: it is in
-Studio, on the app's releases.
 
 ## Widget schemas
 
