@@ -6,7 +6,7 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
-## Unreleased
+## 1.1.11 - 2026-11-24
 
 - Board templates now guide authors to pad short status pills, wrap explanations, and fit figures to the tile. Related readings share space, and dropdown and calendar filters use compact widths and can blend into the board background.
 
