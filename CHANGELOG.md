@@ -6,7 +6,7 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
-## Unreleased
+## 1.1.13 - 2026-11-25
 
 - The connection skill explains how to select appliance projects for cloud MCP and check a write after an interrupted connection.
 
