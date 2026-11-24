@@ -6,6 +6,10 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
+## Unreleased
+
+- The connection skill explains how to select appliance projects for cloud MCP and check a write after an interrupted connection.
+
 ## 1.1.12 - 2026-11-24
 
 - In the hosted IDE, “build the app” builds the open working copy on a development device. App logs and status use its DEV run, and build logs follow the device build.

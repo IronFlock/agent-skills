@@ -33,6 +33,8 @@ For a direct appliance connector use `https://api.<appliance-domain>/mcp` and si
 
 Use the connected server’s list of instances if it offers one. For a cloud project, call the cloud connection and omit `instance`. To work through the cloud on a paired appliance, select its returned instance identifier (a positive decimal string). Check that the appliance is online and allows cloud access, then pass its identifier on every project lookup, read and change. On a direct appliance connection omit `instance`. An omitted selector, or `"local"`, means the installation the connection is signed in to. Project and device keys belong to that installation. If the connection lacks instance selection, use a direct signed-in connection. Name the selected installation to the person, and ask when more than one target fits.
 
+On releases that support cloud MCP forwarding, the appliance administrator enables it under **License** in appliance Studio. In cloud consent or API-key settings, select projects under that appliance’s name. **All projects** reaches the projects the paired local account may use on enabled appliances. Studio can close after setup. If a write loses its response, check the affected state on the selected appliance before repeating it.
+
 Call `list_projects` on that same target, then `list_devices` for the requested project if the person asked about devices. A project restriction can legitimately return an empty list. When multiple connections offer the same tools, keep all calls on the chosen connection.
 
 ## Connection problems
