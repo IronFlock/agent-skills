@@ -216,7 +216,11 @@ widgets:
       version: 1.1.0
       chartconfig:
           markdown: |
-              <style>.kpi{display:flex;align-items:baseline;gap:4cqw;height:96cqh}.kpi .v{font-size:60cqh;font-weight:700;line-height:1}.kpi .u{font-size:22cqh;opacity:.7}.kpi .c{opacity:.7}</style>
+              <style>
+              .kpi {display:flex; flex-wrap:wrap; align-items:baseline; gap:.25em 1em; overflow-wrap:anywhere}
+              .kpi .v {font-size:clamp(1.25em,min(15cqw,32cqh),3em); font-weight:700; line-height:1.1}
+              .kpi .u, .kpi .c {opacity:.7}
+              </style>
               <div class="kpi">
               <div class="c">Power draw</div>
               <div><span class="v">{{power}}</span> <span class="u">kW</span></div>

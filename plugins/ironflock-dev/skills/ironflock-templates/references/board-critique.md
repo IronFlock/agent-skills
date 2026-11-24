@@ -49,7 +49,10 @@ board-interaction.md.
    board-design.md's sizes for the viewing distance; on a tablet every
    button and switch has the touch size of board-interaction.md. Correct:
    take the preset's colours, add the state's word, set the font sizes,
-   enlarge the tile.
+   enlarge the tile. For HTML cards, check the narrowest planned size with
+   the longest expected value and status detail. All lines should fit inside
+   the tile, with visible space around each pill's text. For filters, check the
+   selected text and arrow together and the field's contrast against the board.
 
 ## Once, and one round
 

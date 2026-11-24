@@ -75,6 +75,11 @@ the markup (`style="color:#333"`) stays the same on every theme. That suits text
 a background the markup sets itself, such as a status badge, but on another theme it
 can be hard to read.
 
+Keep a status pill short ("In range", "2 alerts"). Put the affected names and
+explanation in ordinary text that can wrap below it. Give the pill its own
+padding on all four sides, in em so it grows with its label. Leave a gap to
+adjacent text and let that text move to the next line.
+
 ## One record as a card
 
 The fields of one record, such as the current settings of the machine a detail
@@ -88,7 +93,14 @@ related fields in groups, and fields the reader does not need are left out.
 
 ```yaml
 markdown: |
-    <style>.rec dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;margin:0}.rec dt{opacity:.7}.rec dd{margin:0;font-weight:600}.rec .badge{display:inline-block;padding:2px 10px;border-radius:999px;color:#fff;background:{{stateColor}}}</style>
+    <style>
+    .rec {overflow-wrap:anywhere}
+    .rec h3 {display:flex; flex-wrap:wrap; align-items:center; gap:.25em .5em; margin:0 0 .4em; line-height:1.25}
+    .rec dl {display:grid; grid-template-columns:auto minmax(0,1fr); gap:.25em .75em; margin:0}
+    .rec dt {opacity:.7}
+    .rec dd {margin:0; font-weight:600}
+    .rec .badge {display:inline-block; box-sizing:border-box; max-width:100%; padding:.25em .75em; line-height:1.25; border-radius:999px; color:#fff; background:{{stateColor}}}
+    </style>
     <div class="rec">
     <h3>{{name}} <span class="badge">{{state}}</span></h3>
     <dl><dt>Setpoint</dt><dd>{{setpoint}} °C</dd><dt>Speed</dt><dd>{{speed}} rpm</dd><dt>Recipe</dt><dd>{{recipe}}</dd></dl>
@@ -131,11 +143,11 @@ validate.py rejects these keys on an older version.
   few times the interval the device sends at. An older reading is left out: it
   shows as nothing, and a style or attribute that uses it is left out too, also
   while no new data arrives.
-- **Text that follows the tile.** The widget is a size container, so CSS in a
-  `<style>` element can use container units: `font-size:38cqh` makes a figure a
-  third of the tile's height on every screen. Size the headline figure that way;
-  labels can stay in `em`. The widget pads the tile by `2cqh`, so a card that
-  fills it is `96cqh` high.
+- **Text that follows the tile.** Use the tile's width and height to size a headline with `clamp()`, `cqw`
+  and `cqh`. Keep labels and units readable at the smallest intended tile size.
+  Allow for the widget's inset, a wrapped label, the widest expected reading and
+  a localized timestamp. If these need another line, give the tile more room or
+  move secondary detail to its detail page.
 
 ## Figures as cards
 
@@ -145,7 +157,11 @@ belong together share one card.
 
 ```yaml
 markdown: |
-    <style>.kpi{display:flex;flex-direction:column;justify-content:center;height:96cqh}.kpi .v{font-size:38cqh;font-weight:700;line-height:1}.kpi .u{font-size:14cqh;opacity:.7}.kpi .c{opacity:.7}</style>
+    <style>
+    .kpi {overflow-wrap:anywhere}
+    .kpi .v {font-size:clamp(1.25em,min(15cqw,32cqh),3em); font-weight:700; line-height:1.1}
+    .kpi .u, .kpi .c {opacity:.7}
+    </style>
     <div class="kpi">
     <div class="c">Power draw, press-1</div>
     <div><span class="v">{{power}}</span> <span class="u">kW</span></div>

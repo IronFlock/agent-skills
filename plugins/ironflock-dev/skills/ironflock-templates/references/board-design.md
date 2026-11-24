@@ -64,7 +64,11 @@ States: RUNNING green, IDLE grey, FAULT red, the same on every widget.
   that page.
 - **Fewer, bigger tiles.** A wall screen carries six to nine tiles, a tablet
   next to the machine six to eight. A page read at a desk carries up to about
-  twelve. Beyond that, split the page by question
+  twelve. Even a page within that count can feel crowded. Combine readings
+  people compare in one card with a shared heading. Give the chart or table
+  the extra width. If filters, a status summary and several narrow cards
+  compete on one row, move the summary beside its readings or start a new row.
+  Beyond that, split the page by question
   and link the pages through the board's menu. Every page still fills its whole
   grid: a cell no widget covers shows as empty screen, and users read that as
   unfinished.
