@@ -175,6 +175,10 @@ class Board:
     filter_params_used: dict[str, list] = field(default_factory=dict)
     time_params_used: dict[str, list] = field(default_factory=dict)
     filter_params_offered: dict[str, list] = field(default_factory=dict)
+    # URL parameters a widget-table 'edit' column sets, and the ones a
+    # widget-form opens on (openParameter), by name.
+    params_set: dict[str, list] = field(default_factory=dict)
+    params_opening: dict[str, list] = field(default_factory=dict)
     nav_routes: list[tuple[list, str, str]] = field(default_factory=list)  # (path, route, layout_id)
 
     def error(self, path: list, message: str) -> None:
@@ -436,8 +440,10 @@ def check_widget(board: Board, i: int, w: dict, offline: bool, cache: dict, plac
             walker.check_refs_only(config, cpath)
     if package == "widget-form" and isinstance(config, dict):
         check_form_targets(board, config, cpath)
+        check_open_parameter(board, config, cpath)
     if package == "widget-table" and isinstance(config, dict):
         check_single_record_table(board, config, cpath)
+        check_edit_columns(board, config, cpath)
     if package == "widget-markdown" and isinstance(config, dict):
         rendered = cache.get((package, version if isinstance(version, str) else None), (None,))[0]
         check_markdown(board, config, cpath, rendered or (version if isinstance(version, str) else None))
@@ -822,7 +828,6 @@ def check_form_targets(board: Board, config: dict, path: list) -> None:
         if isinstance(f, dict) and constant(f.get("type")) == "file"
         for key in FILE_COLUMNS
     ]
-    targets.append((path + ["deleteFlagColumn"], config.get("deleteFlagColumn")))
     for k, f in enumerate(fields):
         if isinstance(f, dict) and constant(f.get("type")) == "file":
             check_file_field(board, f, path + ["formFields", k])
@@ -841,6 +846,71 @@ def check_form_targets(board: Board, config: dict, path: list) -> None:
             board.error(tpath + ["column"], f"table '{table}' has no column '{column}'")
         elif target.get("dataType") and columns[column] != target.get("dataType"):
             board.warn(tpath + ["dataType"], f"column '{column}' is {columns[column]}, not {target.get('dataType')}")
+
+
+def filter_params_in(value: Any) -> set[str]:
+    """The URL parameters the bindings inside `value` read (useFilter filters)."""
+    found: set[str] = set()
+    if isinstance(value, dict):
+        if value.get("useFilter") and isinstance(value.get("value"), str):
+            found.add(value["value"])
+        for v in value.values():
+            found |= filter_params_in(v)
+    elif isinstance(value, list):
+        for v in value:
+            found |= filter_params_in(v)
+    return found
+
+
+def check_edit_columns(board: Board, config: dict, path: list) -> None:
+    """A widget-table column of type 'edit' shows one button per row (a pen, or
+    the icon styling.iconName names, such as a delete column's) that writes the
+    row's value, the record key, into the URL parameter styling.parameterKey
+    names, as a filter widget does. Recorded for check_filter_wiring."""
+    columns = config.get("columns") if isinstance(config.get("columns"), list) else []
+    for k, col in enumerate(columns):
+        if not isinstance(col, dict) or constant(col.get("type")) != "edit":
+            continue
+        cpath = path + ["columns", k]
+        styling = col.get("styling") if isinstance(col.get("styling"), dict) else {}
+        raw = styling.get("parameterKey")
+        if isinstance(raw, dict):
+            continue  # bound: cannot be followed
+        name = constant(raw)
+        if not isinstance(name, str) or not name.strip():
+            board.warn(
+                cpath + ["styling", "parameterKey"] if isinstance(col.get("styling"), dict) else cpath,
+                "an 'edit' column needs styling.parameterKey, the URL parameter its buttons set to the row's value; "
+                "without it the buttons are disabled",
+            )
+            continue
+        board.params_set.setdefault(name.strip(), []).append(cpath + ["styling", "parameterKey"])
+
+
+def check_open_parameter(board: Board, config: dict, path: list) -> None:
+    """A widget-form with openParameter opens its dialog while the URL carries
+    that parameter (a widget-table 'edit' column sets it to a record's key) and
+    shows no button on a board; its fields follow the record through useFilter
+    bindings on the same parameter. Recorded for check_filter_wiring. Without
+    formButton: $bool:true the setting does nothing; the widget's schema says so
+    (openParameter's condition), so that is not reported here again."""
+    raw = config.get("openParameter")
+    if isinstance(raw, dict):
+        return
+    name = constant(raw)
+    if not isinstance(name, str) or not name.strip():
+        return
+    name = name.strip()
+    opath = path + ["openParameter"]
+    if constant(config.get("formButton")) is not True:
+        return
+    board.params_opening.setdefault(name, []).append(opath)
+    if name not in filter_params_in(config.get("formFields")):
+        board.warn(
+            opath,
+            f"the dialog opens on '{name}', but no field's preFilledValue is filtered by it: give each binding a filterAnd entry "
+            f"with useFilter: true and value: '{name}' (plus the latest filter), so the fields show the chosen record",
+        )
 
 
 def check_markdown(board: Board, config: dict, path: list, version: str | None) -> None:
@@ -1612,27 +1682,55 @@ def check_filter_wiring(board: Board) -> None:
         if not isinstance(w, dict) or not isinstance(w.get("chartconfig"), dict):
             continue
         config = w["chartconfig"]
-        keys = []
+        cpath = ["widgets", i, "chartconfig"]
+        keys = []  # (setting, its path, filter or time)
         if w.get("package_name") == "widget-filter-dropdown":
-            keys = [("parameterKey", "filter")]
+            keys = [(config.get("parameterKey"), cpath + ["parameterKey"], "filter")]
         elif w.get("package_name") == "widget-filter-calendar":
-            keys = [("startKey", "time"), ("endKey", "time")]
-        for key, kind in keys:
-            raw = config.get(key)
+            keys = [(config.get(k), cpath + [k], "time") for k in ("startKey", "endKey")]
+        elif w.get("package_name") == "widget-switch" and isinstance(config.get("dataseries"), list):
+            # A switch with parameterKey is a view control: ON sets the parameter
+            # (to parameterValue), OFF removes it.
+            keys = [
+                (s.get("parameterKey"), cpath + ["dataseries", k, "parameterKey"], "filter")
+                for k, s in enumerate(config["dataseries"])
+                if isinstance(s, dict)
+            ]
+        for raw, kpath, kind in keys:
             if not isinstance(raw, str):
                 continue
             name = decode(raw)[1]
             if not name:
                 continue
             used = board.filter_params_used if kind == "filter" else board.time_params_used
-            if name not in used:
+            if name not in used and not (kind == "filter" and name in board.params_opening):
                 how = (
                     "a filterAnd entry with useFilter: true and value: '{0}'"
                     if kind == "filter"
                     else "queryParams.timeStartParam/timeEndParam: '{0}'"
                 ).format(name)
-                board.warn(["widgets", i, "chartconfig", key], f"no widget reads '{name}'; give the widgets to filter {how}")
+                board.warn(kpath, f"no widget reads '{name}'; give the widgets to filter {how}")
             board.filter_params_offered.setdefault(name, []).append(["widgets", i])
+    for name, paths in board.params_set.items():
+        if name not in board.filter_params_used and name not in board.params_opening:
+            board.warn(
+                paths[0],
+                f"no widget reads '{name}'; give a widget-form openParameter: '{name}' with preFilledValue bindings filtered by it "
+                f"(a filterAnd entry with useFilter: true and value: '{name}'), or filter the widgets that should show the chosen record with it",
+            )
+        board.filter_params_offered.setdefault(name, []).extend(paths)
     for name, paths in board.filter_params_used.items():
+        # A parameter a dialog opens on is reported once, at the form's openParameter.
+        if name not in board.filter_params_offered and name not in board.params_opening:
+            board.warn(
+                paths[0],
+                f"no widget on this board sets the URL parameter '{name}': no filter widget, widget-switch (parameterKey) "
+                f"or widget-table 'edit' column (styling.parameterKey)",
+            )
+    for name, paths in board.params_opening.items():
         if name not in board.filter_params_offered:
-            board.warn(paths[0], f"no filter widget on this board sets the URL parameter '{name}'")
+            board.warn(
+                paths[0],
+                f"no widget on this board sets the URL parameter '{name}' that opens this form; give a widget-table a column of "
+                f"type 'edit' with styling.parameterKey: '{name}', its values bound to the record's key column",
+            )
