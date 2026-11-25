@@ -1,4 +1,4 @@
-<!-- Adapted from the data-visualization skill of the data plugin, version 1.1.0, by Anthropic (anthropics/knowledge-work-plugins), under the Apache License, Version 2.0; this file is under the same licence. Changed by Record Evolution GmbH in 2026: rewritten for the widgets of IronFlock boards. The licence text and the notice are in LICENSE-APACHE-2.0.txt and NOTICE in the folder of the skill ironflock-templates (IronFlock/agent-skills), and at https://www.apache.org/licenses/LICENSE-2.0 -->
+<!-- Adapted from the data-visualization skill of the data plugin, version 1.1.0, by Anthropic (anthropics/knowledge-work-plugins), under the Apache License, Version 2.0; this file is under the same licence. Changed by Record Evolution GmbH in 2026: rewritten for the widgets of IronFlock boards. The licence text and the notice are in LICENSE-APACHE-2.0.txt and NOTICE in the folder of the skill ironflock-templates (IronFlock/ai-plugins), and at https://www.apache.org/licenses/LICENSE-2.0 -->
 # Charts and figures
 
 Each rule names its setting; one without a widget name is

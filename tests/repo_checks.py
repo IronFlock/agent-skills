@@ -487,7 +487,8 @@ def check_eval_runner() -> tuple[int, list[str]]:
             return r.skill_lookups(transcript)
 
         for label, call in (
-            ("a clone of the repository", tool("Bash", command="git clone -q https://github.com/IronFlock/agent-skills.git /tmp/x")),
+            ("a clone of the repository", tool("Bash", command="git clone -q https://github.com/IronFlock/ai-plugins.git /tmp/x")),
+            ("a clone by the repository's old name", tool("Bash", command="git clone -q https://github.com/IronFlock/agent-skills.git /tmp/x")),
             ("a raw file of a skill", tool("WebFetch", url="https://raw.githubusercontent.com/IronFlock/x/main/plugins/ironflock/skills/ironflock-templates/SKILL.md")),
             ("the installed plugins", tool("Bash", command="find ~/.claude/plugins -name '*.md'")),
             ("the home folder spelled out", tool("Read", file_path="/Users/someone/.claude/plugins/cache/ironflock/x/SKILL.md")),
@@ -497,7 +498,7 @@ def check_eval_runner() -> tuple[int, list[str]]:
             tool("Write", file_path="/run/app/.ironflock/skills/fault-procedure/SKILL.md", content="# Fault"),
             tool("Bash", command="cd ironflock-widgets/widget-gauge && npm run build"),
             tool("WebFetch", url="https://ironflock.com/docs/app-development/ai-template/"),
-            {"type": "user", "message": {"content": [{"type": "tool_result", "content": "see github.com/IronFlock/agent-skills"}]}},
+            {"type": "user", "message": {"content": [{"type": "tool_result", "content": "see github.com/IronFlock/ai-plugins"}]}},
         )
         expect("an app skill, the widget fixtures, the docs and a tool result are no lookup", clean == [], clean)
 

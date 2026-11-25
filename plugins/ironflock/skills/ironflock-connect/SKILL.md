@@ -15,7 +15,7 @@ Establish which Claude surface the person uses, which IronFlock installation the
 For the cloud, enter these commands in Claude Code:
 
 ```text
-/plugin marketplace add IronFlock/agent-skills
+/plugin marketplace add IronFlock/ai-plugins
 /plugin install ironflock@ironflock
 ```
 

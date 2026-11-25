@@ -75,7 +75,7 @@ Add the plugin from Claude's plugin directory, or in Claude Code from
 IronFlock's marketplace:
 
 ```text
-/plugin marketplace add IronFlock/agent-skills
+/plugin marketplace add IronFlock/ai-plugins
 /plugin install ironflock-dev@ironflock
 ```
 
@@ -141,10 +141,10 @@ What the plugin sends, runs and fetches:
 - [Build with Claude Code](https://ironflock.com/docs/app-development/claude-code/)
   and [app development](https://ironflock.com/docs/app-development/) in the
   IronFlock documentation
-- [Questions and problems](https://github.com/IronFlock/agent-skills/issues)
-- [What each version changed](https://github.com/IronFlock/agent-skills/blob/main/CHANGELOG.md)
+- [Questions and problems](https://github.com/IronFlock/ai-plugins/issues)
+- [What each version changed](https://github.com/IronFlock/ai-plugins/blob/main/CHANGELOG.md)
 
 ## License
 
 MIT, see
-[LICENSE](https://github.com/IronFlock/agent-skills/blob/main/LICENSE).
+[LICENSE](https://github.com/IronFlock/ai-plugins/blob/main/LICENSE).
