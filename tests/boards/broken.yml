@@ -21,7 +21,7 @@
 # expect: ERROR widgets[9].chartconfig.dataseries[0].data.tableRef.queryParams.filterAnd[0] :: latest filter does not work on a transform
 # expect: ERROR widgets[10].chartconfig.dataseries[0].data.tableRef.queryParams.filterAnd[0].value :: index of a route segment
 # expect: WARN  widgets[10].chartconfig.dataseries[0].data.tableRef.queryParams.filterAnd[1].dataType :: column 'temperature' is numeric, but the filter says string
-# expect: WARN  widgets[10].chartconfig.dataseries[0].data.tableRef.queryParams.filterAnd[2].value :: no filter widget on this board sets the URL parameter 'site'
+# expect: WARN  widgets[10].chartconfig.dataseries[0].data.tableRef.queryParams.filterAnd[2].value :: no widget on this board sets the URL parameter 'site'
 # expect: ERROR widgets[11].chartconfig.dataseries[0].data.tableRef.provider_app :: does not list under consumes
 # expect: WARN  widgets[12].chartconfig.navItems[1].route :: route '/settings' matches no page
 # expect: WARN  widgets[13].chartconfig.parameterKey :: no widget reads 'machine'

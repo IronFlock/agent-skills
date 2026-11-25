@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=https://ironflock.com/schemas/board-template/v1.yml
+# A widget-switch with parameterKey is a view control: while it is ON it sets the
+# URL parameter (to parameterValue), and the widgets that filter on it narrow
+# their rows. The first switch sets 'onlyFaults', which the table reads, so
+# neither side is reported; the second sets 'onlyIdle', which no widget reads.
+# expect-none: widgets[0].chartconfig.dataseries[0].parameterKey
+# expect-none: widgets[1].chartconfig.columns[0].values.tableRef.queryParams.filterAnd[1].value
+# expect: WARN  widgets[0].chartconfig.dataseries[1].parameterKey :: no widget reads 'onlyIdle'
+name: switch-filter
+widgets:
+    - layout_id: view-switches
+      package_name: widget-switch
+      chartconfig:
+          title: $str:View
+          dataseries:
+              - label: $str:Only faults
+                parameterKey: $str:onlyFaults
+                parameterValue: $str:FAULT
+              - label: $str:Only idle
+                parameterKey: $str:onlyIdle
+                parameterValue: $str:IDLE
+    - layout_id: machines
+      package_name: widget-table
+      chartconfig:
+          title: $str:Machines
+          columns:
+              - header: $str:State
+                type: $str:string
+                values:
+                    tableRef:
+                        tablename: machine_status
+                        format: {value: state}
+                        queryParams:
+                            limit: 50
+                            filterAnd:
+                                - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
+                                - {column: state, operator: '=', value: onlyFaults, dataType: string, useFilter: true}
+layout:
+    gridLayout:
+        - {id: view-switches, x: 0, y: 0, w: 96, h: 8}
+        - {id: machines, x: 0, y: 8, w: 96, h: 56}
