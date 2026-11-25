@@ -1,4 +1,4 @@
-# IronFlock agent skills
+# IronFlock AI plugins
 
 A Claude Code marketplace, `ironflock`, with three plugins for the IronFlock IoT
 platform:
@@ -148,14 +148,14 @@ internal runbook for them.
 In Claude Code:
 
 ```text
-/plugin marketplace add IronFlock/agent-skills
+/plugin marketplace add IronFlock/ai-plugins
 /plugin install ironflock-dev@ironflock
 ```
 
 Or from a shell:
 
 ```bash
-claude plugin marketplace add IronFlock/agent-skills
+claude plugin marketplace add IronFlock/ai-plugins
 claude plugin install ironflock-dev@ironflock
 ```
 
@@ -178,7 +178,7 @@ app's `.claude/settings.json`. It loads once a person trusts the folder:
 {
   "extraKnownMarketplaces": {
     "ironflock": {
-      "source": { "source": "github", "repo": "IronFlock/agent-skills" },
+      "source": { "source": "github", "repo": "IronFlock/ai-plugins" },
       "autoUpdate": true
     }
   },

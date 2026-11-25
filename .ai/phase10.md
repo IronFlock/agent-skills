@@ -1,6 +1,6 @@
 # Shared development context
 
-Repository: `agent-skills`.
+Repository: `ai-plugins` (renamed from `agent-skills` on 2026-11-25).
 
 This checkout participates in Phase 10. The canonical plan and private handoff
 are in the sibling API repository: `../api/.ai/phase10/README.md`.

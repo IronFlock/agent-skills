@@ -1,4 +1,4 @@
-<!-- Adapted from the design-critique skill of the design plugin, version 1.2.0, by Anthropic (anthropics/knowledge-work-plugins), under the Apache License, Version 2.0; this file is under the same licence. Changed by Record Evolution GmbH in 2026: rewritten as checks of an IronFlock board. The licence text and the notice are in LICENSE-APACHE-2.0.txt and NOTICE in the folder of the skill ironflock-templates (IronFlock/agent-skills), and at https://www.apache.org/licenses/LICENSE-2.0 -->
+<!-- Adapted from the design-critique skill of the design plugin, version 1.2.0, by Anthropic (anthropics/knowledge-work-plugins), under the Apache License, Version 2.0; this file is under the same licence. Changed by Record Evolution GmbH in 2026: rewritten as checks of an IronFlock board. The licence text and the notice are in LICENSE-APACHE-2.0.txt and NOTICE in the folder of the skill ironflock-templates (IronFlock/ai-plugins), and at https://www.apache.org/licenses/LICENSE-2.0 -->
 # Checking a board before you report it
 
 Five checks for a board you built or restyled, run once before you report

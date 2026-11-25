@@ -1,4 +1,4 @@
-<!-- Adapted from the skills ux-copy and accessibility-review of the design plugin, version 1.2.0, and from the frontend-design plugin, version 1.1.1, both by Anthropic, under the Apache License, Version 2.0; this file is under the same licence. Changed by Record Evolution GmbH in 2026: rewritten for the settings of IronFlock board widgets. The licence text and the notice are in LICENSE-APACHE-2.0.txt and NOTICE in the folder of the skill ironflock-templates (IronFlock/agent-skills), and at https://www.apache.org/licenses/LICENSE-2.0 -->
+<!-- Adapted from the skills ux-copy and accessibility-review of the design plugin, version 1.2.0, and from the frontend-design plugin, version 1.1.1, both by Anthropic, under the Apache License, Version 2.0; this file is under the same licence. Changed by Record Evolution GmbH in 2026: rewritten for the settings of IronFlock board widgets. The licence text and the notice are in LICENSE-APACHE-2.0.txt and NOTICE in the folder of the skill ironflock-templates (IronFlock/ai-plugins), and at https://www.apache.org/licenses/LICENSE-2.0 -->
 # Boards people act on
 
 The words, sizes and contrast of what people click. The forms are in

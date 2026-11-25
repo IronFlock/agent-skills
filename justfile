@@ -1,7 +1,7 @@
 # One version for the repository: VERSION, written into the plugin.json of
 # all marketplace plugins and into CHANGELOG.md by the release (tools/release.py). The
 # tag is v<version>.
-RELEASE_NAME := "agent-skills"
+RELEASE_NAME := "ai-plugins"
 VERSION_FILE := "VERSION"
 VERSION_FILES := "VERSION CHANGELOG.md plugins/ironflock/.claude-plugin/plugin.json plugins/ironflock-dev/.claude-plugin/plugin.json plugins/ironflock-appliance/.claude-plugin/plugin.json"
 # PyYAML and jsonschema, the validator's two dependencies, pinned in a

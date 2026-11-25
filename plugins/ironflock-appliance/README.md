@@ -2,7 +2,7 @@
 
 Connect Claude Code directly to an IronFlock appliance, alongside the IronFlock cloud connection. The computer running Claude Code needs to reach the appliance and trust its HTTPS certificate.
 
-1. Add the IronFlock marketplace with `/plugin marketplace add IronFlock/agent-skills`.
+1. Add the IronFlock marketplace with `/plugin marketplace add IronFlock/ai-plugins`.
 2. Install `/plugin install ironflock-appliance@ironflock`. The plugin also installs the IronFlock skills.
 3. Enter the **Appliance MCP address**, including `/mcp`, for example `https://api.plant.example/mcp`. To change it later, use `/plugin configure ironflock-appliance@ironflock`.
 4. Reload the plugins or restart Claude Code. In `/mcp`, select the appliance connection, authenticate in the browser and review the permissions on the appliance. Ask Claude which projects are on that appliance.

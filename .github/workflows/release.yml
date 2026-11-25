@@ -1,6 +1,6 @@
 # Release: the merge of a release pull request (`just release-patch`: version
 # bump in VERSION, both plugin.json files and CHANGELOG.md, title
-# `release agent-skills v<version>`) checks the release and sets the tag
+# `release ai-plugins v<version>`) checks the release and sets the tag
 # v<version>. The marketplace serves main: a new install gets main as it is,
 # released or not, and an installed plugin updates when its version changes,
 # that is, on the merge of a release pull request. The tag marks the release;

@@ -6,6 +6,10 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
+## Unreleased
+
+- The plugins moved to `IronFlock/ai-plugins` on GitHub. Add the marketplace with `/plugin marketplace add IronFlock/ai-plugins` (Claude Code) or `codex plugin marketplace add IronFlock/ai-plugins` (Codex). The old address `IronFlock/agent-skills` keeps working, so installed plugins need no change.
+
 ## 1.1.14 - 2026-11-25
 
 - The board validator checks edit and delete dialogs opened from a list. It warns when a table's edit column has no URL parameter for its buttons, when no form or widget reads that parameter, when a form opens on a parameter no column sets, and when the form's fields do not show the chosen record.

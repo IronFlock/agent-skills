@@ -56,7 +56,7 @@ Sign in to the IronFlock installation you want to use. It must support browser s
 **Claude Code.** Add the marketplace and install the cloud plugin:
 
 ```text
-/plugin marketplace add IronFlock/agent-skills
+/plugin marketplace add IronFlock/ai-plugins
 /plugin install ironflock@ironflock
 ```
 
@@ -86,15 +86,15 @@ Reload plugins or restart Claude Code, open `/mcp`, choose the IronFlock cloud s
 ## Help
 
 - [IronFlock documentation](https://ironflock.com/docs/)
-- [Questions and problems](https://github.com/IronFlock/agent-skills/issues)
-- [What each version changed](https://github.com/IronFlock/agent-skills/blob/main/CHANGELOG.md)
+- [Questions and problems](https://github.com/IronFlock/ai-plugins/issues)
+- [What each version changed](https://github.com/IronFlock/ai-plugins/blob/main/CHANGELOG.md)
 - [Privacy](https://ironflock.com/en/company-legal/terms-privacy/): IronFlock's
   terms and privacy notice
 
 ## License
 
 MIT, see
-[LICENSE](https://github.com/IronFlock/agent-skills/blob/main/LICENSE).
+[LICENSE](https://github.com/IronFlock/ai-plugins/blob/main/LICENSE).
 
 Three references of `ironflock-production-figures` incorporate material
 adapted from the claude-for-manufacturing plugin by Anthropic and are under

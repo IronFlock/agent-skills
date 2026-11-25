@@ -261,7 +261,7 @@ def transcript_stats(path: Path) -> dict:
 # this repository (GitHub, raw.githubusercontent.com, a clone), a skill folder
 # of it, or the plugins installed in the home folder. Bash and the web are
 # allowed, so this is found after the run, not prevented.
-SKILL_SOURCE = re.compile(r"agent-skills|skills/ironflock-|(?:~|\$HOME|\$\{HOME\}|/(?:Users|home)/[^/\s\"']+)/\.claude\b", re.I)
+SKILL_SOURCE = re.compile(r"ai-plugins|agent-skills|skills/ironflock-|(?:~|\$HOME|\$\{HOME\}|/(?:Users|home)/[^/\s\"']+)/\.claude\b", re.I)
 
 
 def skill_lookups(transcript: Path) -> list[str]:
