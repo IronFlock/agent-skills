@@ -39,7 +39,8 @@ widget-<name>/
 ├── package.json, package-lock.json
 ├── vite.config.ts, tsconfig.json
 ├── .editorconfig, .prettierrc, .gitignore, .vscode/settings.json
-├── CLAUDE.md                       agent guidance: commands, architecture, decisions
+├── AGENTS.md                       agent guidance: working agreements, commands, architecture, decisions
+├── .claude/, .codex/               enable the IronFlock plugins for Claude Code and Codex
 └── README.md                       for people using the package
 ```
 
@@ -211,9 +212,10 @@ release needs.
 
 ## Documentation and thumbnails
 
-- **CLAUDE.md** is for agents working in the repo: the commands, the architecture
+- **AGENTS.md** is for agents working in the repo (Claude Code and Codex both
+  read it): the organization's working agreements, the commands, the architecture
   (how `inputData` flows to the screen), and every non-obvious decision with its
-  reason. Keep the shared sections (commands, the versioned tag, theming, the
+  reason. Keep the shared sections (the working agreements, commands, the versioned tag, theming, the
   `aiSelection` rules) in the fleet's wording, and update the file in the same
   change as the code it describes.
 - **README.md** is for people: what the widget shows, how to install and register

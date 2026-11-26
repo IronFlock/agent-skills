@@ -58,7 +58,13 @@ CATEGORIES: list[tuple[str, list[str]]] = [
     ),
     (
         "Input and control",
-        ["widget-form", "widget-switch", "widget-filter-dropdown", "widget-filter-calendar"],
+        [
+            "widget-form",
+            "widget-switch",
+            "widget-toolbar",
+            "widget-filter-dropdown",
+            "widget-filter-calendar",
+        ],
     ),
     ("Navigation", ["widget-navbar", "widget-sidenav", "widget-navbutton"]),
     ("Notifications", ["widget-toast"]),

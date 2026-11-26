@@ -72,7 +72,7 @@ starting from an empty file, and keep its infrastructure files (`.github/`,
    repos, in later releases). Add a root `layout` only if the content has a
    natural height or width that should not scale
    ([config-schema.md](config-schema.md#layout)).
-5. **README.md and CLAUDE.md**: replace every `TODO:` and describe the widget's own
+5. **README.md and AGENTS.md**: replace every `TODO:` and describe the widget's own
    data flow and decisions.
 6. **Thumbnails** (`thumbnail.png`, `thumbnail.webp`), see
    [repo-and-release.md](repo-and-release.md#documentation-and-thumbnails).

@@ -24,7 +24,7 @@ events, and Studio does all fetching, writing and navigating.
 
 ## Workflow
 
-1. **Read before changing.** In the widget's repo, read `CLAUDE.md` (its own
+1. **Read before changing.** In the widget's repo, read `AGENTS.md` (its own
    decisions and gotchas), `src/definition-schema.json` and the component source.
    Then run the checker once, so you can tell what was already there from what
    you introduce:
@@ -42,7 +42,7 @@ events, and Studio does all fetching, writing and navigating.
    already solves it ([references/widget-index.md](references/widget-index.md)).
 4. **Keep the rest in step**: `src/default-data.json` stays a valid, neutral
    example; `aiSelection` changes when the widget can do something new; `layout`
-   when its natural height or width changes; `CLAUDE.md`
+   when its natural height or width changes; `AGENTS.md`
    and `README.md` describe what you changed.
 5. **Verify**:
    - `npm run build` must pass.

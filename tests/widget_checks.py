@@ -76,7 +76,7 @@ def finish(repo: Path) -> None:
     edit_json(repo, "src/definition-schema.json", schema)
     edit_json(repo, "package.json", lambda p: p.update(description="IronFlock board widget: sample readouts"))
     edit(repo, "README.md", lambda t: re.sub(r"TODO:[^\n]*\n[^\n]*\n", "Shows readouts.\n", t, count=1))
-    edit(repo, "CLAUDE.md", lambda t: re.sub(r"TODO:[^\n]*\n", "", t))
+    edit(repo, "AGENTS.md", lambda t: re.sub(r"TODO:[^\n]*\n", "", t))
     for name in ("thumbnail.png", "thumbnail.webp"):
         shutil.copy(FIXTURES / name, repo / name)
     package = json.loads((repo / "package.json").read_text())
@@ -449,7 +449,7 @@ def main() -> int:
             ("ERROR", "thumbnail.webp", "-"),
         }
         got = {(level, where, path) for level, where, path, _ in raw}
-        unexpected = sorted(f for f in raw if (f[0], f[1], f[2]) not in expected_raw and not f[1].startswith(("CLAUDE.md", "package-lock.json")))
+        unexpected = sorted(f for f in raw if (f[0], f[1], f[2]) not in expected_raw and not f[1].startswith(("AGENTS.md", "package-lock.json")))
         missing = sorted(expected_raw - got)
         status = "ok  " if not unexpected and not missing else "FAIL"
         print(f"{status} the scaffold as generated: {len(raw)} finding(s)")
