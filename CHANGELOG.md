@@ -6,7 +6,7 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
-## Unreleased
+## 1.1.17 - 2026-11-26
 
 - Boards can use the new Toolbar widget (`widget-toolbar`): buttons, switches, sliders, choice groups and dropdowns in one bar, each writing its value into a table column and/or setting a URL parameter. The board validator checks the tables and columns its tools write, and a widget that filters on a toolbar's URL parameter is no longer reported as having no source.
 - Widget repositories keep their agent guide in `AGENTS.md`, which Claude Code and Codex both read. `check_widget.py` checks `AGENTS.md` instead of warning that `CLAUDE.md` is missing, and asks a repository still on `CLAUDE.md` to rename it. `new_widget.py` creates `AGENTS.md` with the working agreements, plus the settings that enable the IronFlock plugins in Claude Code and Codex.
