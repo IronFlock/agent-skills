@@ -6,7 +6,7 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
-## Unreleased
+## 1.1.16 - 2026-11-26
 
 - Building the working copy and looking at the development board need the cloud IDE running. When it is not, Claude passes on the platform's message: open the app in DevStudio, or build a pushed branch. A checkout on a laptop is never built as a working copy.
 
