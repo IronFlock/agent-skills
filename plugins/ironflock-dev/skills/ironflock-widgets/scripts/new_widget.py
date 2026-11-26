@@ -92,7 +92,7 @@ def main() -> int:
         "  git init -b main && npm install && npm run build\n"
         "  npm start                       # the demo on http://localhost:8000/demo/\n"
         "\nThen replace every TODO: (schema description and aiSelection, package.json\n"
-        "description, README.md, CLAUDE.md), adapt the component, add thumbnail.png\n"
+        "description, README.md, AGENTS.md), adapt the component, add thumbnail.png\n"
         "and thumbnail.webp, and run check_widget.py until it reports no errors.\n"
         "references/new-widget.md lists what the platform needs before the widget can\n"
         "be used on a board."

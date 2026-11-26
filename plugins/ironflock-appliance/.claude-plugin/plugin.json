@@ -1,7 +1,7 @@
 {
   "name": "ironflock-appliance",
   "displayName": "IronFlock Appliance",
-  "version": "1.1.16",
+  "version": "1.1.17",
   "description": "Add a direct connection from Claude Code to your IronFlock appliance. Configure the appliance’s HTTPS MCP address and sign in to that installation.",
   "author": {
     "name": "IronFlock",

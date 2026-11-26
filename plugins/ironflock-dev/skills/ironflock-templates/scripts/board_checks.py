@@ -441,6 +441,8 @@ def check_widget(board: Board, i: int, w: dict, offline: bool, cache: dict, plac
     if package == "widget-form" and isinstance(config, dict):
         check_form_targets(board, config, cpath)
         check_open_parameter(board, config, cpath)
+    if package == "widget-toolbar" and isinstance(config, dict):
+        check_toolbar_targets(board, config, cpath)
     if package == "widget-table" and isinstance(config, dict):
         check_single_record_table(board, config, cpath)
         check_edit_columns(board, config, cpath)
@@ -831,6 +833,32 @@ def check_form_targets(board: Board, config: dict, path: list) -> None:
     for k, f in enumerate(fields):
         if isinstance(f, dict) and constant(f.get("type")) == "file":
             check_file_field(board, f, path + ["formFields", k])
+    check_write_targets(board, targets, "form")
+
+
+def check_toolbar_targets(board: Board, config: dict, path: list) -> None:
+    """A widget-toolbar writes a row per click: the tool's targetColumn, its
+    extraColumns and the sharedColumns of the same table."""
+    targets = []
+    shared = config.get("sharedColumns") if isinstance(config.get("sharedColumns"), list) else []
+    targets += [(path + ["sharedColumns", k, "targetColumn"], s.get("targetColumn")) for k, s in enumerate(shared) if isinstance(s, dict)]
+    tools = config.get("tools") if isinstance(config.get("tools"), list) else []
+    for k, t in enumerate(tools):
+        if not isinstance(t, dict):
+            continue
+        targets.append((path + ["tools", k, "targetColumn"], t.get("targetColumn")))
+        extra = t.get("extraColumns") if isinstance(t.get("extraColumns"), list) else []
+        targets += [
+            (path + ["tools", k, "extraColumns", j, "targetColumn"], e.get("targetColumn"))
+            for j, e in enumerate(extra)
+            if isinstance(e, dict)
+        ]
+    check_write_targets(board, targets, "toolbar")
+
+
+def check_write_targets(board: Board, targets: list, writer: str) -> None:
+    """Every targetColumn a widget writes names a column of a table (not a
+    transform) in data-template.yml, of the type it claims."""
     for tpath, target in targets:
         if not isinstance(target, dict) or not target.get("tablename"):
             continue
@@ -838,10 +866,10 @@ def check_form_targets(board: Board, config: dict, path: list) -> None:
         columns = board.columns_of(table, None)
         if columns is None:
             if board.data.present:
-                board.error(tpath + ["tablename"], f"the form writes to '{table}', which is not a table in data-template.yml")
+                board.error(tpath + ["tablename"], f"the {writer} writes to '{table}', which is not a table in data-template.yml")
             continue
         if table in board.data.transforms:
-            board.error(tpath + ["tablename"], f"'{table}' is a transform; forms can only write to tables")
+            board.error(tpath + ["tablename"], f"'{table}' is a transform; a {writer} can only write to tables")
         if column not in columns:
             board.error(tpath + ["column"], f"table '{table}' has no column '{column}'")
         elif target.get("dataType") and columns[column] != target.get("dataType"):
@@ -1696,6 +1724,14 @@ def check_filter_wiring(board: Board) -> None:
                 for k, s in enumerate(config["dataseries"])
                 if isinstance(s, dict)
             ]
+        elif w.get("package_name") == "widget-toolbar" and isinstance(config.get("tools"), list):
+            # Every tool with parameterKey sets that URL parameter to its value
+            # (a switch, choice group, dropdown, slider or button).
+            keys = [
+                (t.get("parameterKey"), cpath + ["tools", k, "parameterKey"], "filter")
+                for k, t in enumerate(config["tools"])
+                if isinstance(t, dict)
+            ]
         for raw, kpath, kind in keys:
             if not isinstance(raw, str):
                 continue
@@ -1724,8 +1760,8 @@ def check_filter_wiring(board: Board) -> None:
         if name not in board.filter_params_offered and name not in board.params_opening:
             board.warn(
                 paths[0],
-                f"no widget on this board sets the URL parameter '{name}': no filter widget, widget-switch (parameterKey) "
-                f"or widget-table 'edit' column (styling.parameterKey)",
+                f"no widget on this board sets the URL parameter '{name}': no filter widget, widget-switch or widget-toolbar "
+                f"(parameterKey) or widget-table 'edit' column (styling.parameterKey)",
             )
     for name, paths in board.params_opening.items():
         if name not in board.filter_params_offered:

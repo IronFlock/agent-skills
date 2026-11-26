@@ -100,7 +100,7 @@ KNOWN_WIDGETS = {
     "widget-linechart", "widget-mapbox", "widget-markdown", "widget-navbar",
     "widget-navbutton", "widget-overlay", "widget-scada", "widget-sidenav",
     "widget-signal", "widget-statehistory", "widget-switch", "widget-table",
-    "widget-textbox", "widget-toast", "widget-value",
+    "widget-textbox", "widget-toast", "widget-toolbar", "widget-value",
 }  # fmt: skip
 
 SCHEMA_TYPES = {
@@ -688,7 +688,7 @@ class WidgetCheck:
         ("WARN", r"Date\.parse\([^)\n]*\btsp\b", "tsp",
          "Date.parse() on a timestamp: bound timestamps are epoch-millisecond numbers, which it turns into NaN"),
         ("WARN", r"\bconsole\.log\(", "console", "console.log left in"),
-        ("WARN", r"\bunsafeHTML\(", "unsafeHTML", "renders config text as HTML; sanitise it, or say in CLAUDE.md why it is trusted"),
+        ("WARN", r"\bunsafeHTML\(", "unsafeHTML", "renders config text as HTML; sanitise it, or say in AGENTS.md why it is trusted"),
         ("WARN", r"\beval\(|\bnew\s+Function\(", "eval", "runs code built from strings"),
         ("WARN", r"<(?:div|span|li|h[1-6]|p)\b[^>]*@click=", "@click",
          "a clickable element that is not a control; use a <button> (or add a role, tabindex and key handling)"),
@@ -1126,7 +1126,14 @@ class WidgetCheck:
                     self.warn(path.name, f"is identical to {sibling.name}'s thumbnail; show this widget")
 
     def check_docs(self) -> None:
-        for name in ("CLAUDE.md", "README.md"):
+        # The agent guide is AGENTS.md, which Claude Code and Codex both read.
+        # A repository still on CLAUDE.md is checked under that name and told
+        # to rename it.
+        agents = "AGENTS.md"
+        if self.read(agents) is None and self.read("CLAUDE.md") is not None:
+            agents = "CLAUDE.md"
+            self.warn(agents, "the widgets keep their agent guide in AGENTS.md; rename it")
+        for name in (agents, "README.md"):
             text = self.read(name)
             if text is None:
                 self.warn(name, "missing")

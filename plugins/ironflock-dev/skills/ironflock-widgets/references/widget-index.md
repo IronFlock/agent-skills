@@ -1,7 +1,7 @@
 # The existing widgets
 
 Read the widget that already solves your sub-problem before writing your own. Each
-repo's `CLAUDE.md` records its decisions and gotchas.
+repo's `AGENTS.md` records its decisions and gotchas.
 
 ## The widgets
 
@@ -25,6 +25,7 @@ repo's `CLAUDE.md` records its decisions and gotchas.
 | widget-embed | a web page in an iframe | Studio rewrites tunnel URLs | lit |
 | widget-form | a data-entry dialog that writes table rows, with file uploads | `data-submit`, `file-data-submit`, `nav-submit`, reads `route` | @material/web, lit-flatpickr |
 | widget-switch | toggles that call device functions, or set URL parameters | `action-submit`, `param-submit`, reads `route` | lit, @material/web |
+| widget-toolbar | a bar of buttons, switches, sliders, choice groups and dropdowns that write table rows and/or set URL parameters | `data-submit`, `param-submit`, reads `route` | lit, @material/web |
 | widget-filter-dropdown | a dropdown that sets a URL parameter | `param-submit`, reads `route` | @material/web |
 | widget-filter-calendar | a date or range picker that sets URL parameters | `param-submit`, reads `route` | @material/web, flatpickr, lit-flatpickr |
 | widget-navbar | a top menu with the current page highlighted | `nav-submit`, reads `route` | lit, @material/web |
@@ -43,11 +44,13 @@ work; externalizing it keeps the bundle small.
 | Canvas text in the board's text colour | `resolvedTextColor()` in any ECharts widget |
 | Text that scales to fill the tile | widget-value (measures and scales), widget-signal and the starter template (CSS `cq` units) |
 | A pivot that splits data into several charts or readouts | widget-doughnut, widget-gauge, widget-linechart (`#split#` in chart names) |
-| Reading and writing URL parameters | widget-filter-dropdown, widget-switch (view switch) |
+| Reading and writing URL parameters | widget-filter-dropdown, widget-switch (view switch), widget-toolbar |
 | Navigation and current-page highlighting | widget-navbutton (smallest), widget-navbar, widget-sidenav |
 | `*` and `{{variable}}` substitution in routes | `resolveRoute()` in widget-navbutton |
 | Calling a device function with an optimistic state | widget-switch |
-| Writing rows to a table | widget-form |
+| Writing rows to a table | widget-form; widget-toolbar (shared key columns, a value held until the bound read-back agrees) |
+| A menu or list that must escape the tile's clipping | widget-toolbar (`popover="manual"` in the top layer, positioned from the trigger and followed while open) |
+| Tools that move into a ⋮ menu when the tile is too small | widget-toolbar (`src/layout.ts`: a hidden ruler measures each tool, a pure function places them) |
 | An opaque menu or dialog over a translucent tile | `surfaceColor()` in widget-filter-dropdown and widget-form |
 | Material Web components styled by tokens | widget-navbutton, widget-switch |
 | A data grid | widget-table (vaadin-grid) |
