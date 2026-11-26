@@ -6,6 +6,10 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
+## Unreleased
+
+- Building the working copy and looking at the development board need the cloud IDE running. When it is not, Claude passes on the platform's message: open the app in DevStudio, or build a pushed branch. A checkout on a laptop is never built as a working copy.
+
 ## 1.1.15 - 2026-11-25
 
 - The plugins moved to `IronFlock/ai-plugins` on GitHub. Add the marketplace with `/plugin marketplace add IronFlock/ai-plugins` (Claude Code) or `codex plugin marketplace add IronFlock/ai-plugins` (Codex). The old address `IronFlock/agent-skills` keeps working, so installed plugins need no change.

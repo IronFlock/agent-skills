@@ -10,8 +10,9 @@ four times a minute. The key needs the scope to read data.
 
 - **The app in development:** `get_dev_dashboard_image` with `app_key` and
   `swarm_key`. It shows the working copy's `.ironflock/board-template.yml`
-  with the app's development data in the project. Cloud only. `swarm_key`
-  comes from `list_projects`, `app_key` from `list_project_apps`.
+  with the app's development data in the project. Cloud only, and only while
+  the user's cloud IDE runs. `swarm_key` comes from `list_projects`,
+  `app_key` from `list_project_apps`.
 - **An installed board:** `get_dashboard_image` with `swarm_key` and
   `dashboard_key` (from `list_dashboards`).
 - `page` names the page to show (home without it), `full_page` shows the
@@ -47,6 +48,9 @@ their layout changed. Correct, and look once more: one round.
   Either the working copy has no board (add `.ironflock/board-template.yml`)
   or the app was never started in development in that project (start it
   there once).
+- It answers that the cloud IDE is not running: the working copy can only be
+  read while it runs. Pass the sentence on: the user opens the app in
+  DevStudio, then you look again. Do not retry before that.
 - It answers that it is busy: wait and try once more.
 - On an appliance, or when the platform has no such tool, go on with the
   checks from the definition, and tell the user that the board was not
