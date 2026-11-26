@@ -22,6 +22,13 @@ device is offline, report that.
   revision only when requested. For a pending build, follow its `build_key`
   with `get_build`. If the submission times out, look up the DEV build before
   considering a retry. Report the outcome and the relevant error if it fails.
+- **The cloud IDE must run.** The working copy exists only in the hosted
+  IDE. The platform builds it, and shows its development board, only while
+  that IDE runs; `get_app_repository` reports this as `ide_running`. If the
+  platform refuses because the cloud IDE is not running, do not retry: pass
+  on its sentence. The user opens the app in DevStudio, or builds a pushed
+  branch or commit. A checkout outside the hosted IDE, such as one on a
+  laptop, is never built as a working copy: build its pushed branch.
 - **Read build logs.** Use `get_build` for the relevant build key. If the key
   is unknown, use `list_builds` with `kind: "DEV"` and the target device.
 - **Read app logs.** Call `get_app_logs` with `app_key`, `swarm_key`,
