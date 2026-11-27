@@ -10,3 +10,5 @@ Connect Claude Code directly to an IronFlock appliance, alongside the IronFlock 
 The appliance issues its own sign-in and handles requests for its local account. Claude receives the tool results you request. End the grant in that appliance’s Studio under **Account Settings → Developer → App sign-ins**.
 
 In Claude chat or Cowork, add a custom connector with the appliance’s full MCP address if Anthropic’s connector service can reach it. The optional address setting above is for Claude Code.
+
+[Privacy](https://ironflock.com/en/company-legal/terms-privacy/): IronFlock's terms and privacy notice.

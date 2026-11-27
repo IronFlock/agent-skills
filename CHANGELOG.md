@@ -6,6 +6,10 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
+## 1.1.19 - 2026-11-27
+
+- Installing the IronFlock and IronFlock Appliance plugins no longer shows a warning about an unrecognized `privacyPolicyUrl` key. The plugin manifests no longer carry it; the IronFlock README still links the privacy notice.
+
 ## 1.1.18 - 2026-11-27
 
 - The widget catalog lists the Toolbar widget, so agents can choose it for a bar of commands, modes, set points or view filters. 1.1.17 added its support before the widget was on npm, when the catalog could not be built for it yet.
