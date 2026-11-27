@@ -94,8 +94,8 @@ GROUP BY machine_id, category;
   value most frequent while the counter rises tells them apart (6 or 4); a
   0 or a missing 17 does not. When the data cannot tell, ask.
 - `category`: `run`, `own_stop`, `mode_stop` (a non-production mode),
-  `starved`, `blocked`, `line_stop` (direction not shown: no tags, or both
-  set), `branch_line` (Lack or Tailback of a branch line), `planned` (only
+  `starved`, `blocked`, `line_stop` (direction not shown: no tags, or
+  both set), `branch_line` (Lack or Tailback of a branch line), `planned` (only
   where the plant maps a mode so) or `unknown`. `kind` is the core's `run`,
   `stop` or `unknown`, plus `planned`.
 - The mode decides first: Execute in Maintenance mode is a `mode_stop`,

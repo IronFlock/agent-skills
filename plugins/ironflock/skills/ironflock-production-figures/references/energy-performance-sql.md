@@ -18,8 +18,8 @@ absent is not zero.
   reading; the meter's documentation says which. Energy is power integrated
   over time. Never sum or average power values to get energy.
 - **Direction**: a meter with feed-in (solar, regenerative drives) reads
-  negative power, or a net counter falls. Ask; use separate import and
-  export registers where they exist, and never report net as consumption.
+  negative power, or a net counter falls. Ask; use separate import
+  and export registers where they exist, and never report net as consumption.
 - Gas, compressed air, water and heat meters are counters too, in their own
   units.
 

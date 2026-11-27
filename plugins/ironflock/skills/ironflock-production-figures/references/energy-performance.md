@@ -19,8 +19,8 @@ calculated according to it.
 - **ISO 50006**, Energy management systems: Evaluating energy performance
   using energy performance indicators and energy baselines. Guidance on
   choosing, building, using and maintaining indicators and baselines,
-  relevant variables and normalisation. Applies whenever such figures are
-  set up or checked, with or without ISO 50001.
+  relevant variables and normalisation. Applies whenever such figures
+  are set up or checked, with or without ISO 50001.
 - Others: ISO 50015 (measurement and verification of energy performance),
   ISO 50047 (determining energy savings), ISO 50002-1 (energy audits),
   ISO 50003 (bodies that certify ISO 50001).
