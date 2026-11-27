@@ -6,7 +6,7 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
-## Unreleased
+## 1.1.22 - 2026-11-27
 
 - Boards can take photos with a form: widget-form's media field (widget-form 2.3.0 and later) stores several photos per save, each resized to a JPEG, as rows of a photo table linked to the record, optionally with where and when each was taken. `board-forms.md` shows the photo table, the files namespace and the two forms (a report with photos, more photos for an existing record), and the board validator checks the namespace (it must take `image/jpeg`), the accepted image types, the photo table's columns and their types, the link to the record and the photo ID's entity key. The widget skill documents the `media-data-submit` event Studio handles for it.
 - Widgets can load a large part that only some configs need on demand: a module loaded with `import()` becomes a chunk next to the bundle, and Studio now imports the bundle by its path in the package, so the chunk is found. The widget skill says when a chunk pays and what it must not do (widget-markdown's code highlighter is the example), and `check_widget.py` follows the chunks in `dist/`: it reports an entry that cannot load alone, a chunk that is missing or imports the entry, and a chunk import that Studio's import map does not provide.
