@@ -65,8 +65,9 @@ refresh-plugin:
 #                        from main's version on top of this branch (or on a
 #                        new branch release/v<x> from an up-to-date main). It
 #                        refuses without release notes under `## Unreleased`
-#                        in CHANGELOG.md, or with a badly formed
-#                        evals/results/<version>.md. Eval results are not
+#                        in CHANGELOG.md, with a badly formed
+#                        evals/results/<version>.md, or when
+#                        `claude plugin validate` faults a plugin. Eval results are not
 #                        required: evals run on demand. Its merge runs
 #                        .github/workflows/release.yml, which checks the same
 #                        and sets the tag.
@@ -76,9 +77,15 @@ refresh-plugin:
 _write-version version:
     python3 -I tools/release.py write {{version}}
 
-# Refuses a release without release notes, or with a badly formed eval results
-# file for the version (tools/release.py). Eval results are optional.
-_require-release level:
+# Claude Code's check of the marketplace and the plugins, with the plugin
+# directory's submission checks; warnings fail (tools/validate_plugins.sh).
+validate-plugins:
+    tools/validate_plugins.sh
+
+# Refuses a release without release notes, with a badly formed eval results
+# file for the version (tools/release.py), or with a plugin that
+# `claude plugin validate` faults. Eval results are optional.
+_require-release level: validate-plugins
     git fetch --quiet origin main
     git fetch --quiet --tags origin
     python3 -I tools/release.py gate {{level}}

@@ -28,9 +28,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # The release notes in CHANGELOG.md, the version in both plugins, and the
+  # The release notes in CHANGELOG.md, the version in both plugins, the
   # form of evals/results/<version>.md if evals were recorded (they are run on
-  # demand, not required).
+  # demand, not required), and `claude plugin validate` of the marketplace
+  # and every plugin.
   check:
     if: github.event_name != 'push' || startsWith(github.event.head_commit.message, 'release ')
     runs-on: ubuntu-latest
@@ -42,6 +43,12 @@ jobs:
           fetch-depth: 0
       - name: release notes and versions
         run: python3 -I tools/release.py ci
+      # Claude Code's own manifest check, pinned; warnings and the plugin
+      # directory's submission refusals fail the release.
+      - name: claude plugin validate
+        env:
+          CLAUDE: npm exec --yes --package=@anthropic-ai/claude-code@2.1.332 -- claude
+        run: tools/validate_plugins.sh
 
   # The tag, only on the merge of a release pull request. Written with the
   # release GitHub App's token from the `release` environment (deployments
