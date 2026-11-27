@@ -126,8 +126,11 @@ Each of these comes from how Studio hosts widgets or from a bug that shipped.
 
 11. **Take shared libraries from Studio's import map.** `@material/web`, `@vaadin/*`,
     flatpickr, echarts and zrender must be external (they register elements or need
-    one shared instance); lit, tinycolor2 and tslib may be. Bundle everything else
-    into the one ES module `main` points at: any other bare import fails on cloud.
+    one shared instance), and every widget leaves lit to it too; tinycolor2 and
+    tslib may be external. Bundle everything else: any other bare import fails on
+    cloud. The ES module `main` points at must load alone; a large part that only
+    some configs need can be a chunk loaded with `import()`, and the widget must
+    work without it.
 12. **ECharts**: register every component with `echarts.use`, build each option from
     `structuredClone(template)` (never from `getOption()`), keep the canvas
     background transparent, and dispose of instances.

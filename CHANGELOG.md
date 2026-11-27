@@ -6,6 +6,13 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
+## Unreleased
+
+- Boards can take photos with a form: widget-form's media field (widget-form 2.3.0 and later) stores several photos per save, each resized to a JPEG, as rows of a photo table linked to the record, optionally with where and when each was taken. `board-forms.md` shows the photo table, the files namespace and the two forms (a report with photos, more photos for an existing record), and the board validator checks the namespace (it must take `image/jpeg`), the accepted image types, the photo table's columns and their types, the link to the record and the photo ID's entity key. The widget skill documents the `media-data-submit` event Studio handles for it.
+- Widgets can load a large part that only some configs need on demand: a module loaded with `import()` becomes a chunk next to the bundle, and Studio now imports the bundle by its path in the package, so the chunk is found. The widget skill says when a chunk pays and what it must not do (widget-markdown's code highlighter is the example), and `check_widget.py` follows the chunks in `dist/`: it reports an entry that cannot load alone, a chunk that is missing or imports the entry, and a chunk import that Studio's import map does not provide.
+- Every widget takes `lit` from Studio's import map, and `check_widget.py` warns about one that bundles it.
+- `check_widget.py` measures a widget's schema and default config as compact JSON, as the IronFlock AI now loads them. widget-form with its media field is about 40,000 of the 60,000 characters and no longer reported as too large.
+
 ## 1.1.21 - 2026-11-27
 
 - The plugin directory's check no longer reports the IronFlock plugin as reading the environment and sending it off the machine. Lines in the skills that began with words such as "set" or "export" read to it like shell commands; they are wrapped differently and say the same.

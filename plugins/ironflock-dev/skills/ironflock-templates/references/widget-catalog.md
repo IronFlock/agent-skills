@@ -319,7 +319,7 @@ An iframe embed widget for displaying external web content within the dashboard.
 
 ### widget-form
 
-A form that stores what people enter as a row in a table, shown in the tile or in a dialog opened by a button. Fields: text, number, dropdown, checkbox, textarea, date and time, colour, masked secret and file upload, each written to one column.
+A form that stores what people enter as a row in a table, shown in the tile or in a dialog opened by a button. Fields: text, number, dropdown, checkbox, textarea, date and time, colour, masked secret and file upload, each written to one column, and photos, each a row of a photo table.
 
 **Data shape:** Writes rather than reads: each formFields[] entry maps one input to a table column (targetColumn), and a save stores one row. Entries of type section head groups of fields, and width puts fields side by side.
 
@@ -328,6 +328,7 @@ A form that stores what people enter as a row in a table, shown in the tile or i
 - Data a person enters or corrects — manual readings, maintenance notes, quality checks, configuration values — with validation, defaults or fields shown only for some answers (conditionalDisplay).
 - Settings that apply as soon as they change, with no Submit button: autoSubmit on a form shown in the tile.
 - A record with a file such as a PDF (type 'file'), or a password or token (type 'secret', into a 'secret: true' column).
+- Several photos taken on a phone as evidence (type 'media'): each a row of a photo table linked to the record, optionally with where and when it was taken.
 - Editing the record a table's 'edit' column picked: openParameter 'edit', and preFilledValue bound to the latest row filtered by it.
 - A long form as a compact sheet: fields side by side (width), headed groups (type section), fieldLayout.density compact.
 - Deleting a record (soft delete), with a confirmation dialog: a separate form with Submit labelled 'Delete' (buttonLabels) that writes the record's key and deleted = true from hidden fields.
@@ -338,6 +339,7 @@ A form that stores what people enter as a row in a table, shown in the tile or i
 - A single on/off setting stored per record — use widget-switch with targetColumn.
 - Showing stored records — use widget-table.
 - A button that only navigates — use widget-navbutton.
+- One-click writes with no fields to fill in — Start/Stop, a mode, a set point — use widget-toolbar.
 
 ### widget-switch
 
@@ -389,6 +391,7 @@ A dropdown filter widget for selecting values from a predefined list. Use this w
 - Capturing a value that must be stored — a filter only narrows what is displayed and writes nothing back. Use widget-form.
 - Options that have to be discovered from the data at runtime; this list is static configuration.
 - Triggering a device action or command — use widget-switch, or widget-scada for an industrial symbol.
+- Several view filters together in one bar — on/off switches, Day | Week | Month choices, a threshold slider — use widget-toolbar.
 
 **Layout:** keeps a fixed size: `fixedHeight: true`, about 48 px height.
 

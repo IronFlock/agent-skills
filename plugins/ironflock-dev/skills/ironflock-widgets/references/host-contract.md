@@ -20,16 +20,23 @@ implements it.
 ## Loading
 
 - A board stores, for every tile, a `package_name` (`widget-gauge`) and a pinned
-  `version`. Studio imports `https://cdn.jsdelivr.net/npm/@ironflock/<package_name>@<version>`
-  (unpkg as the fallback). The CDN serves the file named by `main` in
-  `package.json`, so `main` must be the built ES module, `dist/<package_name>.js`.
+  `version`. Studio imports the bundle by its path in the published package:
+  `https://cdn.jsdelivr.net/npm/@ironflock/<package_name>@<version>/dist/<package_name>.min.js`,
+  which jsDelivr minifies from `dist/<package_name>.js`, then that file as built
+  from unpkg. Last it tries the bare package URL, where the CDN serves the file
+  named by `main` in `package.json`: old versions were built to other paths. So
+  the build must write `dist/<package_name>.js`, and `main` must name it.
 - Studio then renders `<${package_name}-${version}>` and waits until that tag is
   registered. A bundle that registers any other name leaves the tile spinning
   forever, without an error anywhere.
-- The bundle must be **one self-contained ES module**. It is loaded from a CDN
-  URL, so relative imports of chunks or assets (`./chunk.js`,
-  `new URL('x.svg', import.meta.url)`) resolve against the wrong place. Inline
-  assets as strings, or get a base URL from the host (widget-scada's `baseUrl`).
+- That file must be **an ES module that loads alone**: no static relative
+  import, and no asset URL (`new URL('x.svg', import.meta.url)`). On the bare
+  package URL those resolve outside the package. Inline assets as strings, or get
+  a base URL from the host (widget-scada's `baseUrl`).
+- Code that only some configs need can be a **chunk the entry loads with
+  `import()`**: the build writes it next to the entry, and the browser fetches it
+  from there. The widget must work without it
+  ([component.md](component.md#code-loaded-on-demand)).
 - **Bare imports resolve through Studio's import map**, which gives every widget
   the same instance of the shared libraries. It maps:
 
@@ -191,16 +198,17 @@ dispatch with `bubbles: true, composed: true` anyway.
 | `action-submit` | `{ actionApp, actionDevice, actionTopic, args }` | Calls the device function `<swarm>.<actionDevice>.<app>.<stage>.<actionTopic>` with `[args]`. `actionApp` is the numeric app key and must match exactly. The result is discarded; failures show a toast. Without `actionApp` or `actionTopic` nothing happens. |
 | `data-submit` | An array of `{ swarm_app_databackend_key, table_name, column_name, value }` | Groups the items into one row per table, adds `tsp` (now), turns `NaN` into `null` and publishes the row to the app's table. Items without a key or table are skipped. |
 | `file-data-submit` | `{ items, waitUntil }`: `data-submit` items plus file items `{ swarm_app_databackend_key, table_name, column_name, file: File, namespace, contentType }` | Studio after 3.5.8 only. Claims the event by calling `waitUntil(promise)` during the dispatch. Uploads each file into the FleetFiles namespace of the item's app under a key of its own (`<YYYY-MM-DD>/<random>/<file name>`), puts the key in as the item's value, then writes the rows as for `data-submit`. If an upload fails, no row is written. The promise resolves once the rows are written and rejects with an `Error` whose message (localized) says why, which the widget shows. |
+| `media-data-submit` | `{ items, waitUntil, progress }`: `data-submit` items and file items as for `file-data-submit`, each with an optional `row` (the index of its row within its table; absent: the table's one row), and on a file item `id` (the same on every retry), an optional `key` (stored by an earlier attempt) and an optional `urlColumn` (`{ swarm_app_databackend_key, table_name, column_name }`, same table and row) | Studio with media support only (widget-form's media field). Claims the event by calling `waitUntil(promise)` during the dispatch. Stores each file item without a `key`, one after another, calling `progress(id, 'uploading')` before and `progress(id, 'stored', key)` after; an item with a `key` is not uploaded again and is reported `stored` at once. A failed upload is reported `failed` and rejects the promise; no row is written. Then it puts each key in as its item's value and the object's URL (or `null`) into `urlColumn`, groups the items into rows by databackend, table and `row`, each with `tsp`, a later item for a column winning, and writes the tables in the order their first item appears. A table with several rows goes out as one acknowledged publish on `bulk.<swarm_key>.<app_key>.<table>` (rows in `args[0]`), which fleetdb inserts all or none; where the router refuses that topic to board sessions (`not_authorized`, a router before the `board_writer` bulk rule) Studio publishes the rows one by one, leaving the earlier ones written if one fails. It stops at the first table that fails; the promise then rejects. A widget that retries sends the same row values (ids, stored keys), so entity tables keyed by those ids take the retry as an update. |
 | `widget-defaults` | A config object | Widget Editor only: replaces the defaults the form fills in (widget-scada sends the selected symbol's defaults). Needs `bubbles: true, composed: true`. |
 
 - `nav-submit` and `param-submit` only work on boards. In the Widget Editor and the
   AI chat nothing handles them.
-- `action-submit`, `data-submit` and `file-data-submit` work everywhere,
+- `action-submit`, `data-submit`, `file-data-submit` and `media-data-submit` work everywhere,
   **including the Widget Editor's preview and the AI chat**: a click there switches
   a real device, writes a real row or stores a real file.
 - Any other event name is ignored. That is what makes a new event safe to add: a
-  widget that sends one must check that a host handled it (`file-data-submit`:
-  nobody called `waitUntil`) and tell the user when none did, because an older
+  widget that sends one must check that a host handled it (`file-data-submit`,
+  `media-data-submit`: nobody called `waitUntil`) and tell the user when none did, because an older
   Studio, or an appliance build that bundles one, silently drops it.
 - Never put a `File`, `Blob` or other object into a `data-submit` value: Studio
   publishes it as JSON (`{}`), which lands in the column as garbage.

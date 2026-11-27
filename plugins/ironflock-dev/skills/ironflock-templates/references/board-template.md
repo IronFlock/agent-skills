@@ -31,7 +31,7 @@ What each file holds:
 - [board-navigation.md](board-navigation.md): the page tree, reachability,
   highlighting, how a link resolves, the navigation patterns.
 - [board-forms.md](board-forms.md): the file side of boards that manage
-  records: the delete form in YAML, uploading files with a form.
+  records: the delete form in YAML, uploading files and photos with a form.
 - [board-layout-style.md](board-layout-style.md): the grid, fixed-size
   widgets, layering, the `style` keys, tile frames, the presets in the file.
 - [board-markdown.md](board-markdown.md): widget-markdown placeholders and

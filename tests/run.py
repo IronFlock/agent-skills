@@ -10,7 +10,11 @@ board as board-template.yml, run scripts/validate.py and compare its findings:
 - the example board must produce no findings at all;
 - every other board must produce each finding its `# expect:` lines list, as
   `# expect: LEVEL <exact path> :: <part of the message>`, and no finding at a
-  path its `# expect-none: <exact path>` lines list.
+  path its `# expect-none: <exact path>` lines list. A board with an
+  `# offline: <reason>` line is validated with --offline: its widget configs
+  are not walked against their definition schemas, for a board that pins a
+  widget version not yet on npm (the reason says which, and what to change once
+  it is published).
 
 Then the starter app: assets/app-template must produce no findings at all, and
 scripts/new_app.py must scaffold an app from it that keeps no trace of the
@@ -60,10 +64,11 @@ FIXTURE = ROOT / "privileged-compose-fixture.json"
 FINDING = re.compile(r"^(ERROR|WARN)\s+(\S+) (\S+): (.*)$")
 EXPECT = re.compile(r"^# expect:\s*(ERROR|WARN)\s+(\S+)\s+::\s+(.*)$")
 EXPECT_NONE = re.compile(r"^# expect-none:\s*(\S+)\s*$")
+OFFLINE = re.compile(r"^# offline:\s*\S")
 
 
-def validate(app: Path, name: str) -> list[tuple[str, str, str]]:
-    done = subprocess.run([sys.executable, str(VALIDATE), str(app)], capture_output=True, text=True)
+def validate(app: Path, name: str, *flags: str) -> list[tuple[str, str, str]]:
+    done = subprocess.run([sys.executable, str(VALIDATE), str(app), *flags], capture_output=True, text=True)
     if done.returncode not in (0, 1):
         sys.exit(f"validate.py crashed on {name}:\n{done.stdout}{done.stderr}")
     return [(m[1], m[3], m[4]) for m in map(FINDING.match, done.stdout.splitlines()) if m]
@@ -74,7 +79,8 @@ def run_board(board: Path) -> list[tuple[str, str, str]]:
         app = Path(tmp) / "app"
         shutil.copytree(ROOT / "app", app)
         shutil.copy(board, app / ".ironflock" / "board-template.yml")
-        return validate(app, board.name)
+        offline = any(map(OFFLINE.match, board.read_text().splitlines()))
+        return validate(app, board.name, *(["--offline"] if offline else []))
 
 
 def check_starter() -> list[str]:
