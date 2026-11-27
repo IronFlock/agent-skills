@@ -6,7 +6,7 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
-## Unreleased
+## 1.1.21 - 2026-11-27
 
 - The plugin directory's check no longer reports the IronFlock plugin as reading the environment and sending it off the machine. Lines in the skills that began with words such as "set" or "export" read to it like shell commands; they are wrapped differently and say the same.
 
