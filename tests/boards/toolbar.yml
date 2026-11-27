@@ -1,0 +1,84 @@
+# yaml-language-server: $schema=https://ironflock.com/schemas/board-template/v1.yml
+# A widget-toolbar writes a row per click (sharedColumns of the same table,
+# a tool's extraColumns, its own targetColumn) and/or sets a URL parameter
+# (parameterKey). The 'onlyFaults' switch is read by the table, so neither side
+# is reported; the 'period' choice is read by nothing. The command buttons
+# write real columns of machine_status; the misconfigured tools write to a
+# missing table, a missing column and a column of another type.
+# expect-none: widgets[0].chartconfig.tools[0].parameterKey
+# expect-none: widgets[1].chartconfig.columns[0].values.tableRef.queryParams.filterAnd[1].value
+# expect: WARN  widgets[0].chartconfig.tools[1].parameterKey :: no widget reads 'period'
+# expect-none: widgets[0].chartconfig.sharedColumns[0].targetColumn.column
+# expect-none: widgets[0].chartconfig.tools[2].targetColumn.column
+# expect-none: widgets[0].chartconfig.tools[2].extraColumns[0].targetColumn.column
+# expect-none: widgets[0].chartconfig.tools[3].targetColumn.column
+# expect: ERROR widgets[0].chartconfig.tools[4].targetColumn.tablename :: the toolbar writes to 'machine_commands', which is not a table
+# expect: ERROR widgets[0].chartconfig.tools[5].targetColumn.column :: table 'machine_status' has no column 'speed'
+# expect: WARN  widgets[0].chartconfig.tools[6].extraColumns[0].targetColumn.dataType :: column 'state' is string, not numeric
+name: toolbar
+widgets:
+    - layout_id: controls
+      package_name: widget-toolbar
+      chartconfig:
+          orientation: $str:horizontal
+          sharedColumns:
+              - targetColumn: {tablename: machine_status, column: machine_id, dataType: string}
+                value: $str:press-1
+          tools:
+              - label: $str:Only faults
+                control: $str:switch
+                parameterKey: $str:onlyFaults
+                onValue: $str:FAULT
+              - label: $str:Period
+                control: $str:choice
+                parameterKey: $str:period
+                options:
+                    - {label: $str:Day, value: $str:day}
+                    - {label: $str:Week, value: $str:week}
+              - label: $str:Stop
+                icon: $str:stop
+                buttonValue: $str:IDLE
+                confirmText: $str:Stop the press?
+                targetColumn: {tablename: machine_status, column: state, dataType: string}
+                extraColumns:
+                    - targetColumn: {tablename: machine_status, column: state_text, dataType: string}
+                      value: $str:Idle
+              - label: $str:Speed
+                control: $str:slider
+                min: $num:0
+                max: $num:3000
+                step: $num:50
+                unit: $str:rpm
+                targetColumn: {tablename: machine_status, column: target_rpm, dataType: numeric}
+              - label: $str:Reset
+                buttonValue: $str:reset
+                targetColumn: {tablename: machine_commands, column: command, dataType: string}
+              - label: $str:Boost
+                buttonValue: $str:4000
+                targetColumn: {tablename: machine_status, column: speed, dataType: numeric}
+              - label: $str:Max
+                buttonValue: $str:3000
+                targetColumn: {tablename: machine_status, column: target_rpm, dataType: numeric}
+                extraColumns:
+                    - targetColumn: {tablename: machine_status, column: state, dataType: numeric}
+                      value: $str:1
+    - layout_id: machines
+      package_name: widget-table
+      chartconfig:
+          title: $str:Machines
+          columns:
+              - header: $str:State
+                type: $str:string
+                values:
+                    tableRef:
+                        tablename: machine_status
+                        format: {value: state}
+                        queryParams:
+                            limit: 50
+                            filterAnd:
+                                - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
+                                - {column: state, operator: '=', value: onlyFaults, dataType: string, useFilter: true}
+layout:
+    gridLayout:
+        - {id: controls, x: 0, y: 0, w: 96, h: 6}
+        - {id: machines, x: 0, y: 6, w: 96, h: 56}

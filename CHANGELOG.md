@@ -6,6 +6,10 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
+## 1.1.18 - 2026-11-27
+
+- The widget catalog lists the Toolbar widget, so agents can choose it for a bar of commands, modes, set points or view filters. 1.1.17 added its support before the widget was on npm, when the catalog could not be built for it yet.
+
 ## 1.1.17 - 2026-11-26
 
 - Boards can use the new Toolbar widget (`widget-toolbar`): buttons, switches, sliders, choice groups and dropdowns in one bar, each writing its value into a table column and/or setting a URL parameter. The board validator checks the tables and columns its tools write, and a widget that filters on a toolbar's URL parameter is no longer reported as having no source.
