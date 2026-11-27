@@ -6,7 +6,7 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
-## Unreleased
+## 1.1.19 - 2026-11-27
 
 - Installing the IronFlock and IronFlock Appliance plugins no longer shows a warning about an unrecognized `privacyPolicyUrl` key. The plugin manifests no longer carry it; the IronFlock README still links the privacy notice.
 
