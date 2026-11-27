@@ -11,7 +11,7 @@ are not listed here because they change with widget releases.
 
 - Data visualization: widget-linechart, widget-value, widget-gauge, widget-signal, widget-doughnut, widget-table, widget-heatmap, widget-statehistory, widget-mapbox, widget-scada
 - Content and media: widget-label, widget-textbox, widget-markdown, widget-image, widget-overlay, widget-embed
-- Input and control: widget-form, widget-switch, widget-filter-dropdown, widget-filter-calendar
+- Input and control: widget-form, widget-switch, widget-toolbar, widget-filter-dropdown, widget-filter-calendar
 - Navigation: widget-navbar, widget-sidenav, widget-navbutton
 - Notifications: widget-toast
 
@@ -356,6 +356,23 @@ Toggle switches that show an on/off state and change it on click: a switch calls
 - Text, numbers or choices that are entered and stored, or several settings saved together — use widget-form.
 - The history of the switching — use widget-statehistory.
 - A tank, valve or pump drawn as itself and animated — use widget-scada.
+
+### widget-toolbar
+
+A bar of controls that users click to change things: buttons, switches, sliders, choice groups and dropdowns. Each tool writes its value into a table column, which the app's backend receives as a new row, and/or sets a URL parameter that other widgets on the page filter on.
+
+**Data shape:** No input data needed. Each tool writes: targetColumn gets the clicked value (plus extraColumns and sharedColumns such as a record id, in the same row), parameterKey gets it as a URL parameter. To show what is stored, bind a tool's value to the latest value of the same column for the same record. choice and dropdown options can be bound to a table (label, value).
+
+**Use when:**
+- The controls of an app page in one bar: commands, modes, set points and view filters together, such as Start/Stop buttons, an Auto switch and a speed slider writing to a commands table the backend subscribes to.
+- A view bar whose switches, choice groups (Day | Week | Month) and dropdowns set URL parameters that filter the other widgets: each filtered widget gets a filterAnd condition with useFilter: true and the parameterKey as value.
+
+**Not for:**
+- One stand-alone on/off control, or a direct call of a device function — use widget-switch.
+- Several values typed in and saved together, text, dates or files — use widget-form.
+- Picking a date or a time range — use widget-filter-calendar.
+- One filter dropdown on its own, such as picking the machine a page shows — use widget-filter-dropdown.
+- Opening other pages — use widget-navbar or widget-navbutton.
 
 ### widget-filter-dropdown
 
