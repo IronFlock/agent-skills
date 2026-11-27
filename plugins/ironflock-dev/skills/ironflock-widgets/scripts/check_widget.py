@@ -90,8 +90,12 @@ IMPORT_MAP_SNAPSHOT: dict[str, str] = {
 # or their classes are compared with instanceof across modules.
 MUST_BE_EXTERNAL = ("@material/web", "@vaadin/", "lit-flatpickr", "flatpickr", "echarts", "zrender")
 
+# Packages every widget takes from the import map although a bundled copy
+# would work: one copy for the whole board, not about 20 KB in each widget.
+SHOULD_BE_EXTERNAL = ("lit", "lit-html", "lit-element", "@lit/reactive-element")
+
 # The events Studio listens for on a widget element.
-HOST_EVENTS = {"nav-submit", "param-submit", "action-submit", "data-submit", "file-data-submit", "widget-defaults"}
+HOST_EVENTS = {"nav-submit", "param-submit", "action-submit", "data-submit", "file-data-submit", "media-data-submit", "widget-defaults"}
 
 # Widgets the platform registers (for aiSelection's notFor routing).
 KNOWN_WIDGETS = {
@@ -130,7 +134,7 @@ INERT = {
     "hidden": "nothing implements it",
 }
 
-AI_SCHEMA_BUDGET = 50_000  # characters of the schema + default config the AI gets in full (ai: MAX_WIDGET_SCHEMA_CHARS)
+AI_SCHEMA_BUDGET = 60_000  # characters of the schema + default config the AI gets in full (ai: MAX_WIDGET_SCHEMA_CHARS)
 AI_ROUTING_BUDGET = 2_500  # characters of description + aiSelection, a share of a shared prompt
 
 
@@ -274,6 +278,24 @@ def resolve_import_map(specifier: str, imports: dict[str, str]) -> str | None:
         if key.endswith("/") and specifier.startswith(key) and (best is None or len(key) > len(best)):
             best = key
     return imports[best] if best else None
+
+
+def module_imports(code: str) -> list[tuple[str, bool, int]]:
+    """The imports of a built ES module as (specifier, static, offset): the
+    import and export statements at the start of a line, and import("...")
+    calls. An import() in a comment is left out (JSDoc types are written
+    `import("./x").Type`): one on a line that starts as a comment or follows a
+    `//`."""
+    found = [
+        (match.group(1), True, match.start(1))
+        for match in re.finditer(r"""^\s*(?:import|export)\b(?!\s*[(.])[^'"\n]*?(?:from\s*)?["']([^"'\n]+)["']""", code, re.M)
+    ]
+    for match in re.finditer(r"""\bimport\s*\(\s*["']([^"'\n]+)["']\s*\)""", code):
+        before = code[code.rfind("\n", 0, match.start()) + 1 : match.start()]
+        if "//" in before or before.lstrip().startswith(("*", "/*")):
+            continue
+        found.append((match.group(1), False, match.start(1)))
+    return sorted(found, key=lambda item: item[2])
 
 
 def package_of(specifier: str) -> str:
@@ -427,7 +449,7 @@ class WidgetCheck:
             self.warn("package.json", 'set "type": "module"', "type")
         main = f"dist/{self.pkg}.js"
         if str(pkg.get("main", "")).lstrip("./") != main:
-            self.error("package.json", f'main must be "{main}": the CDN serves it for the bare package URL Studio imports', "main")
+            self.error("package.json", f'main must be "{main}": Studio imports that path, and the CDN serves main for the bare package URL it falls back to', "main")
         for field in ("browser", "jsdelivr", "unpkg"):
             if field in pkg and str(pkg[field]).lstrip("./") != main:
                 self.error("package.json", f"{field} makes CDNs serve another file than main", field)
@@ -578,6 +600,7 @@ class WidgetCheck:
             **(self.package.get("devDependencies") or {}),
             **(self.package.get("peerDependencies") or {}),
         }
+        bundled_shared: set[str] = set()
         for specifier, (file, line) in sorted(imported.items()):
             package = package_of(specifier)
             external = self.is_external(specifier, externals)
@@ -597,6 +620,15 @@ class WidgetCheck:
                     file,
                     f"{package} is bundled; it must be external and come from Studio's import map "
                     "(it registers custom elements or relies on one shared instance)",
+                    specifier,
+                    line,
+                )
+            if package in SHOULD_BE_EXTERNAL and not external and served and package not in bundled_shared:
+                bundled_shared.add(package)
+                self.warn(
+                    file,
+                    f"{package} is bundled; add /^lit/ and /^@lit/ to the build's externals, so the widget "
+                    "takes the copy Studio's import map provides, as the other widgets do (about 20 KB less to load)",
                     specifier,
                     line,
                 )
@@ -765,7 +797,14 @@ class WidgetCheck:
         props = schema.get("properties")
         if isinstance(props, dict):
             self.check_properties(file, props, [], [])
-        size = len(json.dumps({"package_name": self.pkg, "version": self.version, "definition_schema": schema, "default_config": self.defaults}, indent=2, ensure_ascii=True))
+        # As the AI's get_widget_schema tool dumps it: compact, non-ASCII escaped.
+        size = len(
+            json.dumps(
+                {"package_name": self.pkg, "version": self.version, "definition_schema": schema, "default_config": self.defaults},
+                separators=(",", ":"),
+                ensure_ascii=True,
+            )
+        )
         if size > AI_SCHEMA_BUDGET:
             self.warn(file, f"schema and default config are {size:,} characters; above {AI_SCHEMA_BUDGET:,} the AI only gets an overview of the top-level settings")
 
@@ -1150,24 +1189,55 @@ class WidgetCheck:
             self.error("package.json", "the description is still the template's TODO text", "description")
 
     def check_dist(self) -> None:
-        bundle = self.repo / "dist" / f"{self.pkg}.js"
+        dist = (self.repo / "dist").resolve()
+        bundle = dist / f"{self.pkg}.js"
         if not bundle.is_file():
             return
-        file = bundle.relative_to(self.repo).as_posix()
+        file = f"dist/{bundle.name}"
         code = bundle.read_text(encoding="utf-8", errors="replace")
         if "versionplaceholder" in code:
             self.error(file, "still contains versionplaceholder; the replace plugin did not run")
         tags = set(re.findall(rf"""["']{re.escape(self.pkg)}-(\d+\.\d+\.\d+)["']""", code))
         if tags and self.version not in tags:
             self.warn(file, f"registers {', '.join(sorted(tags))} but package.json is {self.version}; Studio's dev server serves this file, so rebuild (npm run build)")
-        for match in re.finditer(r"""^\s*(?:import|export)\b[^'"\n]*?(?:from\s*)?["']([^"'\n]+)["']""", code, re.M):
-            specifier = match.group(1)
-            if specifier.startswith((".", "/", "http:", "https:", "data:")):
-                if specifier.startswith("."):
-                    self.error(file, f"imports {specifier}; the bundle must be one file, because the CDN URL it is loaded from is not its folder", specifier, line_of(code, match.start()))
-                continue
-            if resolve_import_map(specifier, self.imports) is None:
-                self.error(file, f"imports {specifier!r}, which Studio's import map does not provide; it fails to load on cloud", specifier, line_of(code, match.start()))
+        # The entry, then every chunk it loads with import(), and theirs.
+        seen, queue = {bundle}, [bundle]
+        while queue:
+            path = queue.pop(0)
+            file = f"dist/{path.relative_to(dist).as_posix()}"
+            code = path.read_text(encoding="utf-8", errors="replace")
+            for specifier, static, offset in module_imports(code):
+                line = line_of(code, offset)
+                if specifier.startswith(("/", "http:", "https:", "data:")):
+                    continue
+                if not specifier.startswith("."):
+                    if resolve_import_map(specifier, self.imports) is None:
+                        self.error(file, f"imports {specifier!r}, which Studio's import map does not provide; it fails to load on cloud", specifier, line)
+                    continue
+                if path == bundle and static:
+                    self.error(
+                        file,
+                        f"imports {specifier} statically; the entry must load alone, because where Studio falls back to the bare "
+                        "package URL a relative import resolves outside the package. Only a module loaded with import() "
+                        "becomes a chunk, and it must share no module with the entry",
+                        specifier,
+                        line,
+                    )
+                    continue
+                target = (path.parent / specifier).resolve()
+                if target == bundle:
+                    self.error(
+                        file,
+                        f"imports the entry bundle; jsDelivr serves the entry as {self.pkg}.min.js, so this import runs it "
+                        "a second time and the element is defined twice. The lazily loaded module must share no module with the entry",
+                        specifier,
+                        line,
+                    )
+                elif dist not in target.parents or not target.is_file():
+                    self.error(file, f"imports {specifier}, which is not in dist/; rebuild (npm run build)", specifier, line)
+                elif target not in seen:
+                    seen.add(target)
+                    queue.append(target)
 
     # -- run -----------------------------------------------------------------
 

@@ -1,0 +1,243 @@
+# yaml-language-server: $schema=https://ironflock.com/schemas/board-template/v1.yml
+# widget-form's media field: several photos per save, each resized to a JPEG,
+# stored in a FleetFiles namespace and written as a row of its own into the
+# photo table its targetColumn names (machine_photos in tests/app's
+# data-template.yml, keyed by photo_id; namespace 'photos' takes image/jpeg up
+# to 10 MB, 'reports' only PDF).
+#
+# offline: widget-form 2.3.0, the first version with the media field, is not on
+# npm yet, and every published version refuses type 'media' and its settings.
+# Once 2.3.0 is published, remove this line and add expect-none lines for the
+# media settings of the two correct fields (type, cameraCapture, maxPhotos,
+# maxImageEdge, imageQuality), so the schema walk covers them too.
+#
+# widgets[0] creates a report with photos: the photo rows get the hidden
+# Generate New ID field's value through mediaLinkField / mediaLinkColumn.
+#
+# expect-none: widgets[0].chartconfig.formFields[3].type
+# expect-none: widgets[0].chartconfig.formFields[3].fileNamespace
+# expect-none: widgets[0].chartconfig.formFields[3].acceptedFileTypes
+# expect-none: widgets[0].chartconfig.formFields[3].maxFileSizeMB
+# expect-none: widgets[0].chartconfig.formFields[3].targetColumn.column
+# expect-none: widgets[0].chartconfig.formFields[3].mediaIdColumn
+# expect-none: widgets[0].chartconfig.formFields[3].mediaIdColumn.column
+# expect-none: widgets[0].chartconfig.formFields[3].mediaLinkField
+# expect-none: widgets[0].chartconfig.formFields[3].mediaLinkColumn
+# expect-none: widgets[0].chartconfig.formFields[3].mediaLinkColumn.column
+# expect-none: widgets[0].chartconfig.formFields[3].fileNameColumn.column
+# expect-none: widgets[0].chartconfig.formFields[3].fileSizeColumn.column
+# expect-none: widgets[0].chartconfig.formFields[3].fileTypeColumn.column
+# expect-none: widgets[0].chartconfig.formFields[3].fileUrlColumn.column
+# expect-none: widgets[0].chartconfig.formFields[3].capturedAtColumn.column
+# expect-none: widgets[0].chartconfig.formFields[3].latitudeColumn.column
+# expect-none: widgets[0].chartconfig.formFields[3].latitudeColumn.tablename
+# expect-none: widgets[0].chartconfig.formFields[3].longitudeColumn.column
+# expect-none: widgets[0].chartconfig.formFields[3].altitudeColumn.column
+# expect-none: widgets[0].chartconfig.formFields[3].positionSourceColumn.column
+#
+# widgets[1] adds photos to an existing report: a hidden field pre-filled with
+# the report's key targets the photo table, so it goes into every photo row and
+# no mediaLinkField is needed.
+#
+# expect-none: widgets[1].chartconfig.formFields[0].targetColumn.column
+# expect-none: widgets[1].chartconfig.formFields[1].type
+# expect-none: widgets[1].chartconfig.formFields[1].fileNamespace
+# expect-none: widgets[1].chartconfig.formFields[1].mediaIdColumn
+# expect-none: widgets[1].chartconfig.formFields[1].mediaLinkField
+# expect-none: widgets[1].chartconfig.formFields[1].mediaLinkColumn
+#
+# widgets[2] holds one mistake (or a few) per field.
+#
+# expect-none: widgets[2].chartconfig.formFields[2].mediaLinkField
+# expect: ERROR widgets[2].chartconfig.formFields[2].type :: a media field needs a fileNamespace
+# expect: ERROR widgets[2].chartconfig.formFields[3].fileNamespace :: has no files namespace 'manuals'
+# expect: ERROR widgets[2].chartconfig.formFields[4].fileNamespace :: namespace 'reports' does not take image/jpeg
+# expect: ERROR widgets[2].chartconfig.formFields[5].acceptedFileTypes :: takes only images, not 'application/pdf'
+# expect: WARN  widgets[2].chartconfig.formFields[6].acceptedFileTypes :: namespace 'photos' does not take 'image/heic'
+# expect: ERROR widgets[2].chartconfig.formFields[7].targetColumn.column :: column 'size_bytes' is bigint
+# expect: ERROR widgets[2].chartconfig.formFields[7].latitudeColumn.column :: latitudeColumn gets the latitude in decimal degrees, which column 'position_source' (string) cannot hold
+# expect: ERROR widgets[2].chartconfig.formFields[7].capturedAtColumn.column :: which column 'altitude' (numeric) cannot hold; use a timestamp column
+# expect: WARN  widgets[2].chartconfig.formFields[7].mediaIdColumn.column :: 'report_id' is not the entity key of 'machine_photos'
+# expect: WARN  widgets[2].chartconfig.formFields[7].fileNameColumn.tablename :: lands outside the photo rows
+# expect: WARN  widgets[2].chartconfig.formFields[7].maxFileSizeMB :: 30 MB is more than namespace 'photos' takes (10 MB
+# expect: ERROR widgets[2].chartconfig.formFields[8].mediaLinkField :: mediaLinkField needs mediaLinkColumn
+# expect: ERROR widgets[2].chartconfig.formFields[9].mediaLinkColumn :: mediaLinkColumn needs mediaLinkField
+# expect: ERROR widgets[2].chartconfig.formFields[10].mediaLinkField :: 'Report' is not the Label of another field of this form
+# expect: ERROR widgets[2].chartconfig.formFields[11].mediaLinkField :: 'Evidence' is a section, which has no value
+# expect: WARN  widgets[2].chartconfig.formFields[12].mediaIdColumn :: no mediaIdColumn, so a save repeated after a failure adds copies
+# expect: WARN  widgets[2].chartconfig.formFields[12].mediaLinkField :: nothing ties the photo rows to a record
+# expect: ERROR widgets[2].chartconfig.formFields[12].positionSourceColumn.column :: table 'machine_photos' has no column 'source'
+# expect: WARN  widgets[2].chartconfig.formFields[13].mediaLinkColumn.column :: column 'latitude' is numeric, but it gets the value of 'Report ID'
+name: media-field
+widgets:
+    - layout_id: report-form
+      package_name: widget-form
+      version: 2.3.0
+      chartconfig:
+          title: $str:Report a problem
+          formButton: $bool:true
+          formFields:
+              - label: $str:Report ID
+                type: $str:textfield
+                hiddenField: $bool:true
+                generateId: $bool:true
+                targetColumn: {tablename: machine_reports, column: report_id, dataType: string}
+              - label: $str:Machine
+                type: $str:textfield
+                required: $bool:true
+                targetColumn: {tablename: machine_reports, column: machine_id, dataType: string}
+              - label: $str:What happened
+                type: $str:textarea
+                targetColumn: {tablename: machine_reports, column: note, dataType: string}
+              - label: $str:Photos
+                type: $str:media
+                required: $bool:true
+                cameraCapture: $bool:true
+                maxPhotos: $num:6
+                maxImageEdge: $num:2048
+                imageQuality: $num:85
+                targetColumn: {tablename: machine_photos, column: file_key, dataType: string}
+                fileNamespace: $str:photos
+                acceptedFileTypes: $str:image/*
+                maxFileSizeMB: $num:6
+                mediaIdColumn: {tablename: machine_photos, column: photo_id, dataType: string}
+                mediaLinkField: $str:Report ID
+                mediaLinkColumn: {tablename: machine_photos, column: report_id, dataType: string}
+                fileNameColumn: {tablename: machine_photos, column: file_name, dataType: string}
+                fileSizeColumn: {tablename: machine_photos, column: size_bytes, dataType: bigint}
+                fileTypeColumn: {tablename: machine_photos, column: content_type, dataType: string}
+                fileUrlColumn: {tablename: machine_photos, column: file_url, dataType: string}
+                capturedAtColumn: {tablename: machine_photos, column: captured_at, dataType: timestamp}
+                latitudeColumn: {tablename: machine_photos, column: latitude, dataType: numeric}
+                longitudeColumn: {tablename: machine_photos, column: longitude, dataType: numeric}
+                altitudeColumn: {tablename: machine_photos, column: altitude, dataType: numeric}
+                positionSourceColumn: {tablename: machine_photos, column: position_source, dataType: string}
+    - layout_id: add-photos-form
+      package_name: widget-form
+      version: 2.3.0
+      chartconfig:
+          title: $str:Add photos
+          formButton: $bool:true
+          formFields:
+              - label: $str:Report
+                type: $str:textfield
+                hiddenField: $bool:true
+                targetColumn: {tablename: machine_photos, column: report_id, dataType: string}
+                preFilledValue:
+                    valueRef:
+                        tablename: machine_reports
+                        column: report_id
+                        queryParams:
+                            limit: 1
+                            filterAnd:
+                                - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
+              - label: $str:Photos
+                type: $str:media
+                required: $bool:true
+                targetColumn: {tablename: machine_photos, column: file_key, dataType: string}
+                fileNamespace: $str:photos
+                mediaIdColumn: {tablename: machine_photos, column: photo_id, dataType: string}
+                capturedAtColumn: {tablename: machine_photos, column: captured_at, dataType: timestamp}
+    - layout_id: broken-form
+      package_name: widget-form
+      version: 2.3.0
+      chartconfig:
+          title: $str:Broken photo fields
+          formFields:
+              - label: $str:Report ID
+                type: $str:textfield
+                hiddenField: $bool:true
+                generateId: $bool:true
+                targetColumn: {tablename: machine_reports, column: report_id, dataType: string}
+              - label: $str:Evidence
+                type: $str:section
+              - label: $str:No namespace
+                type: $str:media
+                targetColumn: {tablename: machine_photos, column: file_key, dataType: string}
+                mediaIdColumn: {tablename: machine_photos, column: photo_id, dataType: string}
+                mediaLinkField: $str:Report ID
+                mediaLinkColumn: {tablename: machine_photos, column: report_id, dataType: string}
+              - label: $str:Unknown namespace
+                type: $str:media
+                targetColumn: {tablename: machine_photos, column: file_key, dataType: string}
+                fileNamespace: $str:manuals
+                mediaIdColumn: {tablename: machine_photos, column: photo_id, dataType: string}
+                mediaLinkField: $str:Report ID
+                mediaLinkColumn: {tablename: machine_photos, column: report_id, dataType: string}
+              - label: $str:Namespace without JPEG
+                type: $str:media
+                targetColumn: {tablename: machine_photos, column: file_key, dataType: string}
+                fileNamespace: $str:reports
+                mediaIdColumn: {tablename: machine_photos, column: photo_id, dataType: string}
+                mediaLinkField: $str:Report ID
+                mediaLinkColumn: {tablename: machine_photos, column: report_id, dataType: string}
+              - label: $str:Not only images
+                type: $str:media
+                targetColumn: {tablename: machine_photos, column: file_key, dataType: string}
+                fileNamespace: $str:photos
+                acceptedFileTypes: $str:image/*, application/pdf
+                mediaIdColumn: {tablename: machine_photos, column: photo_id, dataType: string}
+                mediaLinkField: $str:Report ID
+                mediaLinkColumn: {tablename: machine_photos, column: report_id, dataType: string}
+              - label: $str:Type the namespace refuses
+                type: $str:media
+                targetColumn: {tablename: machine_photos, column: file_key, dataType: string}
+                fileNamespace: $str:photos
+                acceptedFileTypes: $str:image/heic
+                mediaIdColumn: {tablename: machine_photos, column: photo_id, dataType: string}
+                mediaLinkField: $str:Report ID
+                mediaLinkColumn: {tablename: machine_photos, column: report_id, dataType: string}
+              - label: $str:Wrong columns
+                type: $str:media
+                targetColumn: {tablename: machine_photos, column: size_bytes, dataType: bigint}
+                fileNamespace: $str:photos
+                maxFileSizeMB: $num:30
+                mediaIdColumn: {tablename: machine_photos, column: report_id, dataType: string}
+                mediaLinkField: $str:Report ID
+                mediaLinkColumn: {tablename: machine_photos, column: report_id, dataType: string}
+                fileNameColumn: {tablename: machine_documents, column: file_name, dataType: string}
+                latitudeColumn: {tablename: machine_photos, column: position_source, dataType: string}
+                capturedAtColumn: {tablename: machine_photos, column: altitude, dataType: numeric}
+              - label: $str:Link field without column
+                type: $str:media
+                targetColumn: {tablename: machine_photos, column: file_key, dataType: string}
+                fileNamespace: $str:photos
+                mediaIdColumn: {tablename: machine_photos, column: photo_id, dataType: string}
+                mediaLinkField: $str:Report ID
+              - label: $str:Link column without field
+                type: $str:media
+                targetColumn: {tablename: machine_photos, column: file_key, dataType: string}
+                fileNamespace: $str:photos
+                mediaIdColumn: {tablename: machine_photos, column: photo_id, dataType: string}
+                mediaLinkColumn: {tablename: machine_photos, column: report_id, dataType: string}
+              - label: $str:Link to a missing field
+                type: $str:media
+                targetColumn: {tablename: machine_photos, column: file_key, dataType: string}
+                fileNamespace: $str:photos
+                mediaIdColumn: {tablename: machine_photos, column: photo_id, dataType: string}
+                mediaLinkField: $str:Report
+                mediaLinkColumn: {tablename: machine_photos, column: report_id, dataType: string}
+              - label: $str:Link to a section
+                type: $str:media
+                targetColumn: {tablename: machine_photos, column: file_key, dataType: string}
+                fileNamespace: $str:photos
+                mediaIdColumn: {tablename: machine_photos, column: photo_id, dataType: string}
+                mediaLinkField: $str:Evidence
+                mediaLinkColumn: {tablename: machine_photos, column: report_id, dataType: string}
+              - label: $str:No ID and no link
+                type: $str:media
+                targetColumn: {tablename: machine_photos, column: file_key, dataType: string}
+                fileNamespace: $str:photos
+                positionSourceColumn: {tablename: machine_photos, column: source, dataType: string}
+              - label: $str:Link into a numeric column
+                type: $str:media
+                targetColumn: {tablename: machine_photos, column: file_key, dataType: string}
+                fileNamespace: $str:photos
+                mediaIdColumn: {tablename: machine_photos, column: photo_id, dataType: string}
+                mediaLinkField: $str:Report ID
+                mediaLinkColumn: {tablename: machine_photos, column: latitude, dataType: numeric}
+layout:
+    gridLayout:
+        - {id: report-form, x: 0, y: 0, w: 32, h: 64}
+        - {id: add-photos-form, x: 32, y: 0, w: 32, h: 64}
+        - {id: broken-form, x: 64, y: 0, w: 32, h: 64}

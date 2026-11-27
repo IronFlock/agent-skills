@@ -53,9 +53,9 @@ and the CI gate (`just lint`) fails when they are stale.
 - `"name": "@ironflock/widget-<name>"`; `<name>` is lower-case kebab-case and is
   also the repo name, the folder name, Studio's `package_name` (`widget-<name>`)
   and the release name (`release widget-<name> <version>`).
-- `"main": "dist/widget-<name>.js"`: the CDN serves this file for the bare package
-  URL that Studio imports. No `exports`, `browser`, `jsdelivr` or `unpkg` fields
-  that point elsewhere.
+- `"main": "dist/widget-<name>.js"`: Studio imports this path, and the CDN serves
+  `main` for the bare package URL Studio falls back to. No `exports`, `browser`,
+  `jsdelivr` or `unpkg` fields that point elsewhere.
 - `"files": ["dist", "src", "thumbnail.png", "thumbnail.webp"]`: Studio and the
   AI fetch `src/definition-schema.json` and `src/default-data.json` from the
   published package.
@@ -77,16 +77,17 @@ and the CI gate (`just lint`) fails when they are stale.
 
 ## The build
 
-`vite.config.ts` builds a library: one ES module, `dist/widget-<name>.js`, with a
-source map.
+`vite.config.ts` builds a library: the ES module `dist/widget-<name>.js` with a
+source map, plus one chunk for each module the code loads with `import()`.
 
 - `@rollup/plugin-replace` replaces `versionplaceholder` with
   `package.json`'s version. This is what makes the element tag and the `version`
   field carry the release number.
 - `rollupOptions.external` lists exactly the shared libraries the widget takes from
   Studio's import map ([component.md](component.md#shared-libraries)).
-  Everything else is bundled into the one file; no code splitting, no relative
-  asset URLs.
+  Everything else is bundled: into the entry, or into a chunk the entry loads on
+  demand ([component.md](component.md#code-loaded-on-demand)). The entry has no
+  static relative import and no relative asset URL.
 - `define: { 'process.env.NODE_ENV': '"production"' }`, because some dependencies
   read it and browsers have no `process`.
 - `resolve.alias: { tslib: 'tslib/tslib.es6.js' }`: echarts imports tslib, and the

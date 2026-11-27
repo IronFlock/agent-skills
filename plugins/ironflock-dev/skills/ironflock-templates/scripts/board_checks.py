@@ -830,9 +830,17 @@ def check_form_targets(board: Board, config: dict, path: list) -> None:
         if isinstance(f, dict) and constant(f.get("type")) == "file"
         for key in FILE_COLUMNS
     ]
+    targets += [
+        (path + ["formFields", k, key], f.get(key))
+        for k, f in enumerate(fields)
+        if isinstance(f, dict) and constant(f.get("type")) == "media"
+        for key in MEDIA_COLUMNS
+    ]
     for k, f in enumerate(fields):
         if isinstance(f, dict) and constant(f.get("type")) == "file":
             check_file_field(board, f, path + ["formFields", k])
+        elif isinstance(f, dict) and constant(f.get("type")) == "media":
+            check_media_field(board, f, path + ["formFields", k], fields)
     check_write_targets(board, targets, "form")
 
 
@@ -1056,23 +1064,12 @@ def check_file_field(board: Board, f: dict, fpath: list) -> None:
             if ckind and ckind not in kinds:
                 board.error(fpath + [key, "column"], f"{key} gets {what}, which column '{ref.get('column')}' ({ckind}) cannot hold; use a {' or '.join(sorted(kinds))} column")
 
-    namespace = constant(f.get("fileNamespace"))
-    namespace = namespace.strip() if isinstance(namespace, str) else ""
-    if not namespace:
-        board.error(fpath + ["type"], "a file field needs a fileNamespace: a namespace from files.namespaces in data-template.yml ('default' when none are declared)")
+    found = field_namespace(board, f, fpath, "file")
+    if found is None:
         return
-    namespaces = board.data.namespaces
-    if namespaces is None or (isinstance(target, dict) and target.get("provider_app")):
-        return  # no data template here, or another app's files
-    declared = namespaces.get(namespace)
-    if declared is None:
-        names = ", ".join(sorted(namespaces))
-        board.error(fpath + ["fileNamespace"], f"data-template.yml has no files namespace '{namespace}' (it has: {names})")
-        return
-
+    namespace, declared = found
     allowed = declared["contentTypes"]
-    raw = constant(f.get("acceptedFileTypes"))
-    accepted = [t.strip().lower() for t in raw.split(",") if t.strip()] if isinstance(raw, str) else []
+    accepted = accepted_types(f)
     if not accepted and allowed != ["*/*"]:
         board.warn(fpath + ["fileNamespace"], f"no acceptedFileTypes, so the picker offers every file, but namespace '{namespace}' takes only {', '.join(allowed)}; list them in acceptedFileTypes")
     for t in accepted:
@@ -1082,10 +1079,139 @@ def check_file_field(board: Board, f: dict, fpath: list) -> None:
             board.warn(fpath + ["acceptedFileTypes"], f"'{t}' is broader than namespace '{namespace}' ({', '.join(allowed)}); the upload refuses the rest")
         else:
             board.error(fpath + ["acceptedFileTypes"], f"namespace '{namespace}' does not take '{t}' (it takes {', '.join(allowed)})")
+    check_file_size(board, f, fpath, namespace, declared)
 
+
+def field_namespace(board: Board, f: dict, fpath: list, kind: str) -> tuple[str, dict] | None:
+    """The FleetFiles namespace a file or media field stores into, with what
+    data-template.yml declares for it; None (after reporting it) when it is
+    missing or unknown, or when it cannot be checked here."""
+    namespace = constant(f.get("fileNamespace"))
+    namespace = namespace.strip() if isinstance(namespace, str) else ""
+    if not namespace:
+        board.error(fpath + ["type"], f"a {kind} field needs a fileNamespace: a namespace from files.namespaces in data-template.yml ('default' when none are declared)")
+        return None
+    namespaces = board.data.namespaces
+    target = f.get("targetColumn")
+    if namespaces is None or (isinstance(target, dict) and target.get("provider_app")):
+        return None  # no data template here, or another app's files
+    declared = namespaces.get(namespace)
+    if declared is None:
+        names = ", ".join(sorted(namespaces))
+        board.error(fpath + ["fileNamespace"], f"data-template.yml has no files namespace '{namespace}' (it has: {names})")
+        return None
+    return namespace, declared
+
+
+def accepted_types(f: dict) -> list[str]:
+    raw = constant(f.get("acceptedFileTypes"))
+    return [t.strip().lower() for t in raw.split(",") if t.strip()] if isinstance(raw, str) else []
+
+
+def check_file_size(board: Board, f: dict, fpath: list, namespace: str, declared: dict) -> None:
     size = constant(f.get("maxFileSizeMB"))
     if isinstance(size, (int, float)) and not isinstance(size, bool) and size * MIB > declared["maxObjectBytes"]:
         board.warn(fpath + ["maxFileSizeMB"], f"{size:g} MB is more than namespace '{namespace}' takes ({declared['maxObjectBytes'] / MIB:g} MB, its maxObjectBytes)")
+
+
+# The columns a media field writes into each photo row beside the key, with the
+# dataTypes that can hold them (None: whatever the mediaLinkField holds).
+MEDIA_COLUMNS = {
+    "mediaIdColumn": ({"string"}, "the photo's ID, a UUID"),
+    "mediaLinkColumn": (None, "the value of the mediaLinkField"),
+    **FILE_COLUMNS,
+    "fileUrlColumn": ({"string"}, "the stored photo's URL"),
+    "capturedAtColumn": ({"timestamp"}, "the time the photo was taken"),
+    "latitudeColumn": ({"numeric"}, "the latitude in decimal degrees"),
+    "longitudeColumn": ({"numeric"}, "the longitude in decimal degrees"),
+    "altitudeColumn": ({"numeric"}, "the altitude in metres"),
+    "positionSourceColumn": ({"string"}, "where the position came from, 'exif' or 'device'"),
+}
+# What a media field stores every photo it can decode as.
+PHOTO_TYPE = "image/jpeg"
+
+
+def check_media_field(board: Board, f: dict, fpath: list, fields: list) -> None:
+    """A widget-form field of type 'media' (widget-form 2.3.0 and later): several
+    photos per save, each resized to a JPEG, stored in a FleetFiles namespace and
+    written as a row of its own into the table of the target column (the photo
+    table), together with its companion columns and every other field of the
+    form that targets that table. The namespace must take image/jpeg, the
+    companion columns must be in the photo table and hold what they get, and
+    the rows need an ID of their own and a link to their record."""
+    target = f.get("targetColumn")
+    photos = target.get("tablename") if isinstance(target, dict) else None
+    columns = board.columns_of(photos, None) if isinstance(photos, str) else None
+    if isinstance(target, dict) and photos:
+        kind = (columns or {}).get(target.get("column"))
+        if kind and kind != "string":
+            board.error(fpath + ["targetColumn", "column"], f"a media field writes each photo's key, a string, but column '{target.get('column')}' is {kind}")
+        for key, (kinds, what) in MEDIA_COLUMNS.items():
+            ref = f.get(key)
+            if not isinstance(ref, dict) or not ref.get("tablename"):
+                continue
+            if ref.get("tablename") != photos:
+                board.warn(fpath + [key, "tablename"], f"{key} writes to '{ref.get('tablename')}', not the photo table '{photos}' (the target column's table), so it lands outside the photo rows")
+            ckind = (board.columns_of(ref.get("tablename"), None) or {}).get(ref.get("column"))
+            if kinds and ckind and ckind not in kinds:
+                board.error(fpath + [key, "column"], f"{key} gets {what}, which column '{ref.get('column')}' ({ckind}) cannot hold; use a {' or '.join(sorted(kinds))} column")
+
+    check_media_rows(board, f, fpath, fields, photos)
+
+    found = field_namespace(board, f, fpath, "media")
+    if found is None:
+        return
+    namespace, declared = found
+    allowed = declared["contentTypes"]
+    if not any(type_covers(p, PHOTO_TYPE) for p in allowed):
+        board.error(fpath + ["fileNamespace"], f"namespace '{namespace}' does not take {PHOTO_TYPE} (it takes {', '.join(allowed)}), the type a media field stores its photos as; add {PHOTO_TYPE} to its contentTypes")
+    for t in accepted_types(f):
+        if not t.startswith("image/"):
+            board.error(fpath + ["acceptedFileTypes"], f"a media field takes only images, not '{t}'; use a file field for other files")
+        elif not t.endswith("/*") and not any(type_covers(p, t) for p in allowed):
+            board.warn(fpath + ["acceptedFileTypes"], f"namespace '{namespace}' does not take '{t}' (it takes {', '.join(allowed)}): a photo the browser can decode is stored as {PHOTO_TYPE}, but one it cannot (HEIC outside Safari) is uploaded as it is and refused")
+    check_file_size(board, f, fpath, namespace, declared)
+
+
+def check_media_rows(board: Board, f: dict, fpath: list, fields: list, photos: str | None) -> None:
+    """The photo rows' own ID and their link to the record."""
+    id_ref = f.get("mediaIdColumn")
+    if not isinstance(id_ref, dict) or not id_ref.get("column"):
+        board.warn(fpath + ["mediaIdColumn"], "no mediaIdColumn, so a save repeated after a failure adds copies of the photo rows; give the photo table a string ID column, make it its entity key (maintainLatestFlagFor) and set it here")
+    elif id_ref.get("tablename") == photos and photos in board.data.tables and not id_ref.get("provider_app"):
+        keys = board.data.entity_keys.get(photos) or []
+        if id_ref.get("column") not in keys:
+            have = f"its maintainLatestFlagFor is [{', '.join(keys)}]" if keys else "it has no maintainLatestFlagFor"
+            board.warn(fpath + ["mediaIdColumn", "column"], f"'{id_ref.get('column')}' is not the entity key of '{photos}' ({have}), so a save repeated after a failure adds copies of its photo rows instead of writing them again")
+
+    link_field = constant(f.get("mediaLinkField"))
+    link_field = link_field.strip() if isinstance(link_field, str) else ""
+    link_ref = f.get("mediaLinkColumn")
+    link_column = link_ref if isinstance(link_ref, dict) and link_ref.get("column") else None
+    if link_field and not link_column:
+        board.error(fpath + ["mediaLinkField"], "mediaLinkField needs mediaLinkColumn: the column of the photo table that gets its value")
+    elif link_column and not link_field:
+        board.error(fpath + ["mediaLinkColumn"], "mediaLinkColumn needs mediaLinkField: the Label of the form field whose value every photo row gets")
+    if link_field:
+        named = [g for g in fields if isinstance(g, dict) and g is not f and constant(g.get("label")) == link_field]
+        source = next((g for g in named if constant(g.get("type")) != "section"), None)
+        if source is None:
+            what = "is a section, which has no value" if named else "is not the Label of another field of this form"
+            board.error(fpath + ["mediaLinkField"], f"'{link_field}' {what}; name the field whose value ties the photos to their record (in a form that creates the record, its hidden Generate New ID field)")
+        elif link_column:
+            src = source.get("targetColumn") if isinstance(source.get("targetColumn"), dict) else {}
+            skind = (board.columns_of(src.get("tablename"), None) or {}).get(src.get("column")) if src.get("tablename") else None
+            lkind = (board.columns_of(link_column.get("tablename"), None) or {}).get(link_column.get("column")) if link_column.get("tablename") else None
+            if skind and lkind and skind != lkind:
+                board.warn(fpath + ["mediaLinkColumn", "column"], f"column '{link_column.get('column')}' is {lkind}, but it gets the value of '{link_field}', whose column '{src.get('column')}' is {skind}")
+
+    shared = any(
+        isinstance(g, dict) and g is not f and constant(g.get("type")) not in ("media", "section")
+        and isinstance(g.get("targetColumn"), dict) and g["targetColumn"].get("tablename") == photos
+        for g in fields
+    )
+    if photos and not link_field and not link_column and not shared:
+        board.warn(fpath + ["mediaLinkField"], f"nothing ties the photo rows to a record: set mediaLinkField and mediaLinkColumn, or add a hidden field pre-filled with the record's key that targets '{photos}'")
 
 
 def resolve(page: dict, segments: list[str]) -> bool:

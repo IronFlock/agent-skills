@@ -5,36 +5,35 @@ repo's `AGENTS.md` records its decisions and gotchas.
 
 ## The widgets
 
-| Widget | Shows | Talks to Studio | From Studio's import map (bundled) |
+| Widget | Shows | Talks to Studio | Besides lit, from Studio's import map (bundled) |
 |---|---|---|---|
 | widget-linechart | line, bar and scatter charts over time or categories | reads `timeRange` | echarts, tinycolor2 |
 | widget-value | large numbers with label and unit | — | — |
 | widget-gauge | gauges against a min/max with colour sections | — | echarts |
-| widget-signal | status lamps coloured by value | — | lit |
+| widget-signal | status lamps coloured by value | — | — |
 | widget-doughnut | doughnut and pie charts | — | echarts |
-| widget-table | rows and columns, with status colours, links and images | — | lit, @vaadin/grid |
+| widget-table | rows and columns, with status colours, links and images | — | @vaadin/grid |
 | widget-heatmap | intensity over two categorical axes or a calendar | — | echarts |
-| widget-statehistory | state timelines (which state, how long) | — | echarts (luxon, tinycolor2) |
+| widget-statehistory | state timelines (which state, how long) | — | echarts (tinycolor2) |
 | widget-mapbox | positions, tracks and areas on a map | host-set `accessToken` | — (mapbox-gl) |
 | widget-scada | one industrial symbol (tank, pump, valve…) bound to data | `action-submit`, `widget-defaults`, host-set `baseUrl` | — |
 | widget-label | one line of text | — | — |
 | widget-textbox | a title and a text block (retired in the platform) | — | — |
-| widget-markdown | markdown with `{{variables}}` | — | — (marked, highlight.js) |
+| widget-markdown | markdown with `{{variables}}` | — | — (marked, dompurify; highlight.js in a chunk loaded on demand) |
 | widget-image | images, one or several, filtered by time | reads `timeRange` | — |
 | widget-overlay | an image with live values placed on it | — | — |
-| widget-embed | a web page in an iframe | Studio rewrites tunnel URLs | lit |
-| widget-form | a data-entry dialog that writes table rows, with file uploads | `data-submit`, `file-data-submit`, `nav-submit`, reads `route` | @material/web, lit-flatpickr |
-| widget-switch | toggles that call device functions, or set URL parameters | `action-submit`, `param-submit`, reads `route` | lit, @material/web |
-| widget-toolbar | a bar of buttons, switches, sliders, choice groups and dropdowns that write table rows and/or set URL parameters | `data-submit`, `param-submit`, reads `route` | lit, @material/web |
+| widget-embed | a web page in an iframe | Studio rewrites tunnel URLs | — |
+| widget-form | a data-entry dialog that writes table rows, with file uploads and photos | `data-submit`, `file-data-submit`, `media-data-submit`, `nav-submit`, reads `route` | @material/web, lit-flatpickr |
+| widget-switch | toggles that call device functions, or set URL parameters | `action-submit`, `param-submit`, reads `route` | @material/web |
+| widget-toolbar | a bar of buttons, switches, sliders, choice groups and dropdowns that write table rows and/or set URL parameters | `data-submit`, `param-submit`, reads `route` | @material/web |
 | widget-filter-dropdown | a dropdown that sets a URL parameter | `param-submit`, reads `route` | @material/web |
 | widget-filter-calendar | a date or range picker that sets URL parameters | `param-submit`, reads `route` | @material/web, flatpickr, lit-flatpickr |
-| widget-navbar | a top menu with the current page highlighted | `nav-submit`, reads `route` | lit, @material/web |
-| widget-sidenav | a side menu with the current page highlighted | `nav-submit`, reads `route` | lit, @material/web |
-| widget-navbutton | one navigation button | `nav-submit`, reads `route` | lit, @material/web |
+| widget-navbar | a top menu with the current page highlighted | `nav-submit`, reads `route` | @material/web |
+| widget-sidenav | a side menu with the current page highlighted | `nav-submit`, reads `route` | @material/web |
+| widget-navbutton | one navigation button | `nav-submit`, reads `route` | @material/web |
 | widget-toast | notifications popping up for new rows | — (Studio floats its tile) | — |
 
-Widgets that don't take `lit` from the import map bundle their own copy. Both
-work; externalizing it keeps the bundle small.
+Every widget takes `lit` from the import map.
 
 ## Where to look
 
@@ -57,6 +56,7 @@ work; externalizing it keeps the bundle small.
 | A map, a token from the host, retry on tile errors | widget-mapbox |
 | A generated schema and a catalog for the AI | widget-scada (`scripts/`, `schema-curation.json`) |
 | Timers that must die with the element | widget-toast |
+| A library only some configs need, loaded as a chunk on demand | widget-markdown (`src/highlight.ts`, `loadHighlight()`) |
 | Hiding a value that goes stale while no new data arrives | `staleAt()` and `scheduleStaleCheck()` in widget-gauge and widget-value |
 | Normalising malformed configs | widget-doughnut (`sections`), widget-gauge (section limits) |
 

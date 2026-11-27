@@ -3,7 +3,7 @@
 This reference covers the file side of boards on which users create, edit and
 delete records (master data, settings, assets): how the shape of
 board-assets.md maps onto the navigation patterns of board-navigation.md, the
-delete form in YAML, and uploading files with a form. The rules themselves (the
+delete form in YAML, uploading files with a form, and photos taken with a form. The rules themselves (the
 lists, the "New" form, the edit and delete forms and where they go) are in
 board-assets.md: read it first. It assumes the board's anatomy and the literal
 prefixes (`$str:`, `$num:`, `$bool:`) from board-template.md, "Anatomy" and
@@ -121,3 +121,189 @@ the same save as the rest of the row (widget-form 1.0.38 and later):
 - Uploading needs the Use right on the app, like every form write. It does not work on an
   appliance opened through the cloud; there the form says to open the board on
   the appliance itself.
+- A file field holds one file per record. For several photos per save, use a
+  media field (next section).
+
+## Photos with a form
+
+A widget-form field with `type: $str:media` (widget-form 2.3.0 and later) takes
+several photos in one save: taken with the phone's camera, picked from its
+library, or chosen or dropped on a computer. Each photo is resized to a JPEG,
+stored in a FleetFiles namespace, and written as **a row of its own** into the
+table of the field's `targetColumn`, the photo table. Use it for a report or an
+inspection made on a phone with photos as evidence, and for a form that adds
+photos to a record that already exists. For one document per record, such as a
+PDF manual, use a file field (above).
+
+### The data model
+
+The record and its photos are two entity tables, each keyed by an ID the form
+generates, and the photo table carries the record's key as its link column
+(app-templates.md, "One table per entity"):
+
+```yaml
+data:
+  tables:
+    - tablename: inspection_reports
+      description: Inspection reports made on a phone at the asset.
+      maintainLatestFlagFor: [report_id]
+      columns:
+        - {id: tsp, name: Timestamp, description: Time the report was saved (UTC), dataType: timestamp}
+        - {id: report_id, name: Report, description: Report identifier (a UUID the form generates), dataType: string}
+        - {id: asset_id, name: Asset, description: The inspected asset, dataType: string}
+        - {id: note, name: Note, description: What the inspector found, dataType: string}
+    - tablename: report_photos
+      description: Photos of inspection reports, one row per photo.
+      maintainLatestFlagFor: [photo_id]
+      columns:
+        - {id: tsp, name: Timestamp, description: Time the photo row was saved (UTC), dataType: timestamp}
+        - {id: photo_id, name: Photo, description: Photo identifier (a UUID the form generates), dataType: string}
+        - {id: report_id, name: Report, description: The report the photo belongs to, dataType: string}
+        - {id: file_key, name: File key, description: Key of the photo in the namespace photos, dataType: string}
+        - {id: file_name, name: File name, description: Original name of the photo, dataType: string}
+        - {id: size_bytes, name: Size, description: Size of the stored photo in bytes, dataType: bigint}
+        - {id: content_type, name: Content type, description: MIME type of the stored photo, dataType: string}
+        - {id: file_url, name: URL, description: Platform URL of the stored photo, dataType: string}
+        - {id: captured_at, name: Taken at, description: Time the photo was taken (UTC), dataType: timestamp}
+        - {id: latitude, name: Latitude, description: Latitude in decimal degrees, dataType: numeric}
+        - {id: longitude, name: Longitude, description: Longitude in decimal degrees, dataType: numeric}
+        - {id: altitude, name: Altitude, description: Altitude in metres above sea level, dataType: numeric}
+        - {id: position_source, name: Position source, description: Where the position came from (exif or device), dataType: string}
+files:
+  description: Photos taken with the board's report form.
+  namespaces:
+    - name: photos
+      description: Report photos, resized to JPEG on the phone.
+      contentTypes: ["image/jpeg"]
+      maxObjectBytes: 10485760
+```
+
+Only `photo_id`, the link column and `file_key` are needed; leave out the
+columns the app does not use. Set position columns only when the app needs to
+know where a photo was taken: a person's position is personal data, and with
+no position column the form never reads it or asks for it.
+
+### A form that creates a record with photos
+
+The record's key comes from a hidden Generate New ID field, and
+`mediaLinkField` names that field by its Label so every photo row gets the
+same value in `mediaLinkColumn`:
+
+```yaml
+formFields:
+    - label: $str:Report ID
+      type: $str:textfield
+      hiddenField: $bool:true
+      generateId: $bool:true
+      targetColumn: {tablename: inspection_reports, column: report_id, dataType: string}
+    - label: $str:Asset
+      type: $str:textfield
+      required: $bool:true
+      targetColumn: {tablename: inspection_reports, column: asset_id, dataType: string}
+    - label: $str:What did you find?
+      type: $str:textarea
+      targetColumn: {tablename: inspection_reports, column: note, dataType: string}
+    - label: $str:Photos
+      type: $str:media
+      required: $bool:true                     # at least one photo
+      cameraCapture: $bool:true                # a phone opens the rear camera at once
+      maxPhotos: $num:10
+      targetColumn: {tablename: report_photos, column: file_key, dataType: string}
+      fileNamespace: $str:photos
+      mediaIdColumn: {tablename: report_photos, column: photo_id, dataType: string}
+      mediaLinkField: $str:Report ID           # the Label of the field above
+      mediaLinkColumn: {tablename: report_photos, column: report_id, dataType: string}
+      fileNameColumn: {tablename: report_photos, column: file_name, dataType: string}
+      fileUrlColumn: {tablename: report_photos, column: file_url, dataType: string}
+      capturedAtColumn: {tablename: report_photos, column: captured_at, dataType: timestamp}
+      latitudeColumn: {tablename: report_photos, column: latitude, dataType: numeric}
+      longitudeColumn: {tablename: report_photos, column: longitude, dataType: numeric}
+      positionSourceColumn: {tablename: report_photos, column: position_source, dataType: string}
+```
+
+### A form that adds photos to an existing record
+
+It writes no record row, only photo rows. A hidden field pre-filled with the
+record's key targets the photo table's link column: every field whose
+`targetColumn` is in the photo table goes into every photo row instead of a
+row of its own, so no `mediaLinkField` is needed. Bind the pre-filled value
+the way an edit form does (above, and board-assets.md):
+
+```yaml
+formFields:
+    - label: $str:Report
+      type: $str:textfield
+      hiddenField: $bool:true
+      targetColumn: {tablename: report_photos, column: report_id, dataType: string}
+      preFilledValue:
+          valueRef:
+              tablename: inspection_reports
+              column: report_id
+              queryParams:
+                  limit: 1
+                  filterAnd:
+                      - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
+                      - {column: report_id, operator: '=', value: '2', dataType: string, useRoute: true}
+    - label: $str:More photos
+      type: $str:media
+      required: $bool:true
+      targetColumn: {tablename: report_photos, column: file_key, dataType: string}
+      fileNamespace: $str:photos
+      mediaIdColumn: {tablename: report_photos, column: photo_id, dataType: string}
+```
+
+### The rules
+
+- `targetColumn` is the photo table's string column for the stored key. Every
+  companion column belongs in the same table: `mediaIdColumn`,
+  `mediaLinkColumn`, `fileNameColumn`, `fileTypeColumn`, `fileUrlColumn` and
+  `positionSourceColumn` (string), `fileSizeColumn` (bigint or numeric),
+  `capturedAtColumn` (timestamp), `latitudeColumn`, `longitudeColumn` and
+  `altitudeColumn` (numeric).
+- `mediaIdColumn` gets a new UUID per photo. Make it the photo table's entity
+  key (`maintainLatestFlagFor`): a save repeated after a failure writes the
+  same IDs again, which an entity table takes as a new version of the same
+  photo rather than a second photo.
+- `mediaLinkField` (the Label of another, non-section field of the same form)
+  and `mediaLinkColumn` go together. The save is refused while the named field
+  is empty.
+- Every photo is turned upright and stored as a JPEG whose longer edge is at
+  most `maxImageEdge` pixels (default 2048) at `imageQuality` 1 to 100
+  (default 85), which keeps it under the 6 MB that uploads on every
+  installation. So the namespace must take `image/jpeg`. `acceptedFileTypes`
+  takes image types only and defaults to `image/*`; a photo the browser cannot
+  decode (HEIC outside Safari) is uploaded as it is, which the namespace
+  refuses unless it lists that type too. `maxFileSizeMB` applies to each photo
+  after resizing.
+- `cameraCapture` makes a phone open the rear camera directly, one photo at a
+  time; without it the phone offers camera, library and files. `maxPhotos`
+  caps the photos per save, and `required` asks for at least one.
+- Position: from the photo's EXIF GPS data, else, for a photo just taken, the
+  device's position once the viewer allows it. The device position needs an
+  https board, so on an appliance served over http only EXIF positions are
+  stored. A photo picked from the library without GPS data gets no position
+  (phones may remove it when a web page picks the photo), and a photo without
+  either leaves the columns empty and still saves.
+- The photo rows are written before the form's own row, so a record row that
+  exists has its photos. A form with a media field keeps its Submit button even
+  with `autoSubmit`.
+
+### Limits
+
+- Studio stores every photo first (a failed upload writes no row), then
+  writes the photo rows in one bulk insert, all or none, and the record's row
+  after them. Where the router does not allow board sessions the bulk topic
+  yet (an appliance not yet updated), the rows go out one by one and those
+  before a failed one stay written. Either way the form keeps its values and
+  the stored photos' keys, and Submit retries with the same IDs without
+  uploading those photos again; the entity keys above make the retry
+  harmless.
+- Stored photos stay in the namespace when a save fails later: board sessions
+  cannot delete files.
+- It needs widget-form 2.3.0 or later and a Studio that handles the media save
+  (`media-data-submit`). An older Studio leaves it unhandled, and the form says
+  it cannot upload and saves nothing. As with file fields, uploading does not
+  work on an appliance opened through the cloud.
+- The validator checks the namespace (declared, takes `image/jpeg`), the
+  accepted types (images within the namespace), the photo table's columns and
+  their types, the link settings and the ID column's entity key.

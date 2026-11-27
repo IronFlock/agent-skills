@@ -16,11 +16,12 @@ follows all of them; read it next to this file.
 7. [Events](#events)
 8. [Attach, detach and cleanup](#attach-detach-and-cleanup)
 9. [Shared libraries](#shared-libraries)
-10. [ECharts](#echarts)
-11. [Menus, dialogs and tooltips](#menus-dialogs-and-tooltips)
-12. [Security](#security)
-13. [Text, locale and accessibility](#text-locale-and-accessibility)
-14. [Performance](#performance)
+10. [Code loaded on demand](#code-loaded-on-demand)
+11. [ECharts](#echarts)
+12. [Menus, dialogs and tooltips](#menus-dialogs-and-tooltips)
+13. [Security](#security)
+14. [Text, locale and accessibility](#text-locale-and-accessibility)
+15. [Performance](#performance)
 
 ## The element
 
@@ -229,6 +230,7 @@ this.dispatchEvent(
 | Call a device function | `action-submit` `{ actionApp, actionDevice, actionTopic, args }` | widget-switch, widget-scada |
 | Write a row to a table | `data-submit` `[{ swarm_app_databackend_key, table_name, column_name, value }]` | widget-form |
 | Upload files, then write the row with their keys | `file-data-submit` `{ items, waitUntil }` ([host contract](host-contract.md#events)) | widget-form (file field) |
+| Upload several files, then write a row per file (rows told apart by `row`), with progress per file | `media-data-submit` `{ items, waitUntil, progress }` ([host contract](host-contract.md#events)) | widget-form (media field) |
 
 - Read the current state back from the host, not from what you sent: filter
   widgets read their selection from `route`, a switch from its bound value.
@@ -285,8 +287,9 @@ zrender, vaadin, flatpickr, tinycolor2 and tslib
   those whose classes are checked with `instanceof` across modules (`echarts`,
   `zrender`). Bundling them defines `md-*` elements twice or breaks the canvas
   renderer.
-- **May be external**: `lit` (most new widgets externalize it), `tinycolor2`,
-  `tslib`.
+- **`lit` is external in every widget** (`/^lit/`, `/^@lit/`). A bundled copy
+  works, but adds about 20 KB to each widget on a board.
+- **May be external**: `tinycolor2`, `tslib`.
 - **Everything else must be bundled.** A bare import of anything the map does not
   provide fails on cloud. Import echarts only through `echarts/core`,
   `echarts/charts`, `echarts/components`, `echarts/renderers` and
@@ -297,6 +300,55 @@ zrender, vaadin, flatpickr, tinycolor2 and tslib
   the host loads it. Style Material components through their `--md-*` tokens, and
   derive the token colours from the configured or theme colours, not hard-coded
   accents.
+
+## Code loaded on demand
+
+Studio fetches a widget's bundle for every board that shows the widget, whatever
+the tile's config uses. So a feature costs every board its size, and a library
+added for one setting is the usual way a widget gets heavy. `npm run build` prints
+the size of each file.
+
+- **Look for the small way first.** A date library made up most of
+  widget-statehistory's bundle and formatted one duration; a ten-line function
+  replaced it.
+- **A large part that only some configs need goes into a chunk.** Put it in a
+  module of its own and load that with `import()`. The build writes it as
+  `dist/<module>-<hash>.js`, and the browser fetches it from the entry's folder
+  the first time it is asked for. widget-markdown loads highlight.js this way,
+  only when a document has a code block (`src/highlight.ts`):
+
+  ```ts
+  let highlight: ((code: string, lang: string) => string) | undefined
+  let highlightLoad: Promise<void> | undefined
+
+  function loadHighlight(): Promise<void> {
+      highlightLoad ??= import('./highlight').then(
+          (module) => {
+              highlight = module.highlight
+          },
+          (error) => console.warn('widget-markdown: the code highlighter did not load, code blocks stay plain', error)
+      )
+      return highlightLoad
+  }
+  ```
+
+A chunk has rules the entry does not have:
+
+- **The widget works without it.** A chunk can fail to load: on a poor
+  connection, and wherever Studio loaded the entry from the bare package URL.
+  Render at once what the entry can render (plain code blocks), and render again
+  when the chunk has arrived. What the user cannot do without (saving a form,
+  taking a photo) stays in the entry.
+- **The lazy module shares no module with the entry.** It imports its own npm
+  packages and what the import map provides, and from the widget's other files
+  only types (`import type`). When both import the same source file, the build
+  moves the shared code out of the entry, and the entry no longer loads alone.
+  `check_widget.py` reports that in `dist/`.
+- **Load it once.** Keep the promise in module scope, so all tiles of the version
+  share one request, and a failed load is not retried on every data update.
+- **It pays for tens of kilobytes, not for a few.** A chunk costs a second request
+  and a second render. jsDelivr minifies only the entry; a chunk is served as
+  built.
 
 ## ECharts
 

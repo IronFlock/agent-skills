@@ -60,6 +60,31 @@ data:
         - {id: size_bytes, name: Size, description: File size in bytes, dataType: bigint}
         - {id: content_type, name: Content type, description: MIME type of the file, dataType: string}
         - {id: pages, name: Pages, description: Number of pages, dataType: numeric}
+    - tablename: machine_reports
+      description: Problem reports on a machine, made on a phone at the machine.
+      maintainLatestFlagFor: [report_id]
+      columns:
+        - {id: tsp, name: Timestamp, description: Time the report was saved (UTC), dataType: timestamp}
+        - {id: report_id, name: Report, description: Report identifier (a UUID the form generates), dataType: string}
+        - {id: machine_id, name: Machine, description: Machine identifier, dataType: string}
+        - {id: note, name: Note, description: What the reporter saw, dataType: string}
+    - tablename: machine_photos
+      description: Photos of machine reports, one row per photo.
+      maintainLatestFlagFor: [photo_id]
+      columns:
+        - {id: tsp, name: Timestamp, description: Time the photo row was saved (UTC), dataType: timestamp}
+        - {id: photo_id, name: Photo, description: Photo identifier (a UUID the form generates), dataType: string}
+        - {id: report_id, name: Report, description: The report the photo belongs to, dataType: string}
+        - {id: file_key, name: File key, description: Key of the photo in the FleetFiles namespace photos, dataType: string}
+        - {id: file_name, name: File name, description: Original name of the photo, dataType: string}
+        - {id: size_bytes, name: Size, description: Size of the stored photo in bytes, dataType: bigint}
+        - {id: content_type, name: Content type, description: MIME type of the stored photo, dataType: string}
+        - {id: file_url, name: URL, description: Platform URL of the stored photo, dataType: string}
+        - {id: captured_at, name: Taken at, description: Time the photo was taken (UTC), dataType: timestamp}
+        - {id: latitude, name: Latitude, description: Latitude where the photo was taken in decimal degrees, dataType: numeric}
+        - {id: longitude, name: Longitude, description: Longitude where the photo was taken in decimal degrees, dataType: numeric}
+        - {id: altitude, name: Altitude, description: Altitude where the photo was taken in metres, dataType: numeric}
+        - {id: position_source, name: Position source, description: Where the position came from (exif or device), dataType: string}
   transforms:
     - tablename: daily_energy
       description: Energy per machine and day.
@@ -85,9 +110,16 @@ data:
         - {id: state, name: State, description: Operating state, dataType: string}
         - {id: route, name: Route, description: Board route of the machine's alarm page for that state, dataType: string}
 files:
-  description: Machine manuals and service reports uploaded from the board.
+  description: Machine manuals, service reports and report photos uploaded from the board.
   namespaces:
     - name: documents
       description: Manuals and service reports, as PDF or image.
       contentTypes: ["application/pdf", "image/png", "image/jpeg"]
       maxObjectBytes: 20971520
+    - name: photos
+      description: Photos of machine reports, resized to JPEG on the phone.
+      contentTypes: ["image/jpeg"]
+      maxObjectBytes: 10485760
+    - name: reports
+      description: Exported reports, as PDF.
+      contentTypes: ["application/pdf"]

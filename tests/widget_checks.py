@@ -90,6 +90,18 @@ SCHEMA = "src/definition-schema.json"
 DEFAULTS = "src/default-data.json"
 
 
+def dist(repo: Path, chunks: dict[str, str]) -> None:
+    """A built dist/ whose entry loads ./lazy-a1.js on demand, plus the given
+    chunk files."""
+    (repo / "dist").mkdir()
+    (repo / "dist/widget-sample.js").write_text(
+        'import { LitElement } from "lit";\ncustomElement("widget-sample-1.0.0");\n'
+        'const load = () => import("./lazy-a1.js").then((m) => m.heavy);\n'
+    )
+    for name, code in chunks.items():
+        (repo / "dist" / name).write_text(code)
+
+
 def series_item(s: dict) -> dict:
     return s["properties"]["dataseries"]["items"]["properties"]
 
@@ -133,7 +145,7 @@ MUTATIONS: dict[str, tuple[Mutation, list[tuple[str, str, str, str]]]] = {
     ),
     "main points elsewhere": (
         lambda r: edit_json(r, "package.json", lambda p: p.update(main="src/widget-sample.ts")),
-        [("ERROR", "package.json", "main", "the CDN serves it")],
+        [("ERROR", "package.json", "main", "Studio imports that path")],
     ),
     "src not published": (
         lambda r: edit_json(r, "package.json", lambda p: p.update(files=["dist", "thumbnail.png", "thumbnail.webp"])),
@@ -177,6 +189,10 @@ MUTATIONS: dict[str, tuple[Mutation, list[tuple[str, str, str, str]]]] = {
             edit(r, "vite.config.ts", lambda t: t.replace("external: [/^lit/, /^@lit/]", "external: [/^lit/, /^@lit\\//, 'lodash-es']")),
         ),
         [("WARN", ENTRY, "lodash-es", "does not provide it")],
+    ),
+    "bundled lit": (
+        lambda r: edit(r, "vite.config.ts", lambda t: t.replace("external: [/^lit/, /^@lit/]", "external: [/^@lit/]")),
+        [("WARN", ENTRY, "lit", "is bundled")],
     ),
     "bare echarts import": (
         lambda r: edit(r, ENTRY, lambda t: "import { EChartsOption } from 'echarts'\n" + t),
@@ -392,9 +408,25 @@ MUTATIONS: dict[str, tuple[Mutation, list[tuple[str, str, str, str]]]] = {
         lambda r: ((r / "dist").mkdir(), (r / "dist/widget-sample.js").write_text('import { debounce } from "lodash-es";\ncustomElement("widget-sample-1.0.0");\n')),
         [("ERROR", "dist/widget-sample.js", "lodash-es", "fails to load on cloud")],
     ),
-    "dist split into chunks": (
+    "dist entry that needs a chunk to load": (
         lambda r: ((r / "dist").mkdir(), (r / "dist/widget-sample.js").write_text('import "./chunk-a.js";\ncustomElement("widget-sample-1.0.0");\n')),
-        [("ERROR", "dist/widget-sample.js", "./chunk-a.js", "one file")],
+        [("ERROR", "dist/widget-sample.js", "./chunk-a.js", "must load alone")],
+    ),
+    "dist chunk that is not there": (
+        lambda r: dist(r, {}),
+        [("ERROR", "dist/widget-sample.js", "./lazy-a1.js", "not in dist/")],
+    ),
+    "dist chunk that imports the entry": (
+        lambda r: dist(r, {"lazy-a1.js": 'import { n } from "./widget-sample.js";\nexport const heavy = n;\n'}),
+        [("ERROR", "dist/lazy-a1.js", "./widget-sample.js", "defined twice")],
+    ),
+    "dist chunk import the host cannot resolve": (
+        lambda r: dist(r, {"lazy-a1.js": 'import { debounce } from "lodash-es";\nexport const heavy = debounce;\n'}),
+        [("ERROR", "dist/lazy-a1.js", "lodash-es", "fails to load on cloud")],
+    ),
+    "dist chunk whose own chunk is not there": (
+        lambda r: dist(r, {"lazy-a1.js": 'import { shared } from "./shared-b2.js";\nexport const heavy = shared;\n'}),
+        [("ERROR", "dist/lazy-a1.js", "./shared-b2.js", "not in dist/")],
     ),
 }
 
@@ -404,6 +436,20 @@ ACCEPTED: dict[str, Mutation] = {
     # false matches an unset enum target in the editor, the AI and the board
     # validator (widget-form shows Target Column before a field type is picked).
     "false in an enum condition": lambda r: edit_json(r, SCHEMA, lambda s: with_style_condition(s, ["plain", False])),
+    # A module loaded with import() is a chunk next to the entry; it may import
+    # from the import map and from further chunks. An import() in a JSDoc type
+    # is no import.
+    "dist with a chunk loaded on demand": lambda r: dist(
+        r,
+        {
+            "lazy-a1.js": (
+                'import { css } from "lit";\nimport { shared } from "./shared-b2.js";\n'
+                '/**\n * @typedef { import("./renderer").Renderer } Renderer\n */\n'
+                'export const heavy = [css, shared];\n'
+            ),
+            "shared-b2.js": "export const shared = 1;\n",
+        },
+    ),
 }
 
 
