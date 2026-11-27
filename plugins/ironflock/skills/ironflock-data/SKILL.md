@@ -113,8 +113,8 @@ Patterns:
   newest values are its newest rows, per device.
 - **Encrypted columns** (marked as such in the schema, answered as
   `[ENCRYPTED]`) hold ciphertext. Their values cannot be read with SQL by
-  anyone; never select, filter, join or group on them. Only whether a value is
-  set can be counted (`count(*) FILTER (WHERE col IS NOT NULL)`). If the
+  anyone; never select, filter, join or group on them. Only whether a value
+  is set can be counted (`count(*) FILTER (WHERE col IS NOT NULL)`). If the
   person wants the value, explain that only the app itself can read it.
 - **Private tables.** An app may keep tables private. A query on one is
   refused by design: tell the person the app keeps that data to itself, and do

@@ -114,8 +114,8 @@ Find the cause in this order, and stop as soon as you have it.
    its rows in the last hour. An app that runs but has stopped writing,
    although it wrote before, was configured once: do not reconfigure it; read
    its log and think of its data source (the machine, the PLC, the sensor,
-   the network to them). An app that has never written may still need to be
-   set up.
+   the network to them). An app that has never written may still need to
+   be set up.
 4. **Why does the app fail?** `get_app_logs` reads the app's own output on
    the devices it runs on: a crash, a refused connection, a wrong address, a
    configuration error. Read a window around the moment the data stopped
@@ -266,8 +266,8 @@ app from a device group is changed through the group in Studio.
    refused: get a new quote and show it.
 5. **Check** with `check_app_status`. Installing continues on the device in
    the background; say that it is still installing and carry on. An offline
-   device installs when it reconnects. Once it runs, the app may need to be
-   set up (its settings in Studio, or its own tools) before data arrives.
+   device installs when it reconnects. Once it runs, the app may need to
+   be set up (its settings in Studio, or its own tools) before data arrives.
 
 For a price without installing, or the cost of a whole project, use
 `estimate_project_cost`. It never invents prices: hardware and services
