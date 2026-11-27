@@ -66,8 +66,8 @@ never 0%; never take planned time as busy time.
 
 ## First pass yield, scrap and rework
 
-- First pass yield (FPY, used in German too) = parts good at their first
-  pass / parts at their first pass. Needs a result per pass and a part id;
+- First pass yield (FPY, used in German too) = good first passes / all
+  first passes (one first pass per part). Needs a result per pass and a part id;
   the first pass is looked for over a lookback longer than rework takes.
   Public descriptions differ on the denominator: state it, and show the
   later passes beside it (good passes / all passes is higher).
