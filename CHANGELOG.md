@@ -6,7 +6,7 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
-## Unreleased
+## 1.1.24 - 2026-11-28
 
 - The `alarms` table has a `deleted` column: a deleted alarm keeps a last row with `deleted` true, as in any entity table. The board validator knows the column, and the skills say to filter on it. The causes of an alarm event are `data`, `reset`, `stopped` and `deleted`.
 
