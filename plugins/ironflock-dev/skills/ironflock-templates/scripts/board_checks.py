@@ -74,6 +74,7 @@ ALARMS_TABLES = {
         "assessment": "json",
         "assigned_to": "bigint",
         "changed_by": "string",
+        "deleted": "boolean",
         "device_key": "bigint",
         "authid": "string",
     },
