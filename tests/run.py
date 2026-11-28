@@ -14,7 +14,8 @@ board as board-template.yml, run scripts/validate.py and compare its findings:
   `# offline: <reason>` line is validated with --offline: its widget configs
   are not walked against their definition schemas, for a board that pins a
   widget version not yet on npm (the reason says which, and what to change once
-  it is published).
+  it is published). A board with `# consumes: <app>[, <app>...]` lines is
+  validated with those apps added under `consumes` in data-template.yml.
 
 Then the starter app: assets/app-template must produce no findings at all, and
 scripts/new_app.py must scaffold an app from it that keeps no trace of the
@@ -65,6 +66,7 @@ FINDING = re.compile(r"^(ERROR|WARN)\s+(\S+) (\S+): (.*)$")
 EXPECT = re.compile(r"^# expect:\s*(ERROR|WARN)\s+(\S+)\s+::\s+(.*)$")
 EXPECT_NONE = re.compile(r"^# expect-none:\s*(\S+)\s*$")
 OFFLINE = re.compile(r"^# offline:\s*\S")
+CONSUMES = re.compile(r"^# consumes:\s*(.+?)\s*$")
 
 
 def validate(app: Path, name: str, *flags: str) -> list[tuple[str, str, str]]:
@@ -79,7 +81,13 @@ def run_board(board: Path) -> list[tuple[str, str, str]]:
         app = Path(tmp) / "app"
         shutil.copytree(ROOT / "app", app)
         shutil.copy(board, app / ".ironflock" / "board-template.yml")
-        offline = any(map(OFFLINE.match, board.read_text().splitlines()))
+        lines = board.read_text().splitlines()
+        offline = any(map(OFFLINE.match, lines))
+        consumed = [a.strip() for m in map(CONSUMES.match, lines) if m for a in m[1].split(",") if a.strip()]
+        if consumed:
+            data_template = app / ".ironflock" / "data-template.yml"
+            entries = "".join(f"  - app: '{a}'\n    reason: Shows its data on the board\n" for a in consumed)
+            data_template.write_text(data_template.read_text(encoding="utf-8") + "consumes:\n" + entries, encoding="utf-8")
         return validate(app, board.name, *(["--offline"] if offline else []))
 
 

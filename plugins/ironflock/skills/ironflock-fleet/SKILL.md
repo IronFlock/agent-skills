@@ -169,6 +169,13 @@ until someone resets it in Studio. An alarm can be configured but not active
   which alarms are active but OK, and which are not watching at all.
 - To see what raised an alarm, read the data of the table it watches around
   the time it fired (`ironflock-data`).
+- An alarm's state and history are also tables of the built-in app Alarms,
+  which SQL queries, transforms and boards read like any app's data:
+  `alarms` (one row per version of each alarm) and `alarm_events` (one row
+  per status change, with the cause, the device and the row that caused it).
+  Questions about the past ("how often did it fire this month?", "which
+  device raised it?") are answered from `alarm_events` with `ironflock-data`;
+  the current state comes from `list_alarms`.
 - Before `create_alarm` or a change of a trigger with `update_alarm`, read the
   exact app, table and column names with `get_schema`. Do not guess them.
   Agree the conditions, the severities and the recipients with the person
@@ -180,7 +187,8 @@ until someone resets it in Studio. An alarm can be configured but not active
 - `update_alarm` replaces each part you send (the trigger, the recipients)
   completely: read the alarm with `list_alarms` and send everything that
   should remain.
-- `delete_alarm` removes the alarm and its whole history, irreversibly.
+- `delete_alarm` removes the alarm, irreversibly; its status changes stay
+  in `alarm_events`, the deletion as the last of them.
   When someone wants an alarm to stop firing or to be quiet, offer to pause it
   instead (`update_alarm`, not watching); delete only after an explicit yes to
   deleting the named alarms.

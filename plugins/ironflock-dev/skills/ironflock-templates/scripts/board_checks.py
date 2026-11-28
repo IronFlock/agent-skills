@@ -50,6 +50,58 @@ SYSTEM_TABLES = {
         "user_message": "string",
     }
 }
+#: The built-in alarms app that every project has. Boards read its tables
+#: through provider_app: alarms (with alarms or * under consumes), read-only and
+#: from production. Its third table, the notification recipients, is not
+#: readable. Both tables carry the system columns device_key and authid.
+ALARMS_APP = "alarms"
+ALARMS_TABLES = {
+    "alarms": {
+        "tsp": "timestamp",
+        "alarm_key": "bigint",
+        "alarm_name": "string",
+        "display_name": "string",
+        "status": "string",
+        "status_tsp": "timestamp",
+        "status_row": "json",
+        "observing": "boolean",
+        "watched_app": "string",
+        "watched_app_key": "bigint",
+        "watched_backend_key": "bigint",
+        "watched_table": "string",
+        "auto_resolve": "boolean",
+        "conditions": "json",
+        "assessment": "json",
+        "assigned_to": "bigint",
+        "changed_by": "string",
+        "device_key": "bigint",
+        "authid": "string",
+    },
+    "alarm_events": {
+        "tsp": "timestamp",
+        "event_id": "string",
+        "alarm_key": "bigint",
+        "alarm_name": "string",
+        "display_name": "string",
+        "from_status": "string",
+        "to_status": "string",
+        "cause": "string",
+        "watched_app": "string",
+        "watched_app_key": "bigint",
+        "watched_table": "string",
+        "device_name": "string",
+        "row_tsp": "timestamp",
+        "row": "json",
+        "condition": "json",
+        "changed_by": "string",
+        "device_key": "bigint",
+        "authid": "string",
+    },
+}
+#: Entity keys of the alarms app's tables: {latest: true} on alarms gives the
+#: current state of each alarm; alarm_events has none.
+ALARMS_ENTITY_KEYS = {"alarms": ["alarm_key"]}
+ALARMS_UNREADABLE = {"alarm_notifications"}
 DEFAULT_COLUMNS, DEFAULT_ROWS = 96, 64
 #: DEFAULT_DASHBOARD_STYLE in Studio's src/types/dashboard.ts.
 DEFAULT_CELL_SIZE, DEFAULT_GRID_GAP = 12, 8
@@ -189,12 +241,18 @@ class Board:
 
     def columns_of(self, table: str, provider: str | None) -> dict[str, str] | None:
         """Column -> dataType for a table this board may read, or None when the
-        columns cannot be known here (another app's table)."""
+        columns cannot be known here (another app's table, except the built-in
+        alarms app's)."""
         if provider:
-            return None
+            return ALARMS_TABLES.get(table) if is_alarms(provider) else None
         if table in SYSTEM_TABLES:
             return SYSTEM_TABLES[table]
         return self.data.tables.get(table)
+
+
+def is_alarms(provider: Any) -> bool:
+    """Whether a provider_app names the built-in alarms app."""
+    return isinstance(provider, str) and provider.lower() == ALARMS_APP
 
 
 # --------------------------------------------------------------------------
@@ -633,6 +691,14 @@ class Walker:
             if board.data.present and provider.lower() not in consumes and "*" not in consumes:
                 board.error(path + ["provider_app"], f"reads app '{provider}', which data-template.yml does not list under consumes")
         columns = None
+        if isinstance(table, str) and is_alarms(provider):
+            columns = board.columns_of(table, provider)
+            if table in ALARMS_UNREADABLE:
+                board.error(path + ["tablename"], f"'{table}' of the alarms app holds the notification recipients and is not readable; bind alarms or alarm_events")
+            elif columns is None:
+                hint = difflib.get_close_matches(table, list(ALARMS_TABLES), n=1)
+                more = f" (did you mean '{hint[0]}'?)" if hint else ""
+                board.error(path + ["tablename"], f"the alarms app has no table '{table}'{more}; it offers alarms and alarm_events")
         if isinstance(table, str) and not provider:
             columns = board.columns_of(table, None)
             if columns is None and board.data.present:
@@ -871,6 +937,9 @@ def check_write_targets(board: Board, targets: list, writer: str) -> None:
         if not isinstance(target, dict) or not target.get("tablename"):
             continue
         table, column = target.get("tablename"), target.get("column")
+        if is_alarms(target.get("provider_app")):
+            board.error(tpath + ["provider_app"], f"the {writer} writes to the alarms app, whose tables are read-only")
+            continue
         columns = board.columns_of(table, None)
         if columns is None:
             if board.data.present:
@@ -1005,12 +1074,16 @@ def one_row_reason(board: Board, ref: dict) -> str | None:
     if not isinstance(limit, bool) and isinstance(limit, (int, float)) and limit == 1:
         return "limit 1"
     table = ref.get("tablename")
-    if ref.get("provider_app") or not isinstance(table, str) or table not in board.data.tables:
+    alarms = is_alarms(ref.get("provider_app"))
+    if alarms:
+        if table not in ALARMS_TABLES:
+            return None
+    elif ref.get("provider_app") or not isinstance(table, str) or table not in board.data.tables:
         return None  # another app's table or a transform: its entity key is unknown here
     filters = qp.get("filterAnd") if isinstance(qp.get("filterAnd"), list) else []
     if not any(isinstance(f, dict) and f.get("latest") for f in filters):
         return None
-    keys = board.data.entity_keys.get(table)
+    keys = ALARMS_ENTITY_KEYS.get(table) if alarms else board.data.entity_keys.get(table)
     if not keys:
         return f"the latest filter on '{table}', which has no entity key, keeps its single newest row"
     pinned = {

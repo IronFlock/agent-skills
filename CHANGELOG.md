@@ -6,6 +6,10 @@ version and its date. Versions follow semantic versioning: a major version
 when people have to change their setup, a minor one for new skills or
 abilities, a patch for fixes.
 
+## Unreleased
+
+- Apps and boards can read the project's alarms: every project has the built-in app `alarms`, with the tables `alarms` (the current state of each alarm with the latest filter) and `alarm_events` (one row per status change, with its cause, the device and the row that caused it). `ironflock-templates` shows how an app consumes it (`consumes`, `provider_app: alarms` on a board, the SDK's cross-app connection) and its columns; the board validator checks bindings to both tables like the app's own, and reports a write to them, since only the platform writes alarms. The template schemas describe `alarms` and say that `*` includes it. `ironflock-data` and `ironflock-fleet` answer questions about past alarms from `alarm_events` with SQL.
+
 ## 1.1.22 - 2026-11-27
 
 - Boards can take photos with a form: widget-form's media field (widget-form 2.3.0 and later) stores several photos per save, each resized to a JPEG, as rows of a photo table linked to the record, optionally with where and when each was taken. `board-forms.md` shows the photo table, the files namespace and the two forms (a report with photos, more photos for an existing record), and the board validator checks the namespace (it must take `image/jpeg`), the accepted image types, the photo table's columns and their types, the link to the record and the photo ID's entity key. The widget skill documents the `media-data-submit` event Studio handles for it.

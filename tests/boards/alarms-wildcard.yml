@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=https://ironflock.com/schemas/board-template/v1.yml
+# A consumes entry '*' covers the built-in alarms app too, so this board may
+# read alarm_events through provider_app: alarms, and its columns are checked.
+# consumes: *
+#
+# expect-none: widgets[0].chartconfig.columns[0].values.tableRef.provider_app
+# expect-none: widgets[0].chartconfig.columns[0].values.tableRef.format.value
+# expect: ERROR widgets[0].chartconfig.columns[1].values.tableRef.format.value :: table 'alarm_events' has no column 'status' (did you mean
+name: alarms-wildcard
+widgets:
+    - layout_id: events
+      package_name: widget-table
+      chartconfig:
+          title: $str:Alarm events
+          columns:
+              - header: $str:Cause
+                type: $str:string
+                values:
+                    tableRef:
+                        tablename: alarm_events
+                        provider_app: alarms
+                        format: {value: cause}
+                        queryParams: {limit: 100}
+              - header: $str:Status
+                type: $str:string
+                values:
+                    tableRef:
+                        tablename: alarm_events
+                        provider_app: alarms
+                        format: {value: status}
+                        queryParams: {limit: 100}
+layout:
+    gridLayout:
+        - {id: events, x: 0, y: 0, w: 96, h: 64}

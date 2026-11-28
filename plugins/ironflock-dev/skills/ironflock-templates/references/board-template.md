@@ -278,7 +278,8 @@ Some values only exist inside a running platform, and a template cannot know the
 ## Checklist
 
 1. Every `tablename` and column exists in data-template.yml (or under
-   `provider_app` in a consumed app), and the app's code actually publishes it.
+   `provider_app` in a consumed app, such as the built-in `alarms` with its
+   tables `alarms` and `alarm_events`), and the app's code actually publishes it.
 2. Every chartconfig key comes from the pinned widget version's schema, and every
    constant is prefixed.
 3. Bindings (board-bindings.md) sit at the right kind of property (valueRef on single values, tableRef

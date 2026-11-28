@@ -433,7 +433,10 @@ $defs:
     description: >-
       Lowercase name of another app whose table this binding reads. That app
       must be listed under consumes in this app's data-template.yml, and the
-      project must have granted the data access.
+      project must have granted the data access. A consumes entry "*" covers
+      every app. The name alarms is the built-in alarms app that every project
+      has: its tables alarms and alarm_events are readable like any app's,
+      read-only, and exist in production only.
     anyOf:
       - type: string
         pattern: "^[a-z0-9._-]+$"
