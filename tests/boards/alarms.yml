@@ -1,0 +1,135 @@
+# yaml-language-server: $schema=https://ironflock.com/schemas/board-template/v1.yml
+# The built-in alarms app: data-template.yml consumes alarms, and the board reads
+# its tables through provider_app: alarms. Widget 0 lists the status changes
+# from alarm_events, widget 1 the current state of each alarm (the latest
+# filter on alarms, whose entity key is alarm_key). The others bind a column
+# alarm_events does not have, the recipients table, which is not readable, a
+# misspelt table, and a toolbar that writes to the read-only alarm tables.
+# consumes: alarms
+#
+# expect-none: widgets[0].chartconfig.columns[0].values.tableRef.provider_app
+# expect-none: widgets[0].chartconfig.columns[0].values.tableRef.tablename
+# expect-none: widgets[0].chartconfig.columns[0].values.tableRef.format.value
+# expect-none: widgets[0].chartconfig.columns[1].values.tableRef.format.value
+# expect-none: widgets[0].chartconfig.columns[2].values.tableRef.format.value
+# expect-none: widgets[0].chartconfig.columns[2].values.tableRef.queryParams.filterAnd[0].column
+# expect-none: widgets[1].chartconfig.columns
+# expect-none: widgets[1].chartconfig.columns[0].values.tableRef.format.value
+# expect-none: widgets[1].chartconfig.columns[1].values.tableRef.format.value
+# expect: ERROR widgets[2].chartconfig.columns[0].values.tableRef.format.value :: table 'alarm_events' has no column 'severity'
+# expect: ERROR widgets[3].chartconfig.columns[0].values.tableRef.tablename :: holds the notification recipients and is not readable
+# expect: ERROR widgets[4].chartconfig.columns[0].values.tableRef.tablename :: the alarms app has no table 'alarm_event' (did you mean 'alarm_events'?)
+# expect: ERROR widgets[5].chartconfig.tools[0].targetColumn.provider_app :: the toolbar writes to the alarms app, whose tables are read-only
+name: alarms
+widgets:
+    - layout_id: events
+      package_name: widget-table
+      chartconfig:
+          title: $str:Alarm events
+          columns:
+              - header: $str:Alarm
+                type: $str:string
+                values:
+                    tableRef:
+                        tablename: alarm_events
+                        provider_app: alarms
+                        format: {value: display_name}
+                        queryParams: {limit: 100}
+              - header: $str:Device
+                type: $str:string
+                values:
+                    tableRef:
+                        tablename: alarm_events
+                        provider_app: alarms
+                        format: {value: device_name}
+                        queryParams: {limit: 100}
+              - header: $str:New status
+                type: $str:string
+                values:
+                    tableRef:
+                        tablename: alarm_events
+                        provider_app: alarms
+                        format: {value: to_status}
+                        queryParams:
+                            limit: 100
+                            filterAnd:
+                                - {column: cause, operator: '=', value: data, dataType: string}
+    - layout_id: current
+      package_name: widget-table
+      chartconfig:
+          title: $str:Alarms
+          columns:
+              - header: $str:Alarm
+                type: $str:string
+                values:
+                    tableRef:
+                        tablename: alarms
+                        provider_app: alarms
+                        format: {value: display_name}
+                        queryParams:
+                            limit: 100
+                            filterAnd:
+                                - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
+              - header: $str:Status
+                type: $str:state
+                values:
+                    tableRef:
+                        tablename: alarms
+                        provider_app: alarms
+                        format: {value: status}
+                        queryParams:
+                            limit: 100
+                            filterAnd:
+                                - {latest: true, column: '', operator: '=', value: '', dataType: boolean}
+    - layout_id: unknown-column
+      package_name: widget-table
+      chartconfig:
+          columns:
+              - header: $str:Severity
+                type: $str:string
+                values:
+                    tableRef:
+                        tablename: alarm_events
+                        provider_app: alarms
+                        format: {value: severity}
+                        queryParams: {limit: 100}
+    - layout_id: recipients
+      package_name: widget-table
+      chartconfig:
+          columns:
+              - header: $str:Recipients
+                type: $str:string
+                values:
+                    tableRef:
+                        tablename: alarm_notifications
+                        provider_app: alarms
+                        format: {value: notification}
+                        queryParams: {limit: 100}
+    - layout_id: misspelt
+      package_name: widget-table
+      chartconfig:
+          columns:
+              - header: $str:Alarm
+                type: $str:string
+                values:
+                    tableRef:
+                        tablename: alarm_event
+                        provider_app: alarms
+                        format: {value: display_name}
+                        queryParams: {limit: 100}
+    - layout_id: write-alarms
+      package_name: widget-toolbar
+      chartconfig:
+          orientation: $str:horizontal
+          tools:
+              - label: $str:Acknowledge
+                buttonValue: $str:OK
+                targetColumn: {tablename: alarms, column: status, dataType: string, provider_app: alarms}
+layout:
+    gridLayout:
+        - {id: events, x: 0, y: 0, w: 48, h: 32}
+        - {id: current, x: 48, y: 0, w: 48, h: 32}
+        - {id: unknown-column, x: 0, y: 32, w: 24, h: 26}
+        - {id: recipients, x: 24, y: 32, w: 24, h: 26}
+        - {id: misspelt, x: 48, y: 32, w: 24, h: 26}
+        - {id: write-alarms, x: 72, y: 32, w: 24, h: 26}

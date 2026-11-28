@@ -233,6 +233,26 @@ You can read:
 - **Another app's table:** add `provider_app: <app name in lowercase>` to the ref,
   and list that app under `consumes` in data-template.yml. Only that app's shared
   tables and transforms can be read. Its private ones are not shared.
+- **The project's alarms:** `provider_app: alarms`, with `alarms` or `*` under
+  `consumes`. `alarms` holds one row per version of an alarm; bind it with
+  `{latest: true}` (entity key `alarm_key`) for the current state of each alarm.
+  `alarm_events` holds one row per status change, oldest first like every
+  table. The validator knows both tables' columns (app-architecture.md,
+  "Reading another app's data"). Neither can be a form's or a toolbar's target:
+  only the platform writes them. A board reads production alarms, also while
+  the app runs in development.
+
+  ```yaml
+  tableRef:
+    tablename: alarm_events
+    provider_app: alarms
+    format: {time: tsp, alarm: display_name, status: to_status, device: device_name}
+    queryParams:
+      limit: 100
+      windowPeriod: day
+      windowLength: 1
+      nowMinusPeriods: 0
+  ```
 
 There's no arithmetic, ratio, join or derived column in a binding, and no widget
 computes those either. When a widget needs one, add a transform to

@@ -137,6 +137,20 @@ read them.
 - To read another app's tables, list it under `consumes:`. Board widgets that bind
   to those tables then need `provider_app` on their data reference (see
   board-bindings.md).
+  - **Alarms are an app too.** Every project has the built-in app `alarms`, with
+    the project's alarms as two tables: `alarms` (one row per version of an
+    alarm, current state with the latest filter) and `alarm_events` (one row per
+    status change). An app that shows or reacts to alarms consumes it like any
+    other app, and `*` includes it:
+
+    ```yaml
+    consumes:
+      - app: alarms
+        reason: Shows the alarms of each machine on the board
+    ```
+
+    The tables are read-only and exist in production only. app-architecture.md
+    ("Reading another app's data") has the columns and how the code reads them.
 - **An app that needs host access declares `privileged:`** next to `data:`, with a
   `reason` the user reads when granting it:
 

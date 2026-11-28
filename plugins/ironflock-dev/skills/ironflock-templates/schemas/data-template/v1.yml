@@ -101,7 +101,7 @@ $defs:
       app:
         type: string
         pattern: "^(\\*|[A-Za-z0-9._-]+)$"
-        description: Name of the provider app whose data backend this app reads, or "*" to consume all non-platform apps' data in the project. Case-insensitive — legacy apps predating the lowercase-name invariant may be named in their original case; the parser normalizes to lowercase.
+        description: Name of the provider app whose data backend this app reads, or "*" to consume the data of all apps in the project, including alarms. The name alarms is the built-in alarms app that every project has; its tables alarms and alarm_events are readable like any app's, read-only, and exist in production only, so a development run reads the project's production alarms. Case-insensitive — legacy apps predating the lowercase-name invariant may be named in their original case; the parser normalizes to lowercase.
       reason:
         type: string
         description: Human-readable reason for the access, shown to the user when granting

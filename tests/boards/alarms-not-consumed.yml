@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=https://ironflock.com/schemas/board-template/v1.yml
+# Reading the built-in alarms app needs alarms (or '*') under consumes in
+# data-template.yml, like any other app.
+#
+# expect: ERROR widgets[0].chartconfig.columns[0].values.tableRef.provider_app :: reads app 'alarms', which data-template.yml does not list under consumes
+name: alarms-not-consumed
+widgets:
+    - layout_id: events
+      package_name: widget-table
+      chartconfig:
+          title: $str:Alarm events
+          columns:
+              - header: $str:Alarm
+                type: $str:string
+                values:
+                    tableRef:
+                        tablename: alarm_events
+                        provider_app: alarms
+                        format: {value: display_name}
+                        queryParams: {limit: 100}
+layout:
+    gridLayout:
+        - {id: events, x: 0, y: 0, w: 96, h: 64}

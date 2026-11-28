@@ -17,13 +17,14 @@ starter app in `assets/app-template/` follows all of them; scaffold it with
 7. [Reading and writing state with the SDK](#reading-and-writing-state-with-the-sdk)
 8. [Entity tables: current state, updates and deletes](#entity-tables-current-state-updates-and-deletes)
 9. [Following what the board writes](#following-what-the-board-writes)
-10. [Commands, device functions and topics](#commands-device-functions-and-topics)
-11. [The container on the device](#the-container-on-the-device)
-12. [Docker Compose](#docker-compose)
-13. [Web UIs on the device](#web-uis-on-the-device)
-14. [Several devices](#several-devices)
-15. [Devices that register themselves](#devices-that-register-themselves)
-16. [Checklist](#checklist)
+10. [Reading another app's data](#reading-another-apps-data)
+11. [Commands, device functions and topics](#commands-device-functions-and-topics)
+12. [The container on the device](#the-container-on-the-device)
+13. [Docker Compose](#docker-compose)
+14. [Web UIs on the device](#web-uis-on-the-device)
+15. [Several devices](#several-devices)
+16. [Devices that register themselves](#devices-that-register-themselves)
+17. [Checklist](#checklist)
 
 ## The parts of an app
 
@@ -460,6 +461,43 @@ for row in await flock.getHistory("settings", {"limit": 1, "filterAnd": [{"lates
 A table without an entity key holds one setting for all devices: the newest row
 is in force. For settings per device or per machine, key the table by the target
 (see [Several devices](#several-devices)).
+
+## Reading another app's data
+
+An app reads the shared tables of another app in the same project once it lists
+that app under `consumes` in data-template.yml and the project's user has
+granted the access. The code opens a read-only handle with `connect_to_app`
+(`connectToApp` in JavaScript, `ConnectToApp` in Go) and reads and follows the
+provider's tables through it with `get_history` and `subscribe_to_table`, as it
+does its own. It cannot write them.
+
+**The project's alarms** are such an app: every project has the built-in app
+`alarms`, and a `*` under `consumes` includes it. The SDK names it with the
+constant `ALARMS_APP` (`AlarmsApp` in Go).
+
+```python
+from ironflock import ALARMS_APP
+
+alarms = await flock.connect_to_app(ALARMS_APP)
+current = await alarms.get_history("alarms", {"limit": 100, "filterAnd": [{"latest": True}]})
+await alarms.subscribe_to_table("alarm_events", lambda row, *a, **kw: on_alarm_event(row))
+```
+
+| Table | Rows | Columns |
+|---|---|---|
+| `alarms` | One per version of an alarm; `{"latest": True}` gives the current state of each (entity key `alarm_key`) | `tsp`, `alarm_key`, `alarm_name`, `display_name`, `status` (`OK`, `MINOR`, `MAJOR`, `CRITICAL`, empty while unknown), `status_tsp`, `status_row` (the values of the row that set the status), `observing`, `watched_app`, `watched_app_key`, `watched_backend_key`, `watched_table`, `auto_resolve`, `conditions`, `assessment`, `assigned_to`, `changed_by` |
+| `alarm_events` | One per status change, oldest first like every read | `tsp`, `event_id` (a UUID, to keep as a reference), `alarm_key`, `alarm_name`, `display_name`, `from_status`, `to_status`, `cause` (`data`, `reset`, `started`, `stopped`, `trigger_changed`, `deleted`), `watched_app`, `watched_app_key`, `watched_table`, `device_name`, `row_tsp`, `row` (the values of the row that caused the change), `condition` (the condition that matched; empty when the status fell to OK), `changed_by` |
+
+- Both tables also have `device_key` and `authid`. In `alarm_events`,
+  `device_key` is the device that wrote the row.
+- **Production only.** The alarms exist in production; a development run of the
+  app reads the project's production alarms, and so does the board. This needs
+  an SDK release that exports `ALARMS_APP`.
+- **Read-only.** Only the platform writes these tables; an app that acts on an
+  alarm writes to its own tables. The recipients of notifications are not
+  readable.
+- An event carries the row that caused it, so an app with access to `alarms`
+  sees those values even without access to the watched app.
 
 ## Commands, device functions and topics
 
