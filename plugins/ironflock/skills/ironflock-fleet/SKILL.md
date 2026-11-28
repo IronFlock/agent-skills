@@ -187,8 +187,9 @@ until someone resets it in Studio. An alarm can be configured but not active
 - `update_alarm` replaces each part you send (the trigger, the recipients)
   completely: read the alarm with `list_alarms` and send everything that
   should remain.
-- `delete_alarm` removes the alarm, irreversibly; its status changes stay
-  in `alarm_events`, the deletion as the last of them.
+- `delete_alarm` removes the alarm, irreversibly; its last row in `alarms`
+  is marked `deleted`, and its status changes stay in `alarm_events`, the
+  deletion as the last of them.
   When someone wants an alarm to stop firing or to be quiet, offer to pause it
   instead (`update_alarm`, not watching); delete only after an explicit yes to
   deleting the named alarms.

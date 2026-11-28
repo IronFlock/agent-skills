@@ -139,7 +139,7 @@ read them.
   board-bindings.md).
   - **Alarms are an app too.** Every project has the built-in app `alarms`, with
     the project's alarms as two tables: `alarms` (one row per version of an
-    alarm, current state with the latest filter) and `alarm_events` (one row per
+    alarm, current state with the latest filter and a filter on `deleted`) and `alarm_events` (one row per
     status change). An app that shows or reacts to alarms consumes it like any
     other app, and `*` includes it:
 

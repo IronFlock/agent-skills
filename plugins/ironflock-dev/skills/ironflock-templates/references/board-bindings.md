@@ -235,7 +235,9 @@ You can read:
   tables and transforms can be read. Its private ones are not shared.
 - **The project's alarms:** `provider_app: alarms`, with `alarms` or `*` under
   `consumes`. `alarms` holds one row per version of an alarm; bind it with
-  `{latest: true}` (entity key `alarm_key`) for the current state of each alarm.
+  `{latest: true}` (entity key `alarm_key`) for the current state of each alarm,
+  and filter on `deleted` like on any entity table: a deleted alarm keeps a
+  last row with `deleted` true.
   `alarm_events` holds one row per status change, oldest first like every
   table. The validator knows both tables' columns (app-architecture.md,
   "Reading another app's data"). Neither can be a form's or a toolbar's target:

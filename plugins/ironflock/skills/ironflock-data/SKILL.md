@@ -119,7 +119,8 @@ Patterns:
 - **Alarms are tables too.** The project's alarms are the data of the
   built-in app Alarms, listed by `get_schema` like any app: `alarms` holds
   one row per version of an alarm (its entity key is `alarm_key`, so its
-  current state is the newest row per `alarm_key`), and `alarm_events` one
+  current state is the newest row per `alarm_key`; a deleted alarm's newest
+  row has `deleted` true), and `alarm_events` one
   row per status change, with `from_status`, `to_status`, the `cause`, the
   device (`device_key`, `device_name`), the row that caused the change
   (`row_tsp`, `row`) and the `condition` that matched. Queries, transforms
